@@ -1,9 +1,11 @@
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { migrationClient, db } from './';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrationClient } from './';
 
 async function runMigrations() {
   console.log('Running database migrations...');
-  await migrate(db, { migrationsFolder: 'drizzle' });
+  const migrationDb = drizzle(migrationClient);
+  await migrate(migrationDb, { migrationsFolder: 'drizzle' });
   console.log('Migrations completed successfully.');
   // Close the connection, otherwise the script will hang
   await migrationClient.end();
