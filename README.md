@@ -27,11 +27,7 @@ The project uses a production-safe migration strategy. Migrations are generated 
 
 **To make a database schema change:**
 
-1.  Modify the schema in `src/lib/db/schema.ts`.
-2.  Run the following command in your terminal to generate a new SQL migration file:
-    ```bash
-    pnpm db:generate
-    ```
-3.  A new SQL file will be created in the `/drizzle` directory. Review this file to ensure the changes are correct.
-4.  Commit your code changes **and the new migration file** to Git.
-5.  Push your commit. Railway will automatically build the project and run the new migration as part of its release phase.
+1. Modify your schema in `src/lib/db/schema.ts`
+2. Run `pnpm db:generate` in your local terminal. This will create a new SQL migration file in the drizzle folder
+3. Review the generated SQL file to ensure it's correct
+4. Commit your code changes and the new migration file to Git and push. Railway will automatically handle the rest

@@ -10,6 +10,9 @@ if (!process.env.DATABASE_URL) {
 // For migrations
 export const migrationClient = postgres(process.env.DATABASE_URL, { max: 1 });
 
-// For query purposes
-const queryClient = postgres(process.env.DATABASE_URL);
+// For query purposes - only create connection if not in build phase
+const queryClient = postgres(process.env.DATABASE_URL, {
+  // Disable connection pool during build
+  max: process.env.NODE_ENV === 'production' && !process.env.VERCEL ? 1 : undefined,
+});
 export const db = drizzle(queryClient, { schema });
