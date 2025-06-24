@@ -7,26 +7,14 @@ import {
   uuid,
   unique,
   check,
-  customType,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { AdapterAccount } from 'next-auth/adapters';
 
-const validatedJsonb = <TSchema extends z.ZodType>(schema: TSchema) =>
-  customType<{ data: z.infer<TSchema>; driverData: unknown }>({
-    dataType() {
-      return 'jsonb';
-    },
-    toDriver(value: z.infer<TSchema>): unknown {
-      return schema.parse(value);
-    },
-    fromDriver(value: unknown): z.infer<TSchema> {
-      return schema.parse(value);
-    },
-  });
-
-const recipeContentSchema = z.object({
+export type RecipeContent = z.infer<typeof recipeContentSchema>;
+export const recipeContentSchema = z.object({
   ingredients: z.array(z.object({
     name: z.string(),
     amount: z.string(),
@@ -39,7 +27,6 @@ const recipeContentSchema = z.object({
   cookingTime: z.number().optional(),
   servings: z.number().optional(),
 });
-
 
 export const cookbook = pgTable('cookbook', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
@@ -68,7 +55,7 @@ export const recipes = pgTable('recipes', {
     .references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
-  content: validatedJsonb(recipeContentSchema)('content').notNull(),
+  content: jsonb('content').notNull(),
 });
 
 export const recipeChapters = pgTable('recipe_chapters', {

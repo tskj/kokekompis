@@ -12,3 +12,17 @@ This is a Next.js project using a "code-first" database approach with Drizzle OR
 - Keep messages short and concise
 - Focus on why the change was made rather than what changed (since that's in the diff)
 - Example: "add auth to prepare for user features" instead of "Add NextAuth.js configuration with Google provider"
+
+## Development Preferences
+- **Language**: Use Norwegian for UI text, variable names, and URL parameters (e.g., `?oppskrift=` instead of `?recipe=`)
+- **Server Components**: Prefer server components over client components unless interactivity is needed
+- **URL State**: Use URL parameters for state management instead of client-side state when possible
+- **Native HTML**: Use native HTML elements like `<details>` for expandable content instead of custom JavaScript
+- **Type Safety**: Prefer TypeScript type inference from database schemas over manual type definitions
+- **Simplicity**: Avoid over-engineering - choose simple solutions over complex ones
+- **User ID**: `00091a95-ec3b-4119-b1cf-736bb7b02b9c` for testing and seeding data
+
+## Database Notes
+- Uses regular `jsonb` columns for now instead of custom validated types (can be improved later)
+- Zod schemas are exported from schema file for component usage and runtime validation
+- Seeds data with Norwegian content for testing
