@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { toggleChapter } from '@/app/kokebok/[id]/actions';
+import { openChapter, closeChapter } from '@/app/kokebok/[id]/actions';
 
 interface Recipe {
   id: string;
@@ -35,8 +35,9 @@ function Chapter({ chapter, cookbookId, initiallyOpen, currentRecipeId }: Chapte
   }
 
   useEffect(() => {
-    toggleChapter(cookbookId, chapter.id, isOpen);
-  }, [isOpen, cookbookId, chapter.id]);
+    if (isOpen) openChapter(chapter.id);
+    else closeChapter(chapter.id);
+  }, [isOpen, chapter.id]);
 
   return (
     <details
