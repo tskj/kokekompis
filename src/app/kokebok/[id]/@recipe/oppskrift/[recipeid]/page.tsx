@@ -2,10 +2,10 @@ import { db } from '@/lib/db';
 import { recipes, recipeChapters } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { Recipe } from '../../../components/Recipe';
+import { Recipe } from '@/app/kokebok/[id]/components/Recipe';
 import { recipeContentSchema } from '@/lib/db/schema';
 import { auth } from '@/auth';
-import { toggleChapter } from '../../../actions';
+import { toggleChapter } from '@/app/kokebok/[id]/actions';
 
 interface RecipePageProps {
   params: Promise<{ id: string; recipeid: string }>;

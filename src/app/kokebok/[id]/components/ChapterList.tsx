@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { toggleChapter } from '../actions';
+import { toggleChapter } from '@/app/kokebok/[id]/actions';
 
 interface Recipe {
   id: string;

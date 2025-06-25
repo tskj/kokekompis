@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { cookbook, chapters, recipes, recipeChapters, userOpenChapters } from '@/lib/db/schema';
 import { eq, asc, inArray, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { auth } from '../../../../auth';
+import { auth } from '@/auth';
 import { ChapterList } from './components/ChapterList';
 
 interface CookbookLayoutProps {

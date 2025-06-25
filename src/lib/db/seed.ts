@@ -1,5 +1,5 @@
-import { db } from './index';
-import { cookbook, chapters, recipes, recipeChapters } from './schema';
+import { db } from '@/lib/db';
+import { cookbook, chapters, recipes, recipeChapters } from '@/lib/db/schema';
 
 const USER_ID = '00091a95-ec3b-4119-b1cf-736bb7b02b9c';
 
