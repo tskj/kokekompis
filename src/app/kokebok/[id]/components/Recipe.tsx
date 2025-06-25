@@ -1,4 +1,5 @@
 import { RecipeContent } from '@/lib/db/schema';
+import Image from 'next/image';
 
 interface RecipeProps {
   title: string;
@@ -98,10 +99,12 @@ export function Recipe({ title, description, content }: RecipeProps) {
         {content.ferdigprodukt.bilder.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
             {content.ferdigprodukt.bilder.map((bilde, index) => (
-              <img
+              <Image
                 key={index}
                 src={bilde}
                 alt={`${title} bilde ${index + 1}`}
+                width={200}
+                height={128}
                 className="w-full h-32 object-cover rounded-lg"
               />
             ))}
