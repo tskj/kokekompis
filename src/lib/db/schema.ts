@@ -73,6 +73,19 @@ export const recipeChapters = pgTable('recipe_chapters', {
   check('recipe_order_starts_at_one', sql`"order" >= 1`),
 ]);
 
+export const userOpenChapters = pgTable('user_open_chapters', {
+  id: uuid('id').defaultRandom().notNull().primaryKey(),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  chapterId: uuid('chapterId')
+    .notNull()
+    .references(() => chapters.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
+}, (userOpenChapters) => [
+  unique().on(userOpenChapters.userId, userOpenChapters.chapterId),
+]);
+
 
 // ========= OAuth =========
 

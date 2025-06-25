@@ -1,7 +1,8 @@
 import { db } from '@/lib/db';
-import { cookbook, chapters, recipes, recipeChapters } from '@/lib/db/schema';
-import { eq, asc } from 'drizzle-orm';
+import { cookbook, chapters, recipes, recipeChapters, userOpenChapters } from '@/lib/db/schema';
+import { eq, asc, inArray, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
+import { auth } from '../../../../auth';
 import { ChapterList } from './components/ChapterList';
 
 interface CookbookLayoutProps {
@@ -9,7 +10,7 @@ interface CookbookLayoutProps {
   params: Promise<{ id: string }>;
 }
 
-async function getCookbookWithChapters(id: string) {
+async function getCookbookWithChapters(id: string, userId?: string) {
   // Get cookbook info
   const [cookbookData] = await db
     .select({
@@ -47,6 +48,27 @@ async function getCookbookWithChapters(id: string) {
     .where(eq(chapters.cookbookId, id))
     .orderBy(asc(recipeChapters.order));
 
+  // Get user's open chapters for this cookbook using subquery
+  let openChapterIds: string[] = [];
+  if (userId) {
+    const chaptersInCookbook = db
+      .select({ id: chapters.id })
+      .from(chapters)
+      .where(eq(chapters.cookbookId, id));
+
+    const openChapters = await db
+      .select({ chapterId: userOpenChapters.chapterId })
+      .from(userOpenChapters)
+      .where(
+        and(
+          eq(userOpenChapters.userId, userId),
+          inArray(userOpenChapters.chapterId, chaptersInCookbook)
+        )
+      );
+    
+    openChapterIds = openChapters.map(oc => oc.chapterId);
+  }
+
   // Combine the data
   const chaptersWithRecipes = chaptersData.map((chapter) => ({
     ...chapter,
@@ -63,12 +85,14 @@ async function getCookbookWithChapters(id: string) {
   return {
     ...cookbookData,
     chapters: chaptersWithRecipes,
+    openChapterIds,
   };
 }
 
 export default async function CookbookLayout({ recipe, params }: CookbookLayoutProps) {
   const { id } = await params;
-  const cookbookData = await getCookbookWithChapters(id);
+  const session = await auth();
+  const cookbookData = await getCookbookWithChapters(id, session?.user?.id);
 
   if (!cookbookData) {
     notFound();
@@ -90,6 +114,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
               <ChapterList 
                 cookbookId={id}
                 chapters={cookbookData.chapters}
+                openChapterIds={cookbookData.openChapterIds}
               />
             )}
           </div>

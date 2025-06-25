@@ -2,11 +2,11 @@ import { db } from '@/lib/db';
 import { recipes } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { Recipe } from '../../components/Recipe';
+import { Recipe } from '../../../components/Recipe';
 import { recipeContentSchema } from '@/lib/db/schema';
 
 interface RecipePageProps {
-  params: Promise<{ id: string; recipeId: string }>;
+  params: Promise<{ id: string; recipeid: string }>;
 }
 
 async function getRecipe(recipeId: string) {
@@ -20,8 +20,8 @@ async function getRecipe(recipeId: string) {
 }
 
 export default async function RecipePage({ params }: RecipePageProps) {
-  const { recipeId } = await params;
-  const recipeData = await getRecipe(recipeId);
+  const { recipeid } = await params;
+  const recipeData = await getRecipe(recipeid);
 
   if (!recipeData) {
     notFound();

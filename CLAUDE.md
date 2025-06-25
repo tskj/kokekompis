@@ -26,3 +26,6 @@ This is a Next.js project using a "code-first" database approach with Drizzle OR
 - Uses regular `jsonb` columns for now instead of custom validated types (can be improved later)
 - Zod schemas are exported from schema file for component usage and runtime validation
 - Seeds data with Norwegian content for testing
+
+## Important: User can't see tool results
+When the user asks to "show me" file contents, they literally cannot see the results of Read tool calls. Always include the actual file contents in my text response, not just a description of what I found.
