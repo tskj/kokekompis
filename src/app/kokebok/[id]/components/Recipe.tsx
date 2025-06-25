@@ -48,35 +48,44 @@ export function Recipe({ title, description, content }: RecipeProps) {
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Ingredienser</h2>
         {content.ingredients.type === "simple" ? (
-          <div>
-            <ul className="space-y-2 mb-6">
-              {content.ingredients.items.map((ingredient, index) => (
-                <li key={index} className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <span className="text-gray-700 dark:text-gray-300">{ingredient.value}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
-              <h3 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">Fremgangsmåte</h3>
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">{content.ingredients.fremgangsmåte}</p>
-            </div>
-          </div>
+          <ul className="space-y-2">
+            {content.ingredients.items.map((ingredient, index) => (
+              <li key={index} className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-gray-700 dark:text-gray-300">{ingredient.value}</span>
+              </li>
+            ))}
+          </ul>
         ) : (
           <div className="space-y-6">
             {content.ingredients.sections.map((section, sectionIndex) => (
               <div key={sectionIndex} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-3 text-blue-600 dark:text-blue-400">{section.sectionName}</h3>
-                <ul className="space-y-2 mb-4">
+                <ul className="space-y-2">
                   {section.items.map((ingredient, index) => (
                     <li key={index} className="flex items-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
                       <span className="text-gray-700 dark:text-gray-300">{ingredient.value}</span>
                     </li>
                   ))}
                 </ul>
-                <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded">
-                  <h4 className="font-medium mb-1 text-gray-900 dark:text-gray-100">Fremgangsmåte</h4>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{section.fremgangsmåte}</p>
-                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Fremgangsmåte */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-4">Fremgangsmåte</h2>
+        {content.ingredients.type === "simple" ? (
+          <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
+            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">{content.ingredients.fremgangsmåte}</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {content.ingredients.sections.map((section, sectionIndex) => (
+              <div key={sectionIndex} className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                <h3 className="font-semibold mb-3 text-gray-900 dark:text-gray-100">{section.sectionName}</h3>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">{section.fremgangsmåte}</p>
               </div>
             ))}
           </div>
