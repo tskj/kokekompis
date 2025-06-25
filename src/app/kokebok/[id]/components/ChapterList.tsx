@@ -30,10 +30,10 @@ export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterLis
   const currentRecipeId = params.recipeid as string | undefined;
 
   // Find which chapter contains the current recipe
-  const activeChapterId = currentRecipeId 
-    ? chapters.find(chapter => 
-        chapter.recipes.some(recipe => recipe.id === currentRecipeId)
-      )?.id
+  const activeChapterId = currentRecipeId
+    ? chapters.find(chapter =>
+      chapter.recipes.some(recipe => recipe.id === currentRecipeId)
+    )?.id
     : null;
 
   // Use server state for open chapters
@@ -53,8 +53,8 @@ export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterLis
   return (
     <div className="space-y-2">
       {chapters.map((chapter) => (
-        <details 
-          key={chapter.id} 
+        <details
+          key={chapter.id}
           className="border rounded-lg overflow-hidden"
           data-chapter-id={chapter.id}
           open={openChapters.has(chapter.id)}
@@ -63,7 +63,7 @@ export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterLis
           <summary className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-50 transition-colors">
             {chapter.name}
           </summary>
-          
+
           <div className="border-t">
             {chapter.recipes.length === 0 ? (
               <p className="px-4 py-2 text-sm text-gray-500">
@@ -75,11 +75,10 @@ export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterLis
                   <Link
                     key={recipe.id}
                     href={`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
-                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 transition-colors ${
-                      currentRecipeId === recipe.id
+                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 transition-colors ${currentRecipeId === recipe.id
                         ? 'bg-blue-100 border-l-2 border-blue-500 font-medium'
                         : ''
-                    }`}
+                      }`}
                   >
                     <div className="font-medium">{recipe.title}</div>
                     {recipe.description && (

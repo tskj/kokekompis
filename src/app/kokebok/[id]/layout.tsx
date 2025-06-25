@@ -65,7 +65,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
           inArray(userOpenChapters.chapterId, chaptersInCookbook)
         )
       );
-    
+
     openChapterIds = openChapters.map(oc => oc.chapterId);
   }
 
@@ -101,17 +101,17 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
   return (
     <div className="max-w-7xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-8">{cookbookData.name}</h1>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Chapter sidebar - LEFT side */}
         <div className="lg:col-span-1">
           <div className="sticky top-6">
             <h2 className="text-xl font-semibold mb-4">Kapitler</h2>
-            
+
             {cookbookData.chapters.length === 0 ? (
               <p className="text-gray-500">Ingen kapitler ennå</p>
             ) : (
-              <ChapterList 
+              <ChapterList
                 cookbookId={id}
                 chapters={cookbookData.chapters}
                 openChapterIds={cookbookData.openChapterIds}

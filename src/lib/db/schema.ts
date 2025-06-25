@@ -13,19 +13,56 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { AdapterAccount } from 'next-auth/adapters';
 
+// mulig å utvide til strukturert data etterhvert
+const ingredient =
+  z.object({
+    type: z.literal("fritekst"),
+    value: z.string(),
+  });
+
 export type RecipeContent = z.infer<typeof recipeContentSchema>;
 export const recipeContentSchema = z.object({
-  ingredients: z.array(z.object({
-    name: z.string(),
-    amount: z.string(),
-    unit: z.string().optional(),
-  })),
-  instructions: z.array(z.object({
-    step: z.number(),
-    instruction: z.string(),
-  })),
-  cookingTime: z.number().optional(),
-  servings: z.number().optional(),
+  bar: z.object({
+    tilberedingstid_minutter: z.number(),
+    antall_porsjoner: z.number(),
+
+    stekeinfo: z.nullable(z.object({
+      grader_celsius: z.number(),
+      steketid_minutter: z.number(),
+    })),
+
+    venteinfo: z.nullable(z.union([
+      z.object({
+        type: z.literal("kjøl"),
+        timer: z.number(),
+      }),
+      z.object({
+        type: z.literal("frys"),
+        timer: z.number()
+      })
+    ])),
+  }),
+
+  ingredients: z.union([
+    z.object({
+      type: z.literal("simple"),
+      items: z.array(ingredient),
+      fremgangsmåte: z.string(),
+    }),
+    z.object({
+      type: z.literal("sectioned"),
+      sections: z.array(z.object({
+        sectionName: z.string(),
+        items: z.array(ingredient),
+        fremgangsmåte: z.string(),
+      }))
+    })
+  ]),
+
+  ferdigprodukt: z.object({
+    bilder: z.array(z.string()),
+    tekst: z.string().nullable(),
+  })
 });
 
 export const cookbook = pgTable('cookbook', {
