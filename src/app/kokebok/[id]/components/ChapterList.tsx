@@ -55,18 +55,18 @@ export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterLis
       {chapters.map((chapter) => (
         <details
           key={chapter.id}
-          className="border rounded-lg overflow-hidden"
+          className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
           data-chapter-id={chapter.id}
           open={openChapters.has(chapter.id)}
           onToggle={(e) => handleDetailsToggle(chapter.id, e.currentTarget.open)}
         >
-          <summary className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-50 transition-colors">
+          <summary className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             {chapter.name}
           </summary>
 
-          <div className="border-t">
+          <div className="border-t border-gray-200 dark:border-gray-700">
             {chapter.recipes.length === 0 ? (
-              <p className="px-4 py-2 text-sm text-gray-500">
+              <p className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
                 Ingen oppskrifter
               </p>
             ) : (
@@ -75,14 +75,14 @@ export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterLis
                   <Link
                     key={recipe.id}
                     href={`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
-                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 transition-colors ${currentRecipeId === recipe.id
-                        ? 'bg-blue-100 border-l-2 border-blue-500 font-medium'
+                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors ${currentRecipeId === recipe.id
+                        ? 'bg-blue-100 dark:bg-blue-900/50 border-l-2 border-blue-500 dark:border-blue-400 font-medium'
                         : ''
                       }`}
                   >
                     <div className="font-medium">{recipe.title}</div>
                     {recipe.description && (
-                      <div className="text-gray-500 text-xs mt-1 truncate">
+                      <div className="text-gray-500 dark:text-gray-400 text-xs mt-1 truncate">
                         {recipe.description}
                       </div>
                     )}

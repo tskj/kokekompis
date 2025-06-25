@@ -53,7 +53,7 @@ async function seed() {
 
     console.log('📖 Created chapters:', [chapter1.name, chapter2.name, chapter3.name]);
 
-    // Create all recipes
+    // Create all recipes with new schema
     const allRecipes = await tx
       .insert(recipes)
       .values([
@@ -63,159 +63,198 @@ async function seed() {
           title: 'Bruschetta med Tomat',
           description: 'Klassisk italiensk forrett med ferske tomater',
           content: {
-            ingredients: [
-              { name: 'Brød', amount: '4', unit: 'skiver' },
-              { name: 'Tomater', amount: '3', unit: 'stk' },
-              { name: 'Hvitløk', amount: '2', unit: 'fedd' },
-              { name: 'Basilikum', amount: '1', unit: 'bunt' },
-            ],
-            instructions: [
-              { step: 1, instruction: 'Rist brødskivene til de er gylne' },
-              { step: 2, instruction: 'Skjær tomater i små terninger' },
-              { step: 3, instruction: 'Bland tomater med hakket hvitløk og basilikum' },
-              { step: 4, instruction: 'Legg tomatblandingen på brødskivene' },
-            ],
-            cookingTime: 15,
-            servings: 4,
+            bar: {
+              tilberedingstid_minutter: 15,
+              antall_porsjoner: 4,
+              stekeinfo: null,
+              venteinfo: null,
+            },
+            ingredients: {
+              type: "simple",
+              items: [
+                { type: "fritekst", value: "4 skiver brød" },
+                { type: "fritekst", value: "3 store tomater" },
+                { type: "fritekst", value: "2 hvitløksfedd" },
+                { type: "fritekst", value: "1 bunt fersk basilikum" },
+                { type: "fritekst", value: "3 ss olivenolje" },
+                { type: "fritekst", value: "Salt og pepper" },
+              ],
+              fremgangsmåte: "Rist brødskivene til de er gylne. Skjær tomater i små terninger og bland med hakket hvitløk og basilikum. Drypp over olivenolje og krydre med salt og pepper. Legg tomatblandingen på brødskivene og server umiddelbart.",
+            },
+            ferdigprodukt: {
+              bilder: [],
+              tekst: "Serveres best mens brødet fortsatt er varmt og sprøtt.",
+            },
           },
         },
         {
           userId: USER_ID,
-          title: 'Caprese Salat',
-          description: 'Enkel italiensk salat med mozzarella og basilikum',
+          title: 'Hjemmelaget Pizza',
+          description: 'Crispy pizza med hjemmelaget bunn og friske toppinger',
           content: {
-            ingredients: [
-              { name: 'Mozzarella', amount: '250', unit: 'g' },
-              { name: 'Tomater', amount: '4', unit: 'stk' },
-              { name: 'Basilikum', amount: '1', unit: 'bunt' },
-              { name: 'Balsamico', amount: '2', unit: 'ss' },
-              { name: 'Olivenolje', amount: '3', unit: 'ss' },
-            ],
-            instructions: [
-              { step: 1, instruction: 'Skjær mozzarella og tomater i skiver' },
-              { step: 2, instruction: 'Legg alternerende på et fat' },
-              { step: 3, instruction: 'Topp med frisk basilikum' },
-              { step: 4, instruction: 'Drypp over olivenolje og balsamico' },
-            ],
-            cookingTime: 10,
-            servings: 4,
+            bar: {
+              tilberedingstid_minutter: 90,
+              antall_porsjoner: 4,
+              stekeinfo: {
+                grader_celsius: 250,
+                steketid_minutter: 12,
+              },
+              venteinfo: {
+                type: "kjøl",
+                timer: 1,
+              },
+            },
+            ingredients: {
+              type: "sectioned",
+              sections: [
+                {
+                  sectionName: "Pizzabunn",
+                  items: [
+                    { type: "fritekst", value: "500g hvetemel" },
+                    { type: "fritekst", value: "3dl lunken vann" },
+                    { type: "fritekst", value: "1 ts tørrgjær" },
+                    { type: "fritekst", value: "1 ts salt" },
+                    { type: "fritekst", value: "2 ss olivenolje" },
+                  ],
+                  fremgangsmåte: "Løs opp gjæren i det lunkne vannet. Bland mel og salt, tilsett gjærblandingen og olivenolje. Elt deigen til den er smidig, ca 10 minutter. La heve i 1 time.",
+                },
+                {
+                  sectionName: "Toppings",
+                  items: [
+                    { type: "fritekst", value: "2dl tomatsaus" },
+                    { type: "fritekst", value: "200g mozzarella" },
+                    { type: "fritekst", value: "100g skinke eller pepperoni" },
+                    { type: "fritekst", value: "1 paprika" },
+                    { type: "fritekst", value: "100g sjampinjong" },
+                    { type: "fritekst", value: "Fersk basilikum" },
+                  ],
+                  fremgangsmåte: "Skjær grønnsakene i tynne skiver. Riv osten. Brett ut deigen på pizzastein eller stekebrett, smør på tomatsaus og fordel toppings. Stek i 250°C i 10-12 minutter til bunnen er gyllen.",
+                },
+              ],
+            },
+            ferdigprodukt: {
+              bilder: [],
+              tekst: "Pizza smaker best når den spises rett fra ovnen mens osten fortsatt bobler.",
+            },
           },
         },
         {
           userId: USER_ID,
-          title: 'Hjemmelaget Hummus',
-          description: 'Kremet hummus med tahini og hvitløk',
+          title: 'Kylling Tikka Masala',
+          description: 'Krydret indisk kyllingrett i kremet tomatsaus',
           content: {
-            ingredients: [
-              { name: 'Kikerter', amount: '400', unit: 'g' },
-              { name: 'Tahini', amount: '3', unit: 'ss' },
-              { name: 'Sitron', amount: '1', unit: 'stk' },
-              { name: 'Hvitløk', amount: '2', unit: 'fedd' },
-              { name: 'Olivenolje', amount: '2', unit: 'ss' },
-              { name: 'Paprika', amount: '1', unit: 'ts' },
-            ],
-            instructions: [
-              { step: 1, instruction: 'Kjør alle ingredienser i food processor' },
-              { step: 2, instruction: 'Tilsett vann til ønsket konsistens' },
-              { step: 3, instruction: 'Smak til med salt og pepper' },
-              { step: 4, instruction: 'Server med paprika og olivenolje på toppen' },
-            ],
-            cookingTime: 15,
-            servings: 6,
+            bar: {
+              tilberedingstid_minutter: 45,
+              antall_porsjoner: 6,
+              stekeinfo: null,
+              venteinfo: {
+                type: "kjøl",
+                timer: 2,
+              },
+            },
+            ingredients: {
+              type: "sectioned",
+              sections: [
+                {
+                  sectionName: "Marinert kylling",
+                  items: [
+                    { type: "fritekst", value: "800g kyllingfilet" },
+                    { type: "fritekst", value: "2dl gresk yoghurt" },
+                    { type: "fritekst", value: "2 ss tandoori masala" },
+                    { type: "fritekst", value: "1 ss ingefær, revet" },
+                    { type: "fritekst", value: "3 hvitløksfedd" },
+                  ],
+                  fremgangsmåte: "Skjær kyllingen i biter og mariner i yoghurt blandet med krydder, ingefær og hvitløk. La stå i kjøleskapet i minst 2 timer.",
+                },
+                {
+                  sectionName: "Masala saus",
+                  items: [
+                    { type: "fritekst", value: "1 stor løk" },
+                    { type: "fritekst", value: "400g hermetiske tomater" },
+                    { type: "fritekst", value: "2dl kokosmelk" },
+                    { type: "fritekst", value: "2 ss garam masala" },
+                    { type: "fritekst", value: "1 ss paprika" },
+                    { type: "fritekst", value: "1 ts spisskummen" },
+                    { type: "fritekst", value: "Salt og pepper" },
+                  ],
+                  fremgangsmåte: "Stek den marinerte kyllingen til den er gjennomstekt. Stek hakket løk til myk, tilsett krydder og tomater. Kok i 10 minutter, tilsett kokosmelk og kylling. Simmer i 5 minutter til sausen tykner.",
+                },
+              ],
+            },
+            ferdigprodukt: {
+              bilder: [],
+              tekst: "Serveres med basmatiris og naan-brød. Garnér med fersk koriander.",
+            },
           },
         },
         // Hovedretter
         {
           userId: USER_ID,
-          title: 'Spaghetti Carbonara',
-          description: 'Kremet pasta med egg, ost og bacon',
+          title: 'Bakt Laks med Gressløksaus',
+          description: 'Saftig ovnsbakt laks med kremet gressløksaus',
           content: {
-            ingredients: [
-              { name: 'Spaghetti', amount: '400', unit: 'g' },
-              { name: 'Bacon', amount: '150', unit: 'g' },
-              { name: 'Egg', amount: '3', unit: 'stk' },
-              { name: 'Parmesan', amount: '100', unit: 'g' },
-            ],
-            instructions: [
-              { step: 1, instruction: 'Kok pastaen al dente' },
-              { step: 2, instruction: 'Stek bacon crispy' },
-              { step: 3, instruction: 'Visp sammen egg og revet parmesan' },
-              { step: 4, instruction: 'Bland alt sammen mens pastaen er varm' },
-            ],
-            cookingTime: 20,
-            servings: 4,
+            bar: {
+              tilberedingstid_minutter: 25,
+              antall_porsjoner: 4,
+              stekeinfo: {
+                grader_celsius: 200,
+                steketid_minutter: 15,
+              },
+              venteinfo: null,
+            },
+            ingredients: {
+              type: "simple",
+              items: [
+                { type: "fritekst", value: "600g laksfilet" },
+                { type: "fritekst", value: "2dl rømme" },
+                { type: "fritekst", value: "1 bunt gressløk" },
+                { type: "fritekst", value: "1 sitron" },
+                { type: "fritekst", value: "2 ss smør" },
+                { type: "fritekst", value: "Salt og hvit pepper" },
+              ],
+              fremgangsmåte: "Krydre laksen med salt og pepper. Legg på smurt stekebrett og stek i 200°C i 12-15 minutter. Bland rømme med hakket gressløk og sitronsaft. Server laksen med sausen og kokte poteter eller ris.",
+            },
+            ferdigprodukt: {
+              bilder: [],
+              tekst: "Laksen er ferdig når den flaker seg lett med en gaffel.",
+            },
           },
         },
+        // Desserter
         {
           userId: USER_ID,
-          title: 'Sopp Risotto',
-          description: 'Kremet risotto med blandede sopp og parmesan',
+          title: 'Sjokoladefondant',
+          description: 'Varm sjokoladekake med flytende kjerne',
           content: {
-            ingredients: [
-              { name: 'Arborio ris', amount: '300', unit: 'g' },
-              { name: 'Blandede sopp', amount: '400', unit: 'g' },
-              { name: 'Løk', amount: '1', unit: 'stk' },
-              { name: 'Hvitvin', amount: '1', unit: 'dl' },
-              { name: 'Kraft', amount: '8', unit: 'dl' },
-              { name: 'Parmesan', amount: '100', unit: 'g' },
-              { name: 'Smør', amount: '2', unit: 'ss' },
-            ],
-            instructions: [
-              { step: 1, instruction: 'Stek sopp og løk til de er myke' },
-              { step: 2, instruction: 'Tilsett ris og stek i 2 minutter' },
-              { step: 3, instruction: 'Hell i hvitvin og rør til absorbert' },
-              { step: 4, instruction: 'Tilsett kraft gradvis under konstant røring' },
-              { step: 5, instruction: 'Rør inn smør og parmesan til slutt' },
-            ],
-            cookingTime: 35,
-            servings: 4,
-          },
-        },
-        {
-          userId: USER_ID,
-          title: 'Stekt Laks med Dill',
-          description: 'Saftig laks med kremet dillsaus',
-          content: {
-            ingredients: [
-              { name: 'Laksfilet', amount: '600', unit: 'g' },
-              { name: 'Dill', amount: '1', unit: 'bunt' },
-              { name: 'Rømme', amount: '2', unit: 'dl' },
-              { name: 'Sitron', amount: '1', unit: 'stk' },
-              { name: 'Hvitløk', amount: '1', unit: 'fedd' },
-              { name: 'Smør', amount: '2', unit: 'ss' },
-            ],
-            instructions: [
-              { step: 1, instruction: 'Krydre laksen med salt og pepper' },
-              { step: 2, instruction: 'Stek laksen i smør, 3-4 min per side' },
-              { step: 3, instruction: 'Bland rømme, dill, sitron og hvitløk' },
-              { step: 4, instruction: 'Server laksen med dillsausen ved siden' },
-            ],
-            cookingTime: 20,
-            servings: 4,
-          },
-        },
-        // Dessert
-        {
-          userId: USER_ID,
-          title: 'Tiramisu',
-          description: 'Klassisk italiensk dessert med kaffe og mascarpone',
-          content: {
-            ingredients: [
-              { name: 'Ladyfingers', amount: '200', unit: 'g' },
-              { name: 'Mascarpone', amount: '500', unit: 'g' },
-              { name: 'Egg', amount: '4', unit: 'stk' },
-              { name: 'Kaffe', amount: '2', unit: 'dl' },
-              { name: 'Kakao', amount: '2', unit: 'ss' },
-            ],
-            instructions: [
-              { step: 1, instruction: 'Lag sterk kaffe og la den kjøle seg' },
-              { step: 2, instruction: 'Visp egg og sukker til det er luftig' },
-              { step: 3, instruction: 'Fold inn mascarpone forsiktig' },
-              { step: 4, instruction: 'Dypp ladyfingers i kaffe og legg i lag' },
-              { step: 5, instruction: 'Dryss kakao på toppen' },
-            ],
-            cookingTime: 30,
-            servings: 8,
+            bar: {
+              tilberedingstid_minutter: 30,
+              antall_porsjoner: 4,
+              stekeinfo: {
+                grader_celsius: 220,
+                steketid_minutter: 12,
+              },
+              venteinfo: {
+                type: "frys",
+                timer: 2,
+              },
+            },
+            ingredients: {
+              type: "simple",
+              items: [
+                { type: "fritekst", value: "100g mørk sjokolade (70%)" },
+                { type: "fritekst", value: "100g smør" },
+                { type: "fritekst", value: "2 hele egg" },
+                { type: "fritekst", value: "2 eggeplommer" },
+                { type: "fritekst", value: "60g sukker" },
+                { type: "fritekst", value: "30g hvetemel" },
+                { type: "fritekst", value: "Smør til former" },
+              ],
+              fremgangsmåte: "Smelt sjokolade og smør sammen. Visp egg, eggeplommer og sukker luftig. Rør inn sjokoladeblandingen og mel. Fordel i smurte former og sett i fryseren i 2 timer. Stek fra fryst i 220°C i 10-12 minutter til kantene er faste men midten fortsatt myk.",
+            },
+            ferdigprodukt: {
+              bilder: [],
+              tekst: "Serveres umiddelbart med vaniljeis eller pisket krem. Kaken skal ha flytende kjerne.",
+            },
           },
         },
       ])
@@ -227,14 +266,12 @@ async function seed() {
     await tx.insert(recipeChapters).values([
       // Forretter (3 recipes)
       { recipeId: allRecipes[0].id, chapterId: chapter1.id, order: 1 }, // Bruschetta
-      { recipeId: allRecipes[1].id, chapterId: chapter1.id, order: 2 }, // Caprese
-      { recipeId: allRecipes[2].id, chapterId: chapter1.id, order: 3 }, // Hummus
-      // Hovedretter (3 recipes)  
-      { recipeId: allRecipes[3].id, chapterId: chapter2.id, order: 1 }, // Carbonara
-      { recipeId: allRecipes[4].id, chapterId: chapter2.id, order: 2 }, // Risotto
-      { recipeId: allRecipes[5].id, chapterId: chapter2.id, order: 3 }, // Laks
+      { recipeId: allRecipes[1].id, chapterId: chapter1.id, order: 2 }, // Pizza
+      { recipeId: allRecipes[2].id, chapterId: chapter1.id, order: 3 }, // Tikka Masala
+      // Hovedretter (1 recipe)  
+      { recipeId: allRecipes[3].id, chapterId: chapter2.id, order: 1 }, // Laks
       // Desserter (1 recipe)
-      { recipeId: allRecipes[6].id, chapterId: chapter3.id, order: 1 }, // Tiramisu
+      { recipeId: allRecipes[4].id, chapterId: chapter3.id, order: 1 }, // Fondant
     ]);
 
     console.log('🔗 Linked recipes to chapters');
