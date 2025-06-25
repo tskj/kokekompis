@@ -4,6 +4,7 @@ import { eq, asc, inArray, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { ChapterList } from './components/ChapterList';
+import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 
 interface CookbookLayoutProps {
   recipe: React.ReactNode;
@@ -90,13 +91,11 @@ async function getCookbookWithChapters(id: string, userId?: string) {
 }
 
 export default async function CookbookLayout({ recipe, params }: CookbookLayoutProps) {
-  const { id } = await params;
-  const session = await auth();
-  const cookbookData = await getCookbookWithChapters(id, session?.user?.id);
+  const cookbookId = await getCookbookIdParam(params);
 
-  if (!cookbookData) {
-    notFound();
-  }
+  const session = await auth();
+  const cookbookData = await getCookbookWithChapters(cookbookId, session?.user?.id);
+  if (!cookbookData) notFound();
 
   return (
     <div className="max-w-7xl mx-auto p-6">
@@ -112,7 +111,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
               <p className="text-gray-500">Ingen kapitler ennå</p>
             ) : (
               <ChapterList
-                cookbookId={id}
+                cookbookId={cookbookId}
                 chapters={cookbookData.chapters}
                 openChapterIds={cookbookData.openChapterIds}
               />

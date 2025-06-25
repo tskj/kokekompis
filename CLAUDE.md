@@ -22,6 +22,62 @@ This is a Next.js project using a "code-first" database approach with Drizzle OR
 - **Simplicity**: Avoid over-engineering - choose simple solutions over complex ones
 - **User ID**: `00091a95-ec3b-4119-b1cf-736bb7b02b9c` for testing and seeding data
 
+## Code Style
+- **Early returns**: Use one-line brace-free style for early returns and guard clauses
+  ```typescript
+  // Preferred
+  if (!isValid) throw new Error('Invalid input');
+  if (!data) return null;
+  if (user.role !== 'admin') notFound();
+  
+  // Avoid
+  if (!isValid) {
+    throw new Error('Invalid input');
+  }
+  ```
+- **Guard clause spacing**: When a guard clause directly validates the line above, no empty line between them
+  ```typescript
+  // Preferred - guard clause belongs to the line above
+  const id = parseUuidParam(param);
+  if (!id) notFound();
+  
+  const data = await fetchData();
+  if (!data) return null;
+  
+  // Also preferred - guard clause is more independent
+  const user = getCurrentUser();
+  
+  if (user.role !== 'admin') notFound();
+  ```
+- **No trailing whitespace**: Never insert whitespace at end of lines, including empty lines
+  ```typescript
+  // WRONG - empty lines with spaces/tabs (shown as · for visibility)
+  export function example() {
+    let result = '';
+  ··
+    for (let i = 0; i < 10; i++) {
+      result += i;
+  ····
+      if (i > 5) break;
+    }
+  ··
+    return result;
+  }
+  
+  // CORRECT - completely empty lines
+  export function example() {
+    let result = '';
+
+    for (let i = 0; i < 10; i++) {
+      result += i;
+
+      if (i > 5) break;
+    }
+
+    return result;
+  }
+  ```
+
 ## Database Notes
 - Uses regular `jsonb` columns for now instead of custom validated types (can be improved later)
 - Zod schemas are exported from schema file for component usage and runtime validation

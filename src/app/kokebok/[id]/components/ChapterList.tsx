@@ -1,9 +1,10 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { openChapter, closeChapter } from '@/app/kokebok/[id]/actions';
+import { uuidHref } from '@/lib/uuid/uuid-links';
+import { useRecipeId } from '@/hooks/useUuidParams';
+import Link from 'next/link';
 
 interface Recipe {
   id: string;
@@ -59,7 +60,7 @@ function Chapter({ chapter, cookbookId, initiallyOpen, currentRecipeId }: Chapte
             {chapter.recipes.map((recipe) => (
               <Link
                 key={recipe.id}
-                href={`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
+                href={uuidHref`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
                 className={`block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors ${currentRecipeId === recipe.id
                   ? 'bg-blue-100 dark:bg-blue-900/50 border-l-2 border-blue-500 dark:border-blue-400 font-medium'
                   : ''
@@ -88,8 +89,7 @@ interface ChapterListProps {
 }
 
 export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterListProps) {
-  const params = useParams();
-  const currentRecipeId = params.recipeid as string | undefined;
+  const currentRecipeId = useRecipeId();
 
   return (
     <div className="space-y-2">

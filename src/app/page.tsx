@@ -1,6 +1,7 @@
 import { auth, signIn, signOut } from '@/auth';
 import { db } from '@/lib/db';
 import { cookbook } from '@/lib/db/schema';
+import { uuidHref } from '@/lib/uuid/uuid-links';
 import Link from 'next/link';
 
 function SignIn() {
@@ -68,7 +69,7 @@ export default async function Home() {
               {cookbooks.map((book) => (
                 <Link
                   key={book.id}
-                  href={`/kokebok/${book.id}`}
+                  href={uuidHref`/kokebok/${book.id}`}
                   className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <h3 className="font-medium">{book.name}</h3>

@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { Recipe } from '@/app/kokebok/[id]/components/Recipe';
 import { recipeContentSchema } from '@/lib/db/schema';
 import { openChapter } from '@/app/kokebok/[id]/actions';
+import { getCookbookAndRecipeIdParams } from '@/lib/uuid/server-uuid-params';
 
 interface RecipePageProps {
   params: Promise<{ id: string; recipeid: string }>;
@@ -37,9 +38,9 @@ async function getRecipeWithChapter(recipeId: string, cookbookId: string) {
 }
 
 export default async function RecipePage({ params }: RecipePageProps) {
-  const { id: cookbookId, recipeid } = await params;
+  const { cookbookId, recipeId } = await getCookbookAndRecipeIdParams(params);
 
-  const recipeData = await getRecipeWithChapter(recipeid, cookbookId);
+  const recipeData = await getRecipeWithChapter(recipeId, cookbookId);
   if (!recipeData) notFound();
 
   await openChapter(recipeData.chapterId);
