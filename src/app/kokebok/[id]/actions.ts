@@ -7,10 +7,7 @@ import { eq, and } from 'drizzle-orm';
 
 export async function toggleChapter(cookbookId: string, chapterId: string, isOpen: boolean) {
   const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Must be authenticated');
-  }
+  if (!session?.user?.id) return;
 
   if (isOpen) {
     await db

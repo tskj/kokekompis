@@ -29,18 +29,7 @@ export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterLis
   const params = useParams();
   const currentRecipeId = params.recipeid as string | undefined;
 
-  // Find which chapter contains the current recipe
-  const activeChapterId = currentRecipeId
-    ? chapters.find(chapter =>
-      chapter.recipes.some(recipe => recipe.id === currentRecipeId)
-    )?.id
-    : null;
-
-  // Use server state for open chapters
-  const openChapters = new Set([
-    ...openChapterIds,
-    ...(activeChapterId ? [activeChapterId] : [])
-  ]);
+  const openChapters = new Set(openChapterIds);
 
   const handleDetailsToggle = async (chapterId: string, isOpen: boolean) => {
     try {
