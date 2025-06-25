@@ -98,9 +98,9 @@ export function Recipe({ title, description, content }: RecipeProps) {
         {content.ferdigprodukt.bilder.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
             {content.ferdigprodukt.bilder.map((bilde, index) => (
-              <img 
-                key={index} 
-                src={bilde} 
+              <img
+                key={index}
+                src={bilde}
                 alt={`${title} bilde ${index + 1}`}
                 className="w-full h-32 object-cover rounded-lg"
               />

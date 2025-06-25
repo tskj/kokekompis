@@ -76,8 +76,8 @@ export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterLis
                     key={recipe.id}
                     href={`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
                     className={`block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors ${currentRecipeId === recipe.id
-                        ? 'bg-blue-100 dark:bg-blue-900/50 border-l-2 border-blue-500 dark:border-blue-400 font-medium'
-                        : ''
+                      ? 'bg-blue-100 dark:bg-blue-900/50 border-l-2 border-blue-500 dark:border-blue-400 font-medium'
+                      : ''
                       }`}
                   >
                     <div className="font-medium">{recipe.title}</div>
