@@ -1,0 +1,4 @@
+tests
+structured data in ingredients (units and stuff)
+
+.singleOrNone() og lignende metoder for å sikre databasekallene! (og dictionary for group?)
