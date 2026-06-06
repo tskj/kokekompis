@@ -51,6 +51,10 @@ export const Attr = {
   // DB transaction retries — emitted on SERIALIZABLE failure before each retry so contention is queryable.
   DB_TX_RETRIED: ":db-tx/retried", // value: { name, attempt, code }
 
+  // health probe — emitted only when /api/health's DB check fails (Railway probes constantly, so a
+  // fact per green probe would drown the log stream); the error detail rides along in the 503 body.
+  HEALTH_DB: ":health/db", // value: false
+
   // === auth (NextAuth events) — example domain attribute ===
   AUTH_SIGN_IN: ":auth/sign-in", // value: provider name ("google")
 } as const;
