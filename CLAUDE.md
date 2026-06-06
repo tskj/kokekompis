@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # AI Assistant Context
 
 This is a Next.js project using a "code-first" database approach with Drizzle ORM and PostgreSQL.

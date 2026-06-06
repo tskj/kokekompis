@@ -154,10 +154,19 @@ invariant violation becomes a confusing downstream crash.
 
 - **Route all time through `src/lib/clock.ts`** (`nowMs()` / `nowDate()` / `nowIso()`), never
   `Date.now()` or zero-arg `new Date()` — tests drive a synthetic clock via `withClock(...)`.
-- **Reach for `withTransaction({ name }, async (tx) => …)`** when you need a multi-statement unit to
-  be atomic. It runs `SERIALIZABLE` with bounded retry on serialization-failure / deadlock, so you
-  stop reasoning about interleavings and let Postgres referee. For single statements the plain `db`
-  call is fine.
+- **Wrap multi-statement DB work in `withTransaction({ name }, async (tx) => …)`** — and use `tx`, not
+  `db`, for every query inside. It runs `SERIALIZABLE` with bounded retry on serialization-failure /
+  deadlock, so you stop reasoning about interleavings and let Postgres referee. Wrap whenever an
+  endpoint does:
+  - **two or more reads** — so they observe one consistent snapshot (no row appearing, vanishing, or
+    changing between queries). This is not optional: any handler/loader issuing ≥2 selects belongs in a
+    transaction. Example: the cookbook layout reads cookbook + chapters + recipe↔chapter links + the
+    user's open-chapter set in a single `withTransaction` (`src/app/kokebok/[id]/layout.tsx`).
+  - **two or more writes**, or a read-then-write that must stay consistent — so they commit
+    all-or-nothing.
+
+  A *single* statement is already atomic — leave it on the plain `db` call (e.g. `openChapter`'s lone
+  `insert … onConflictDoNothing`). Don't wrap a single statement just to wrap it.
 
 ---
 

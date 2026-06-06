@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { withTransaction } from '@/lib/db-tx';
 import { cookbook, chapters, recipes, recipeChapters, userOpenChapters } from '@/lib/db/schema';
 import { eq, asc, inArray, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
@@ -12,82 +12,86 @@ interface CookbookLayoutProps {
 }
 
 async function getCookbookWithChapters(id: string, userId?: string) {
-  // Get cookbook info
-  const cookbookData = await db
-    .select({
-      id: cookbook.id,
-      name: cookbook.name,
-      userId: cookbook.userId,
-    })
-    .from(cookbook)
-    .where(eq(cookbook.id, id))
-    .maybeSingle('cookbook.layout');
+  // All reads run in one SERIALIZABLE transaction (src/lib/db-tx.ts) so the cookbook, its chapters,
+  // the recipe↔chapter links, and the user's open-chapter set come from a single consistent snapshot.
+  return withTransaction({ name: 'cookbook.layout' }, async (tx) => {
+    // Get cookbook info
+    const cookbookData = await tx
+      .select({
+        id: cookbook.id,
+        name: cookbook.name,
+        userId: cookbook.userId,
+      })
+      .from(cookbook)
+      .where(eq(cookbook.id, id))
+      .maybeSingle('cookbook.layout');
 
-  if (!cookbookData) {
-    return null;
-  }
+    if (!cookbookData) {
+      return null;
+    }
 
-  // Get all chapters for this cookbook
-  const chaptersData = await db
-    .select()
-    .from(chapters)
-    .where(eq(chapters.cookbookId, id))
-    .orderBy(asc(chapters.order));
-
-  // Get all recipe-chapter relationships for this cookbook
-  const recipeChapterData = await db
-    .select({
-      chapterId: recipeChapters.chapterId,
-      recipeId: recipeChapters.recipeId,
-      order: recipeChapters.order,
-      recipeTitle: recipes.title,
-      recipeDescription: recipes.description,
-    })
-    .from(recipeChapters)
-    .innerJoin(chapters, eq(recipeChapters.chapterId, chapters.id))
-    .innerJoin(recipes, eq(recipeChapters.recipeId, recipes.id))
-    .where(eq(chapters.cookbookId, id))
-    .orderBy(asc(recipeChapters.order));
-
-  // Get user's open chapters for this cookbook using subquery
-  let openChapterIds: string[] = [];
-  if (userId) {
-    const chaptersInCookbook = db
-      .select({ id: chapters.id })
+    // Get all chapters for this cookbook
+    const chaptersData = await tx
+      .select()
       .from(chapters)
-      .where(eq(chapters.cookbookId, id));
+      .where(eq(chapters.cookbookId, id))
+      .orderBy(asc(chapters.order));
 
-    const openChapters = await db
-      .select({ chapterId: userOpenChapters.chapterId })
-      .from(userOpenChapters)
-      .where(
-        and(
-          eq(userOpenChapters.userId, userId),
-          inArray(userOpenChapters.chapterId, chaptersInCookbook)
-        )
-      );
+    // Get all recipe-chapter relationships for this cookbook
+    const recipeChapterData = await tx
+      .select({
+        chapterId: recipeChapters.chapterId,
+        recipeId: recipeChapters.recipeId,
+        order: recipeChapters.order,
+        recipeTitle: recipes.title,
+        recipeDescription: recipes.description,
+      })
+      .from(recipeChapters)
+      .innerJoin(chapters, eq(recipeChapters.chapterId, chapters.id))
+      .innerJoin(recipes, eq(recipeChapters.recipeId, recipes.id))
+      .where(eq(chapters.cookbookId, id))
+      .orderBy(asc(recipeChapters.order));
 
-    openChapterIds = openChapters.map(oc => oc.chapterId);
-  }
+    // Get user's open chapters for this cookbook using subquery
+    let openChapterIds: string[] = [];
+    if (userId) {
+      const chaptersInCookbook = tx
+        .select({ id: chapters.id })
+        .from(chapters)
+        .where(eq(chapters.cookbookId, id));
 
-  // Combine the data
-  const chaptersWithRecipes = chaptersData.map((chapter) => ({
-    ...chapter,
-    recipes: recipeChapterData
-      .filter((rc) => rc.chapterId === chapter.id)
-      .map((rc) => ({
-        id: rc.recipeId,
-        title: rc.recipeTitle,
-        description: rc.recipeDescription,
-        order: rc.order,
-      })),
-  }));
+      const openChapters = await tx
+        .select({ chapterId: userOpenChapters.chapterId })
+        .from(userOpenChapters)
+        .where(
+          and(
+            eq(userOpenChapters.userId, userId),
+            inArray(userOpenChapters.chapterId, chaptersInCookbook)
+          )
+        );
 
-  return {
-    ...cookbookData,
-    chapters: chaptersWithRecipes,
-    openChapterIds,
-  };
+      openChapterIds = openChapters.map(oc => oc.chapterId);
+    }
+
+    // Combine the data
+    const chaptersWithRecipes = chaptersData.map((chapter) => ({
+      ...chapter,
+      recipes: recipeChapterData
+        .filter((rc) => rc.chapterId === chapter.id)
+        .map((rc) => ({
+          id: rc.recipeId,
+          title: rc.recipeTitle,
+          description: rc.recipeDescription,
+          order: rc.order,
+        })),
+    }));
+
+    return {
+      ...cookbookData,
+      chapters: chaptersWithRecipes,
+      openChapterIds,
+    };
+  });
 }
 
 export default async function CookbookLayout({ recipe, params }: CookbookLayoutProps) {
