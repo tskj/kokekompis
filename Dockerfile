@@ -13,9 +13,11 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-# Build.
+# Build. `next build` imports the db module (which requires DATABASE_URL) while collecting route
+# config; pages are dynamic so nothing actually connects. Give it a throwaway URL for the build step
+# only — Railway injects the real DATABASE_URL at runtime.
 COPY . .
-RUN pnpm build
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" pnpm build
 
 EXPOSE 3000
 # Overridden by railway.json deploy.startCommand, but sane as a default.
