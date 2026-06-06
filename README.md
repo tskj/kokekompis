@@ -12,22 +12,46 @@ This project is a minimal, production-ready boilerplate for a Next.js applicatio
 - **Authentication:** Auth.js (Google Provider)
 - **Deployment:** Railway
 
-## Environment Setup
+## Local development
 
-1.  Copy the `.env.example` file to a new file named `.env`.
-2.  Fill in the required values:
-    - `DATABASE_URL`: Your PostgreSQL connection string (from Railway).
-    - `NEXTAUTH_SECRET`: A strong secret string (`openssl rand -hex 32`).
-    - `NEXTAUTH_URL`: `https://www.kokekompis.no` for production, `http://localhost:3000` for local dev.
-    - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: Credentials from Google Cloud Console.
+You need a local Postgres reachable over the default Unix socket (`/var/run/postgresql`, peer/trust
+auth). Then:
 
-## Development Workflow
+```bash
+pnpm install
+# get .env.keys from a teammate (the dotenvx decryption key) and drop it in the repo root
+pnpm dev          # http://localhost:3000
+```
 
-The project uses a production-safe migration strategy. Migrations are generated locally and run automatically on deployment by Railway.
+That's it. `pnpm dev` decrypts the shared secrets from the committed `.env`, points you at a **local**
+database, and **auto-creates + migrates** it before starting Next — no manual `createdb`, no remote DB.
+Each git worktree gets its own database (`kokekompis_dev_<worktree>`), so parallel worktrees never
+clobber each other. Override anything in a gitignored `.env.local`; set `PGHOST` there if your Postgres
+socket lives elsewhere, or `NO_WORKTREE_DB=1` to use the base name.
 
-**To make a database schema change:**
+## Secrets (dotenvx)
 
-1. Modify your schema in `src/lib/db/schema.ts`
-2. Run `pnpm db:generate` in your local terminal. This will create a new SQL migration file in the drizzle folder
-3. Review the generated SQL file to ensure it's correct
-4. Commit your code changes and the new migration file to Git and push. Railway will automatically handle the rest
+Config is **committed per environment**: the dotenvx-encrypted `.env` (shared secrets) plus the
+plaintext non-secret `.env.development` (local DB url, `NEXTAUTH_URL`). The only thing shared
+out-of-band is `.env.keys` (the decryption key) — never committed. On Railway the same key is one
+service var, `DOTENV_PRIVATE_KEY`. See `.env.example` for the full contract. Edit a secret with
+`pnpm exec dotenvx set KEY value` (re-encrypts in place) and commit the result.
+
+## Database changes
+
+Migrations are generated locally and applied automatically (locally on `pnpm dev`; in production by
+Railway's pre-deploy step):
+
+1. Edit your schema in `src/lib/db/schema.ts`
+2. `pnpm db:generate` — writes a new SQL migration into `drizzle/` (review it)
+3. Commit the code + the migration and push. Railway runs `scripts/migrate.mjs` before the new release.
+
+`pnpm db:studio` opens Drizzle Studio against this worktree's DB.
+
+## Deploy (Railway)
+
+Builds from the committed `Dockerfile` (`railway.json` → `builder: DOCKERFILE`, chosen over Nixpacks
+for a deterministic build); migrations run in `preDeployCommand`; the app starts with
+`dotenvx run -- next start` and is health-checked at `/api/health`. Pushing to `main` triggers a
+build + deploy. The service needs `DOTENV_PRIVATE_KEY` set; `DATABASE_URL` / `NEXTAUTH_URL` are
+Railway service vars.

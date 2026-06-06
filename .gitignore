@@ -30,8 +30,20 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — COMMITTED: the dotenvx-encrypted `.env` (shared secrets) + the non-secret per-environment
+# config (`.env.development`). NEVER committed: the decryption key and personal overrides.
 .env*
+!.env
+!.env.example
+!.env.development
+.env.keys
+.env.local
+
+# Railway project token — gitignored, used by `source .railway.env` for the railway CLI
+.railway.env
+
+# Local git worktrees created under .claude (e.g. by Claude Code) — never part of the repo
+.claude/worktrees/
 
 # vercel
 .vercel

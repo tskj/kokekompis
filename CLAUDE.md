@@ -4,7 +4,9 @@ This is a Next.js project using a "code-first" database approach with Drizzle OR
 
 - **Package Manager:** pnpm
 - **Key Library:** Drizzle ORM for database interaction. Schema is defined in TypeScript at `src/lib/db/schema.ts`.
-- **Migrations:** This project does NOT use a direct push-to-db command. It uses a production-safe workflow. Changes are made by generating SQL migration files.
+- **Migrations:** This project does NOT use a direct push-to-db command. It uses a production-safe workflow: `pnpm db:generate` creates SQL migration files; they're applied automatically (locally on `pnpm dev`, in prod by Railway's pre-deploy `scripts/migrate.mjs`). Never hand-write migrations.
+- **Env & secrets:** Config is committed per environment — dotenvx-encrypted `.env` (shared secrets) + plaintext `.env.development` (local DB url). The decryption key (`.env.keys` locally, `DOTENV_PRIVATE_KEY` on Railway) is the only out-of-band secret. `pnpm dev` runs against a **local** Postgres that it auto-creates + migrates (per git worktree). Don't read env from `.env` with plain `dotenv` — it's encrypted; dotenvx injects it at runtime.
+- **Deploy:** Railway builds from the committed `Dockerfile` (`railway.json`), not Nixpacks. Push to `main` to deploy.
 - **Primary Instruction Source:** The development workflow, especially for database changes, is documented in `README.md`. Always check that file for instructions on how to handle database migrations.
 
 ## Commit Style

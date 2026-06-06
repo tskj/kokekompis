@@ -3,15 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "dotenvx run --ignore=MISSING_ENV_FILE -f .env.local -f .env.development -f .env -- node scripts/dev.mjs",
     "build": "next build",
-    "start": "next start",
+    "start": "node node_modules/@dotenvx/dotenvx/src/cli/dotenvx.js run -- node node_modules/next/dist/bin/next start",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/lib/db/migrate.ts"
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:migrate:local": "dotenvx run --ignore=MISSING_ENV_FILE -f .env.local -f .env.development -- node scripts/worktree-db.mjs",
+    "db:studio": "dotenvx run --ignore=MISSING_ENV_FILE -f .env.local -f .env.development -- drizzle-kit studio"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",
+    "@dotenvx/dotenvx": "^1.69.1",
     "drizzle-orm": "^0.44.2",
     "next": "15.3.4",
     "next-auth": "5.0.0-beta.29",
