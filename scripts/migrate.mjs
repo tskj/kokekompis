@@ -1,11 +1,11 @@
 // Apply committed Drizzle migrations. Uses only runtime deps (drizzle-orm + postgres) and plain
 // JS, so it runs in Railway's preDeploy container without dev dependencies.
 //
-// Connection URL: prefer MIGRATE_DATABASE_URL when set (on Railway we point it at the Postgres
-// PUBLIC proxy URL — public DNS that resolves immediately in the preDeploy step, before the
-// private *.railway.internal network has finished initializing). Otherwise fall back to
-// DATABASE_URL (local dev, or anywhere the primary URL is reachable). We also retry on transient
-// connection errors so a not-yet-ready network doesn't fail the deploy.
+// Connection URL: MIGRATE_DATABASE_URL if set, else DATABASE_URL. On Railway this runs in the
+// preDeploy step and connects to the Postgres service over the private *.railway.internal network,
+// which can take a couple of seconds to come up — so we retry on transient DNS/connection errors
+// (ENOTFOUND / ECONNRESET / …) instead of failing the deploy on the first miss. MIGRATE_DATABASE_URL
+// stays supported as an escape hatch (e.g. the public proxy URL) but isn't needed by default.
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
@@ -20,8 +20,8 @@ const ATTEMPTS = 10;
 const DELAY_MS = 3000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const isTransient = (err) =>
-  /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|CONNECT_TIMEOUT|connect/i.test(
-    String(err?.code || err?.message || err),
+  /ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|EPIPE|CONNECT_TIMEOUT|connection|connect/i.test(
+    String(err?.code || err?.cause?.code || err?.message || err),
   );
 
 for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
