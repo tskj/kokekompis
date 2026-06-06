@@ -110,10 +110,12 @@ Structured, EAV-shaped event logging. **Don't use `console.*` in server app code
 - Count-based checks that intentionally read many rows (`rows.length >= N`) are fine as-is — they
   aren't `.limit(1)` and the rule doesn't touch them.
 
-The helpers are installed by a side-effect import (`import "@/lib/cardinality"` at the top of
-`src/lib/db/index.ts`) that patches `QueryPromise.prototype`. `next.config.ts` keeps `drizzle-orm`
-in `serverExternalPackages` so the patch lands on the single drizzle instance the queries use (a
-bundler split would make `.single()` "not a function" in production).
+The helpers are installed by `installCardinality(...)` in `src/lib/db/index.ts`, which patches the
+QueryPromise base reached from a *live query off `db`*. It's done this way (rather than patching a
+statically-imported `QueryPromise`) because Next's production bundle can emit a second copy of
+drizzle-orm; patching the imported copy would miss the one the page's queries actually extend and make
+`.single()` "not a function" in production. Deriving the prototype from a real query patches the exact
+class — whichever copy `db` uses.
 
 ---
 

@@ -77,27 +77,49 @@ function boundedTo(qp: QueryPromise<unknown>, n: number): PromiseLike<unknown[]>
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-(QueryPromise.prototype as any).single = function single(this: QueryPromise<unknown>, context: string) {
-  return Promise.resolve(boundedTo(this, 2)).then((rows) => pickSingle(rows as unknown[], context));
-};
+function patch(proto: any): void {
+  proto.single = function single(this: QueryPromise<unknown>, context: string) {
+    return Promise.resolve(boundedTo(this, 2)).then((rows) => pickSingle(rows as unknown[], context));
+  };
+  proto.maybeSingle = function maybeSingle(this: QueryPromise<unknown>, context: string) {
+    return Promise.resolve(boundedTo(this, 2)).then((rows) => pickMaybe(rows as unknown[], context));
+  };
+  proto.first = function first(this: QueryPromise<unknown>, context: string) {
+    return Promise.resolve(boundedTo(this, 1)).then((rows) => pickFirst(rows as unknown[], context));
+  };
+  // `context` is required by the type (call-site symmetry with first/single) but unused at runtime —
+  // maybeFirst never fails, so there's no message to build. Omit the param to avoid an unused-var lint.
+  proto.maybeFirst = function maybeFirst(this: QueryPromise<unknown>) {
+    return Promise.resolve(boundedTo(this, 1)).then((rows) => (rows as unknown[])[0] ?? null);
+  };
+  proto.exists = function exists(this: QueryPromise<unknown>) {
+    return Promise.resolve(boundedTo(this, 1)).then((rows) => (rows as unknown[]).length > 0);
+  };
+}
 
-(QueryPromise.prototype as any).maybeSingle = function maybeSingle(this: QueryPromise<unknown>, context: string) {
-  return Promise.resolve(boundedTo(this, 2)).then((rows) => pickMaybe(rows as unknown[], context));
-};
+// Patch the statically-imported QueryPromise. Sufficient when there's a single drizzle-orm copy
+// (dev, plain Node, tests).
+patch(QueryPromise.prototype as any);
 
-(QueryPromise.prototype as any).first = function first(this: QueryPromise<unknown>, context: string) {
-  return Promise.resolve(boundedTo(this, 1)).then((rows) => pickFirst(rows as unknown[], context));
-};
+// …but Next's PRODUCTION bundle can emit a SECOND copy of drizzle-orm, and the page's query builders
+// extend the QueryPromise from *that* copy — so the static patch above lands on the wrong class and
+// `.single()`/`.maybeSingle()` come back "not a function" at runtime. installCardinality() walks a LIVE
+// query (off the real `db`) down to its thenable base — the QueryPromise every builder kind shares,
+// in whichever copy `db` actually uses — and patches that exact class. Called once from
+// src/lib/db/index.ts with a throwaway `db.select().from(<table>)`.
+let installed = false;
+export function installCardinality(sampleQuery: object): void {
+  if (installed) return;
 
-// `context` is required by the type (call-site symmetry with first/single) but unused at runtime —
-// maybeFirst never fails, so there's no message to build. Omit the param to avoid an unused-var lint.
-(QueryPromise.prototype as any).maybeFirst = function maybeFirst(this: QueryPromise<unknown>) {
-  return Promise.resolve(boundedTo(this, 1)).then((rows) => (rows as unknown[])[0] ?? null);
-};
+  let proto: any = Object.getPrototypeOf(sampleQuery);
+  let base: any = null;
+  while (proto && proto !== Object.prototype) {
+    if (typeof proto.then === "function") base = proto; // deepest thenable proto = the QueryPromise base
+    proto = Object.getPrototypeOf(proto);
+  }
+  if (!base) return;
 
-(QueryPromise.prototype as any).exists = function exists(this: QueryPromise<unknown>) {
-  return Promise.resolve(boundedTo(this, 1)).then((rows) => (rows as unknown[]).length > 0);
-};
+  installed = true;
+  if (base !== (QueryPromise.prototype as any)) patch(base);
+}
 /* eslint-enable @typescript-eslint/no-explicit-any */
-
-export {};

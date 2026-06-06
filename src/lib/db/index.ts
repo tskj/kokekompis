@@ -1,4 +1,4 @@
-import '@/lib/cardinality'; // augments QueryPromise.prototype with .single()/.maybeSingle()/… — must load before any query
+import { installCardinality } from '@/lib/cardinality';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/lib/db/schema';
@@ -14,3 +14,8 @@ const queryClient = postgres(process.env.DATABASE_URL, {
   max: process.env.NODE_ENV === 'production' && !process.env.VERCEL ? 1 : undefined,
 });
 export const db = drizzle(queryClient, { schema });
+
+// Install the .single()/.maybeSingle()/… cardinality helpers (src/lib/cardinality.ts) onto the exact
+// QueryPromise class these queries use. Passing a live query (only constructed, never executed) makes
+// it robust to production bundlers that emit more than one copy of drizzle-orm.
+installCardinality(db.select().from(schema.cookbook));
