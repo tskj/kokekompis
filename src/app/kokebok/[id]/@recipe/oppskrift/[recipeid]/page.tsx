@@ -18,7 +18,9 @@ async function getRecipeWithChapter(recipeId: string, cookbookId: string) {
     .from(chapters)
     .where(eq(chapters.cookbookId, cookbookId));
 
-  const [recipeData] = await db
+  // A recipe can sit in more than one chapter of the cookbook, so 2+ rows is legitimate — a
+  // deliberate pick-one-of-many (order unspecified, as before), not a uniqueness invariant.
+  const recipeData = await db
     .select({
       id: recipes.id,
       title: recipes.title,
@@ -32,9 +34,9 @@ async function getRecipeWithChapter(recipeId: string, cookbookId: string) {
       eq(recipes.id, recipeId),
       inArray(recipeChapters.chapterId, chaptersInCookbook)
     ))
-    .limit(1);
+    .maybeFirst('recipe.lookup');
 
-  return recipeData || null;
+  return recipeData;
 }
 
 export default async function RecipePage({ params }: RecipePageProps) {

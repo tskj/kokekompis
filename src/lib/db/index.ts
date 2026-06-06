@@ -1,3 +1,4 @@
+import '@/lib/cardinality'; // augments QueryPromise.prototype with .single()/.maybeSingle()/… — must load before any query
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/lib/db/schema';

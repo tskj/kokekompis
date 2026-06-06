@@ -13,7 +13,7 @@ interface CookbookLayoutProps {
 
 async function getCookbookWithChapters(id: string, userId?: string) {
   // Get cookbook info
-  const [cookbookData] = await db
+  const cookbookData = await db
     .select({
       id: cookbook.id,
       name: cookbook.name,
@@ -21,7 +21,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
     })
     .from(cookbook)
     .where(eq(cookbook.id, id))
-    .limit(1);
+    .maybeSingle('cookbook.layout');
 
   if (!cookbookData) {
     return null;
