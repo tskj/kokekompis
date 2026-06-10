@@ -2,8 +2,9 @@ import type { RecipeContent } from '@/lib/db/schema';
 import { Mengde, type VisEnhet } from './Mengde';
 
 // Ingredienslista, gruppert slik oppskriften selv grupperer ("Deig", "Fyll"). Visningen kan
-// konvertere volummål til gram (src/lib/enheter.ts) — originalmengden følger alltid med.
-export function IngrediensListe({ content, visEnhet }: { content: RecipeContent; visEnhet: VisEnhet }) {
+// konvertere volummål til gram (src/lib/enheter.ts) og skalere med porsjonsmultiplikatoren —
+// originalmengden følger alltid med.
+export function IngrediensListe({ content, visEnhet, ganger = 1 }: { content: RecipeContent; visEnhet: VisEnhet; ganger?: number }) {
   const grupper = new Map<string | null, RecipeContent['ingredienser']>();
   for (const ingrediens of content.ingredienser) {
     const gruppe = grupper.get(ingrediens.gruppe) ?? [];
@@ -23,7 +24,7 @@ export function IngrediensListe({ content, visEnhet }: { content: RecipeContent;
             {ingredienser.map((ingrediens) => (
               <li key={ingrediens.id} className="flex items-baseline gap-2 leading-snug">
                 <span className="min-w-[5.5rem] text-right tabular-nums">
-                  <Mengde ingrediens={ingrediens} visEnhet={visEnhet} />
+                  <Mengde ingrediens={ingrediens} visEnhet={visEnhet} ganger={ganger} />
                 </span>
                 <span>
                   {ingrediens.navn}

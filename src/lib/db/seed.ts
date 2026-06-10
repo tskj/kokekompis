@@ -10,6 +10,7 @@ const USER_ID = '00091a95-ec3b-4119-b1cf-736bb7b02b9c';
 const skillingsboller: RecipeContent = {
   info: {
     porsjoner: { antall: 16, benevnelse: 'boller' },
+    kanSkaleres: true,
     aktivTidMinutter: 40,
     totalTidMinutter: 165,
     stekeinfo: { graderCelsius: 220, varme: 'over_under', minutter: 12 },
@@ -121,6 +122,7 @@ const skillingsboller: RecipeContent = {
 const sjokoladekake: RecipeContent = {
   info: {
     porsjoner: { antall: 12, benevnelse: 'stykker' },
+    kanSkaleres: false,
     aktivTidMinutter: 25,
     totalTidMinutter: 100,
     stekeinfo: { graderCelsius: 175, varme: 'varmluft', minutter: 35 },
@@ -206,6 +208,7 @@ const sjokoladekake: RecipeContent = {
 const pannekaker: RecipeContent = {
   info: {
     porsjoner: { antall: 4, benevnelse: 'porsjoner' },
+    kanSkaleres: true,
     aktivTidMinutter: 30,
     totalTidMinutter: 60,
     stekeinfo: null,
@@ -255,6 +258,7 @@ const pannekaker: RecipeContent = {
 const focaccia: RecipeContent = {
   info: {
     porsjoner: { antall: 12, benevnelse: 'ruter' },
+    kanSkaleres: true,
     aktivTidMinutter: 20,
     totalTidMinutter: 180,
     stekeinfo: { graderCelsius: 230, varme: 'varmluft', minutter: 20 },
@@ -321,6 +325,7 @@ const focaccia: RecipeContent = {
 const fiskesuppe: RecipeContent = {
   info: {
     porsjoner: { antall: 4, benevnelse: 'porsjoner' },
+    kanSkaleres: true,
     aktivTidMinutter: 35,
     totalTidMinutter: 35,
     stekeinfo: null,
@@ -388,6 +393,7 @@ const fiskesuppe: RecipeContent = {
 const vaniljekrem: RecipeContent = {
   info: {
     porsjoner: { antall: 6, benevnelse: 'dl krem' },
+    kanSkaleres: true,
     aktivTidMinutter: 15,
     totalTidMinutter: 75,
     stekeinfo: null,
@@ -444,6 +450,7 @@ const vaniljekrem: RecipeContent = {
 const skoleboller: RecipeContent = {
   info: {
     porsjoner: { antall: 12, benevnelse: 'boller' },
+    kanSkaleres: true,
     aktivTidMinutter: 45,
     totalTidMinutter: 160,
     stekeinfo: { graderCelsius: 220, varme: 'over_under', minutter: 10 },

@@ -9,6 +9,7 @@ import { uuidHref } from '@/lib/uuid/uuid-links';
 import { ingredienserForSteg, pågåendeVenting } from '@/lib/steg';
 import { formaterMinutter } from '@/lib/enheter';
 import { Mengde } from '@/components/oppskrift/Mengde';
+import { lesGanger } from '@/components/oppskrift/Oppskrift';
 import { BakNotater } from './components/BakNotater';
 
 // Bakeviewet: arbeidsmodusen for skitne fingre. Låst til ett lesbart view — ingen scroll, ingen
@@ -19,18 +20,19 @@ type Modus = 'linear' | 'parallell';
 
 interface BakPageProps {
   params: Promise<{ recipeid: string }>;
-  searchParams: Promise<{ steg?: string; modus?: string; enheter?: string; fra?: string }>;
+  searchParams: Promise<{ steg?: string; modus?: string; fra?: string; ganger?: string }>;
 }
 
-function bakHref(recipeId: string, steg: number, modus: Modus, fra: string | undefined): string {
+function bakHref(recipeId: string, steg: number, modus: Modus, fra: string | undefined, ganger: number): string {
   const query = new URLSearchParams({ steg: String(steg) });
   if (modus !== 'parallell') query.set('modus', modus);
   if (fra) query.set('fra', fra);
+  if (ganger !== 1) query.set('ganger', String(ganger));
 
   return `${uuidHref`/bak/${recipeId}`}?${query}`;
 }
 
-function StegKort({ steg, nummer, content }: { steg: Steg; nummer: number; content: RecipeContent }) {
+function StegKort({ steg, nummer, content, ganger }: { steg: Steg; nummer: number; content: RecipeContent; ganger: number }) {
   const ingredienser = ingredienserForSteg(content, steg);
 
   if (steg.passiv) {
@@ -55,7 +57,7 @@ function StegKort({ steg, nummer, content }: { steg: Steg; nummer: number; conte
         <ul className="flex flex-wrap gap-3">
           {ingredienser.map((ingrediens) => (
             <li key={ingrediens.id} className="rounded-lg border border-line bg-paper px-4 py-2.5 text-lg md:text-xl">
-              <Mengde ingrediens={ingrediens} visEnhet="original" /> {ingrediens.navn}
+              <Mengde ingrediens={ingrediens} visEnhet="original" ganger={ganger} /> {ingrediens.navn}
             </li>
           ))}
         </ul>
@@ -109,6 +111,7 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
   // URL-state: 1-basert steg, klampet; modus styrer om ventinger vises parallelt
   const modus: Modus = sp.modus === 'linear' ? 'linear' : 'parallell';
   const fra = sp.fra && sp.fra.startsWith('/') ? sp.fra : undefined;
+  const ganger = lesGanger(sp.ganger, content.info.kanSkaleres);
   const stegNummer = Math.min(Math.max(Number(sp.steg) || 1, 1), content.steg.length);
   const stegIndex = stegNummer - 1;
 
@@ -122,15 +125,18 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
       <header className="flex items-baseline justify-between gap-4 pb-3">
         <Link href={fra ?? '/'} className="text-sm text-ink-soft hover:text-terra">← Legg fra deg bakeviewet</Link>
 
-        <p className="hidden truncate font-display italic text-ink-soft md:block">{data.title}</p>
+        <p className="hidden truncate font-display italic text-ink-soft md:block">
+          {data.title}
+          {ganger !== 1 && <span className="ml-2 rounded-full bg-terra px-2 py-0.5 font-sans text-sm not-italic text-paper">{ganger === 0.5 ? '½' : ganger}×</span>}
+        </p>
 
         <p className="text-sm text-ink-soft" aria-label="Modus">
           {modus === 'parallell' ? (
-            <Link href={bakHref(recipeId, stegNummer, 'linear', fra)} className="underline underline-offset-2 hover:text-terra">
+            <Link href={bakHref(recipeId, stegNummer, 'linear', fra, ganger)} className="underline underline-offset-2 hover:text-terra">
               vis ett og ett steg
             </Link>
           ) : (
-            <Link href={bakHref(recipeId, stegNummer, 'parallell', fra)} className="underline underline-offset-2 hover:text-terra">
+            <Link href={bakHref(recipeId, stegNummer, 'parallell', fra, ganger)} className="underline underline-offset-2 hover:text-terra">
               vis ventinger parallelt
             </Link>
           )}
@@ -138,7 +144,7 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
       </header>
 
       <main className={`grid min-h-0 flex-1 gap-4 ${venting ? 'md:grid-cols-[1fr_16rem]' : ''}`}>
-        <StegKort steg={gjeldende} nummer={stegNummer} content={content} />
+        <StegKort steg={gjeldende} nummer={stegNummer} content={content} ganger={ganger} />
         {venting && <ImensKort venting={venting} />}
       </main>
 
@@ -154,7 +160,7 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
       <nav className="flex items-center gap-3 pt-3" aria-label="Steg">
         {stegNummer > 1 ? (
           <Link
-            href={bakHref(recipeId, stegNummer - 1, modus, fra)}
+            href={bakHref(recipeId, stegNummer - 1, modus, fra, ganger)}
             className="rounded-xl border border-line bg-card px-6 py-4 text-lg hover:border-terra hover:text-terra md:px-10"
           >
             ← Forrige
@@ -167,7 +173,7 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
           {content.steg.map((s, i) => (
             <Link
               key={s.id}
-              href={bakHref(recipeId, i + 1, modus, fra)}
+              href={bakHref(recipeId, i + 1, modus, fra, ganger)}
               aria-label={`Gå til steg ${i + 1}`}
               className={`size-3 rounded-full ${i === stegIndex ? 'bg-terra' : s.passiv ? 'border border-butter bg-butter/40 hover:bg-butter' : 'bg-line hover:bg-terra/50'}`}
             />
@@ -183,7 +189,7 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
           </Link>
         ) : (
           <Link
-            href={bakHref(recipeId, stegNummer + 1, modus, fra)}
+            href={bakHref(recipeId, stegNummer + 1, modus, fra, ganger)}
             className="rounded-xl bg-terra px-6 py-4 text-lg font-medium text-paper hover:bg-terra-deep md:px-10"
           >
             Neste →

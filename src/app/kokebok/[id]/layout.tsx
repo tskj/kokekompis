@@ -7,6 +7,7 @@ import { auth } from '@/auth';
 import { ChapterList } from './components/ChapterList';
 import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { uuidHref } from '@/lib/uuid/uuid-links';
+import { endreBokNavn, nyttKapittel } from '@/app/actions/bok';
 
 interface CookbookLayoutProps {
   recipe: React.ReactNode;
@@ -121,7 +122,33 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
     <div className="mx-auto max-w-7xl p-6 md:p-10">
       <header className="mb-8 skjul-ved-print">
         <Link href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
-        <h1 className="mt-1 font-display text-4xl">{cookbookData.name}</h1>
+
+        <div className="mt-1 flex items-baseline gap-3">
+          <h1 className="font-display text-4xl">{cookbookData.name}</h1>
+
+          <details className="group">
+            <summary
+              className="cursor-pointer list-none text-sm text-ink-soft opacity-60 hover:text-terra hover:opacity-100 group-open:hidden"
+              title="Endre navn på boken"
+              aria-label="Endre navn på boken"
+            >
+              ✎
+            </summary>
+            <form action={endreBokNavn.bind(null, cookbookId)} className="flex items-center gap-2">
+              <input
+                name="navn"
+                required
+                maxLength={100}
+                defaultValue={cookbookData.name}
+                aria-label="Nytt navn på boken"
+                className="rounded-lg border border-line bg-card px-3 py-1.5 font-display text-lg focus:border-terra focus:outline-none"
+              />
+              <button type="submit" className="rounded-full border border-line px-3 py-1.5 text-sm hover:border-terra hover:text-terra">
+                Døp om
+              </button>
+            </form>
+          </details>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-4">
@@ -141,9 +168,28 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
               />
             )}
 
+            <details className="mt-4">
+              <summary className="cursor-pointer list-none py-1 text-sm text-ink-soft hover:text-terra">
+                + nytt kapittel
+              </summary>
+              <form action={nyttKapittel.bind(null, cookbookId)} className="mt-1 flex items-center gap-2">
+                <input
+                  name="navn"
+                  required
+                  maxLength={100}
+                  placeholder="Gjærbakst"
+                  aria-label="Kapittelnavn"
+                  className="w-full rounded-lg border border-line bg-card px-3 py-1.5 text-sm focus:border-terra focus:outline-none"
+                />
+                <button type="submit" className="rounded-full border border-line px-3 py-1.5 text-sm hover:border-terra hover:text-terra">
+                  Lag
+                </button>
+              </form>
+            </details>
+
             <Link
               href={uuidHref`/kokebok/${cookbookId}/importer`}
-              className="mt-6 block border-2 border-dashed border-line px-3 py-2.5 text-center text-sm text-ink-soft hover:border-terra hover:text-terra"
+              className="mt-4 block border-2 border-dashed border-line px-3 py-2.5 text-center text-sm text-ink-soft hover:border-terra hover:text-terra"
             >
               + Ny oppskrift — skann eller lim inn lenke
             </Link>

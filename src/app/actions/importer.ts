@@ -1,8 +1,10 @@
 'use server';
 
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { eq, and, max } from 'drizzle-orm';
+import { eq, and, asc, max, sql } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
+import { db } from '@/lib/db';
 import { chapters, recipes, recipeChapters } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
@@ -68,6 +70,21 @@ async function lagreOppskrift(
       if (!kapittel) tilbakeMedFeil(cookbookId, 'Velg et kapittel i denne boken');
     }
 
+    // to samtidige importer av samme lenke deler ett AI-kall (in-flight-dedup i ai-laget), men
+    // begge når hit — lagringen må selv være idempotent på kilde-URL så boken ikke får dubletter
+    if (ekstrahert.opprinnelse?.url) {
+      const eksisterende = await tx
+        .select({ id: recipes.id })
+        .from(recipes)
+        .where(and(
+          eq(recipes.cookbookId, cookbookId),
+          sql`${recipes.content}->'opprinnelse'->>'url' = ${ekstrahert.opprinnelse.url}`,
+        ))
+        .orderBy(asc(recipes.title))
+        .maybeFirst('importer.allerede-i-tx');
+      if (eksisterende) return eksisterende.id;
+    }
+
     const oppskrift = await tx
       .insert(recipes)
       .values({
@@ -121,6 +138,18 @@ export async function importerFraUrl(cookbookId: string, formData: FormData) {
   const kildeUrl = validerKildeUrl(String(formData.get('url') ?? ''));
   if (!kildeUrl) tilbakeMedFeil(cookbookId, 'Det der ser ikke ut som en nettadresse');
 
+  // står lenken alt i boken? da er importen idempotent — hopp dit i stedet for å svi tokener
+  const alleredeImportert = await db
+    .select({ id: recipes.id })
+    .from(recipes)
+    .where(and(
+      eq(recipes.cookbookId, cookbookId),
+      sql`${recipes.content}->'opprinnelse'->>'url' = ${kildeUrl.toString()}`,
+    ))
+    .orderBy(asc(recipes.title))
+    .maybeFirst('importer.allerede');
+  if (alleredeImportert) redirect(uuidHref`/kokebok/${cookbookId}/oppskrift/${alleredeImportert.id}`);
+
   let ekstrahert: EkstrahertOppskrift;
   let modell: string;
   let latencyMs: number;
@@ -158,14 +187,15 @@ export async function importerFraBilde(cookbookId: string, formData: FormData) {
   if (!bilde.type.startsWith('image/'))             tilbakeMedFeil(cookbookId, 'Filen må være et bilde');
   if (bilde.size > MAKS_BILDE_BYTES)                tilbakeMedFeil(cookbookId, 'Bildet er for stort (maks 8 MB)');
 
-  const base64 = Buffer.from(await bilde.arrayBuffer()).toString('base64');
-  const dataUrl = `data:${bilde.type};base64,${base64}`;
+  const bytes = Buffer.from(await bilde.arrayBuffer());
+  const dataUrl = `data:${bilde.type};base64,${bytes.toString('base64')}`;
+  const bildeHash = createHash('sha256').update(bytes).digest('hex');
 
   let ekstrahert: EkstrahertOppskrift;
   let modell: string;
   let latencyMs: number;
   try {
-    ({ oppskrift: ekstrahert, modell, latencyMs } = await ekstraherFraBilde(dataUrl));
+    ({ oppskrift: ekstrahert, modell, latencyMs } = await ekstraherFraBilde(dataUrl, bildeHash));
   } catch (err) {
     if (err instanceof ImportFeil) {
       log.warn('import.bilde-failed', err.message, { størrelse: bilde.size });

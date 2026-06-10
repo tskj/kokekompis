@@ -63,6 +63,7 @@ export function RedigerSkjema({ recipeId, tittel: startTittel, beskrivelse: star
 
   const [antall, setAntall] = useState(String(content.info.porsjoner.antall));
   const [benevnelse, setBenevnelse] = useState(content.info.porsjoner.benevnelse);
+  const [kanSkaleres, setKanSkaleres] = useState(content.info.kanSkaleres);
   const [aktivTid, setAktivTid] = useState(content.info.aktivTidMinutter == null ? '' : String(content.info.aktivTidMinutter));
   const [totalTid, setTotalTid] = useState(content.info.totalTidMinutter == null ? '' : String(content.info.totalTidMinutter));
 
@@ -149,6 +150,7 @@ export function RedigerSkjema({ recipeId, tittel: startTittel, beskrivelse: star
       content: {
         info: {
           porsjoner: { antall: tilTall(antall) ?? 1, benevnelse: benevnelse.trim() || 'porsjoner' },
+          kanSkaleres,
           aktivTidMinutter: tilTall(aktivTid),
           totalTidMinutter: tilTall(totalTid),
           stekeinfo: stekes
@@ -201,6 +203,10 @@ export function RedigerSkjema({ recipeId, tittel: startTittel, beskrivelse: star
             <input value={antall} onChange={(e) => setAntall(e.target.value)} aria-label="Antall porsjoner" className={`${inputKlasse} w-16`} />
             <input value={benevnelse} onChange={(e) => setBenevnelse(e.target.value)} aria-label="Benevnelse" className={`${inputKlasse} w-28`} />
           </span>
+          <label className="mt-1.5 flex items-center gap-2 text-sm" title="Skru av for retter som ikke kan ganges opp — f.eks. bundet til én langpanne">
+            <input type="checkbox" checked={kanSkaleres} onChange={(e) => setKanSkaleres(e.target.checked)} />
+            kan skaleres (½×/2×/4×)
+          </label>
         </label>
 
         <label className="block">

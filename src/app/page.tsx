@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { cookbook, recipeFavorites } from '@/lib/db/schema';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
+import { opprettBok } from '@/app/actions/bok';
 import Link from 'next/link';
 
 function SignIn() {
@@ -92,12 +93,7 @@ export default async function Home() {
       <section className="mt-14" aria-label="Bokhylla">
         <h2 className="text-[11px] uppercase tracking-[0.2em] text-ink-soft mb-6">Bokhylla</h2>
 
-        {cookbooks.length === 0 ? (
-          <p className="text-ink-soft">
-            Hylla er tom ennå — den første boken kommer når du gjør den til din.
-          </p>
-        ) : (
-          <div className="flex flex-wrap items-end gap-6 border-b-8 border-ink/80">
+        <div className="flex flex-wrap items-end gap-6 border-b-8 border-ink/80">
             {cookbooks.map((bok, index) => (
               <Link
                 key={bok.id}
@@ -126,7 +122,37 @@ export default async function Home() {
                 </span>
               </Link>
             )}
+
+            {userId && (
+              <details className="group h-64 w-44">
+                <summary className="flex h-full cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-r-md rounded-l-sm border-2 border-dashed border-line text-ink-soft hover:border-terra hover:text-terra group-open:hidden">
+                  <span className="text-3xl leading-none">+</span>
+                  <span className="font-display text-lg">ny bok</span>
+                </summary>
+
+                <form action={opprettBok} className="flex h-full flex-col justify-center gap-3 rounded-r-md rounded-l-sm border border-line bg-card p-4 shadow-bok">
+                  <label className="block text-sm">
+                    <span className="text-ink-soft">Hva skal boken hete?</span>
+                    <input
+                      name="navn"
+                      required
+                      maxLength={100}
+                      placeholder="Mormors arvegods"
+                      className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2 font-display focus:border-terra focus:outline-none"
+                    />
+                  </label>
+                  <button type="submit" className="rounded-full bg-terra px-4 py-2 text-sm font-medium text-paper hover:bg-terra-deep">
+                    Sett på hylla
+                  </button>
+                </form>
+              </details>
+            )}
           </div>
+
+        {cookbooks.length === 0 && !userId && (
+          <p className="mt-6 text-ink-soft">
+            Hylla er tom ennå — logg inn for å sette den første boken på plass.
+          </p>
         )}
       </section>
     </main>

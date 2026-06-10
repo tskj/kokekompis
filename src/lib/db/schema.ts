@@ -67,6 +67,9 @@ export const recipeContentSchema = z.object({
       // "boller", "porsjoner", "stykker" — vises som "16 boller"
       benevnelse: z.string(),
     }),
+    // porsjonsmultiplikatoren (½×/2×/4×) gir ikke mening for alle retter (en langpannekake er
+    // bundet til pannen sin) — false skjuler den. default, ikke migrering: gamle rader får true.
+    kanSkaleres: z.boolean().default(true),
     aktivTidMinutter: z.number().nullable(),
     // fra du starter til det er spiseklart — ikke mulig på alle oppskrifter, men nyttig når den finnes
     totalTidMinutter: z.number().nullable(),

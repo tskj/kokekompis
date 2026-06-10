@@ -173,6 +173,61 @@ describe("AI-import (ekte actions og database, mocket nett og OpenAI)", () => {
     expect(alle).toHaveLength(1); // bare den fra makeKokebok
   });
 
+  it("to samtidige importer av samme lenke deler ETT OpenAI-kall og gir ÉN oppskrift", async () => {
+    const { user, bok, kapittel } = await makeKokebok();
+    hoisted.userId = user.id;
+    vi.stubEnv("OPENAI_API_KEY", "test-nøkkel");
+
+    const fetchSpy = vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).includes("api.openai.com")) {
+        // hold AI-svaret åpent et øyeblikk så begge kallene rekker å være i flukt samtidig
+        await new Promise((r) => setTimeout(r, 50));
+        return openAISvar(EKSTRAHERT);
+      }
+
+      return new Response("<html>vafler</html>");
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const [a, b] = await Promise.all([
+      importerFraUrl(bok.id, urlSkjema(kapittel.id)).then(() => null, (e: Error) => e),
+      importerFraUrl(bok.id, urlSkjema(kapittel.id)).then(() => null, (e: Error) => e),
+    ]);
+    expect(a?.message).toMatch(/^NEXT_REDIRECT:.*\/oppskrift\//);
+    expect(b?.message).toMatch(/^NEXT_REDIRECT:.*\/oppskrift\//);
+
+    const openAIKall = fetchSpy.mock.calls.filter(([u]) => String(u).includes("api.openai.com"));
+    expect(openAIKall).toHaveLength(1);
+
+    const rader = await db.select().from(recipes).where(eq(recipes.title, "Vafler fra nettet"));
+    expect(rader).toHaveLength(1);
+  });
+
+  it("en lenke som alt står i boken re-importeres ikke — du sendes til oppskriften du har", async () => {
+    const { user, bok, kapittel } = await makeKokebok();
+    hoisted.userId = user.id;
+    vi.stubEnv("OPENAI_API_KEY", "test-nøkkel");
+
+    vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).includes("api.openai.com")) return openAISvar(EKSTRAHERT);
+
+      return new Response("<html>vafler</html>");
+    }));
+
+    await importerFraUrl(bok.id, urlSkjema(kapittel.id)).catch(() => {});
+
+    // runde to: ingen fetch i det hele tatt — verken siden eller OpenAI
+    const andreRunde = vi.fn();
+    vi.stubGlobal("fetch", andreRunde);
+
+    const feil = await importerFraUrl(bok.id, urlSkjema(kapittel.id)).then(() => null, (e: Error) => e);
+    expect(feil?.message).toMatch(/^NEXT_REDIRECT:.*\/oppskrift\//);
+    expect(andreRunde).not.toHaveBeenCalled();
+
+    const rader = await db.select().from(recipes).where(eq(recipes.title, "Vafler fra nettet"));
+    expect(rader).toHaveLength(1);
+  });
+
   it("avviser adresser som ikke er offentlige http(s)-verter", async () => {
     const { user, bok, kapittel } = await makeKokebok();
     hoisted.userId = user.id;

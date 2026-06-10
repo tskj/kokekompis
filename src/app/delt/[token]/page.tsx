@@ -5,13 +5,13 @@ import { recipes, recipeShares, users, recipeContentSchema } from '@/lib/db/sche
 import { withTransaction } from '@/lib/db-tx';
 import { getUuidParam } from '@/lib/uuid/server-uuid-params';
 import { uuidHref } from '@/lib/uuid/uuid-links';
-import { Oppskrift } from '@/components/oppskrift/Oppskrift';
+import { Oppskrift, lesGanger } from '@/components/oppskrift/Oppskrift';
 import { RettBilder } from '@/components/oppskrift/RettBilder';
 import { bildeUrl } from '@/lib/lagring';
 
 interface DeltSideProps {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ enheter?: string }>;
+  searchParams: Promise<{ enheter?: string; ganger?: string }>;
 }
 
 // Den offentlige delingssiden: oppskriften slik den står i boken — med opprinnelsen, som alltid
@@ -19,7 +19,7 @@ interface DeltSideProps {
 // et kjøleskap i årevis.
 export default async function DeltSide({ params, searchParams }: DeltSideProps) {
   const token = getUuidParam(await params, 'token');
-  const { enheter } = await searchParams;
+  const { enheter, ganger: gangerParam } = await searchParams;
 
   const delt = await withTransaction({ name: 'oppskrift.delt' }, async (tx) => {
     const share = await tx
@@ -62,6 +62,7 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
         beskrivelse={delt.description}
         content={content}
         visEnhet={enheter === 'gram' ? 'gram' : 'original'}
+        ganger={lesGanger(gangerParam, content.info.kanSkaleres)}
         stiBase={stiBase}
         ferdigBilder={<RettBilder tittel={delt.title} bilder={bilder} />}
       />

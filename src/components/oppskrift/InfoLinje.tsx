@@ -1,15 +1,16 @@
 import type { RecipeContent } from '@/lib/db/schema';
-import { formaterMinutter, formaterVarme } from '@/lib/enheter';
+import { formaterMengde, formaterMinutter, formaterVarme } from '@/lib/enheter';
 
 // Den klassiske "banneren": porsjoner, tider og ovnsinfo på én linje, som kolofonen i en trykt
 // kokebok. Totaltiden (fra start til spiseklart) er den viktigste — den står først og fetest.
-export function InfoLinje({ info }: { info: RecipeContent['info'] }) {
+export function InfoLinje({ info, ganger = 1 }: { info: RecipeContent['info']; ganger?: number }) {
   const felter: Array<{ navn: string; verdi: string }> = [];
 
   if (info.totalTidMinutter != null) felter.push({ navn: 'Fra start til spiseklart', verdi: formaterMinutter(info.totalTidMinutter) });
   if (info.aktivTidMinutter != null) felter.push({ navn: 'Aktiv tid', verdi: formaterMinutter(info.aktivTidMinutter) });
 
-  felter.push({ navn: 'Gir', verdi: `${info.porsjoner.antall} ${info.porsjoner.benevnelse}` });
+  const antall = formaterMengde(info.porsjoner.antall * ganger, null);
+  felter.push({ navn: 'Gir', verdi: `${antall} ${info.porsjoner.benevnelse}${ganger !== 1 ? ` (${formaterMengde(ganger, null)}×)` : ''}` });
 
   if (info.stekeinfo) {
     const varme = info.stekeinfo.varme ? `, ${formaterVarme(info.stekeinfo.varme)}` : '';

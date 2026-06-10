@@ -137,6 +137,23 @@ type BrukerInnhold =
   | string
   | Array<{ type: 'input_text'; text: string } | { type: 'input_image'; image_url: string }>;
 
+// In-flight-dedup per kilde: et utålmodig dobbeltklikk (eller to faner) på samme lenke/bilde skal
+// dele ETT OpenAI-kall, ikke svi tokener to ganger. Nøkkelen er kilde-URL-en eller bildehashen;
+// promiset ryddes når kallet er ferdig, så en bevisst re-import senere går gjennom.
+const pågående = new Map<string, Promise<EkstraksjonsResultat>>();
+
+type EkstraksjonsResultat = { oppskrift: EkstrahertOppskrift; modell: string; latencyMs: number };
+
+function medInFlightDedup(nøkkel: string, fn: () => Promise<EkstraksjonsResultat>): Promise<EkstraksjonsResultat> {
+  const eksisterende = pågående.get(nøkkel);
+  if (eksisterende) return eksisterende;
+
+  const promise = fn().finally(() => pågående.delete(nøkkel));
+  pågående.set(nøkkel, promise);
+
+  return promise;
+}
+
 async function kallOpenAI(brukerInnhold: BrukerInnhold): Promise<{ oppskrift: EkstrahertOppskrift; modell: string; latencyMs: number }> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new ImportFeil('OPENAI_API_KEY er ikke satt — AI-import er ikke konfigurert');
@@ -232,26 +249,28 @@ export function tilRecipeContent(ekstrahert: EkstrahertOppskrift): RecipeContent
 }
 
 export async function ekstraherFraTekst(tekst: string, kildeUrl: string) {
-  const avkortet = tekst.slice(0, MAKS_TEKST_TEGN);
+  return medInFlightDedup(kildeUrl, async () => {
+    const avkortet = tekst.slice(0, MAKS_TEKST_TEGN);
 
-  const resultat = await kallOpenAI(`Kilde-URL: ${kildeUrl}\n\nInnhold fra siden:\n\n${avkortet}`);
+    const resultat = await kallOpenAI(`Kilde-URL: ${kildeUrl}\n\nInnhold fra siden:\n\n${avkortet}`);
 
-  // Nettkilde: opprinnelsen skal alltid peke på der den ble hentet — det er hele poenget med å
-  // hente innholdet inn NÅ. Modellens navn beholdes når den fant et («Det søte liv»).
-  const navn = resultat.oppskrift.opprinnelse?.navn || new URL(kildeUrl).hostname.replace(/^www\./, '');
-  resultat.oppskrift.opprinnelse = {
-    type: 'nettside',
-    navn,
-    url: kildeUrl,
-    historie: resultat.oppskrift.opprinnelse?.historie ?? null,
-  };
+    // Nettkilde: opprinnelsen skal alltid peke på der den ble hentet — det er hele poenget med å
+    // hente innholdet inn NÅ. Modellens navn beholdes når den fant et («Det søte liv»).
+    const navn = resultat.oppskrift.opprinnelse?.navn || new URL(kildeUrl).hostname.replace(/^www\./, '');
+    resultat.oppskrift.opprinnelse = {
+      type: 'nettside',
+      navn,
+      url: kildeUrl,
+      historie: resultat.oppskrift.opprinnelse?.historie ?? null,
+    };
 
-  return resultat;
+    return resultat;
+  });
 }
 
-export async function ekstraherFraBilde(bildeDataUrl: string) {
-  return kallOpenAI([
+export async function ekstraherFraBilde(bildeDataUrl: string, dedupNøkkel: string) {
+  return medInFlightDedup(`bilde:${dedupNøkkel}`, () => kallOpenAI([
     { type: 'input_text', text: 'Strukturer oppskriften på dette bildet.' },
     { type: 'input_image', image_url: bildeDataUrl },
-  ]);
+  ]));
 }

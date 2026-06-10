@@ -29,6 +29,7 @@ export function testOppskrift(overrides?: Partial<RecipeContent>): RecipeContent
   return recipeContentSchema.parse({
     info: {
       porsjoner: { antall: 12, benevnelse: "boller" },
+      kanSkaleres: true,
       aktivTidMinutter: 30,
       totalTidMinutter: 120,
       stekeinfo: { graderCelsius: 220, varme: "over_under", minutter: 12 },

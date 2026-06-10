@@ -4,6 +4,7 @@ import { chapters } from '@/lib/db/schema';
 import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { importerFraBilde, importerFraUrl } from '@/app/actions/importer';
+import { SendeKnapp } from '@/components/SendeKnapp';
 
 interface ImporterPageProps {
   params: Promise<{ id: string }>;
@@ -76,9 +77,7 @@ export default async function ImporterPage({ params, searchParams }: ImporterPag
 
           <KapittelVelger kapitler={kapitler} />
 
-          <button type="submit" className="rounded-full bg-terra px-5 py-2 text-sm font-medium text-paper hover:bg-terra-deep">
-            Hent oppskriften
-          </button>
+          <SendeKnapp barn="Hent oppskriften" venteTekst="Leser oppskriften — et halvt minutts tid …" />
         </form>
 
         <form action={importerFraBilde.bind(null, cookbookId)} className="space-y-4 rounded-xl border border-line bg-card p-5 shadow-bok">
@@ -101,9 +100,7 @@ export default async function ImporterPage({ params, searchParams }: ImporterPag
 
           <KapittelVelger kapitler={kapitler} />
 
-          <button type="submit" className="rounded-full bg-terra px-5 py-2 text-sm font-medium text-paper hover:bg-terra-deep">
-            Skann oppskriften
-          </button>
+          <SendeKnapp barn="Skann oppskriften" venteTekst="Leser bildet — et halvt minutts tid …" />
         </form>
       </div>
     </div>

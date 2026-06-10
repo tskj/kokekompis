@@ -8,19 +8,20 @@ import { getCookbookAndRecipeIdParams } from '@/lib/uuid/server-uuid-params';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
-import { Oppskrift } from '@/components/oppskrift/Oppskrift';
+import { Oppskrift, lesGanger } from '@/components/oppskrift/Oppskrift';
 import { NotatTavle } from '@/components/oppskrift/NotatTavle';
 import { RettBilder } from '@/components/oppskrift/RettBilder';
 import { Relasjoner } from '@/app/kokebok/[id]/components/Relasjoner';
 import { bildeUrl } from '@/lib/lagring';
 import { PrintKnapp } from '@/components/PrintKnapp';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 import { delOppskrift } from '@/app/actions/deling';
 import { toggleFavoritt } from '@/app/actions/favoritter';
 import { flyttOppskrift } from '@/app/actions/organisering';
 
 interface RecipePageProps {
   params: Promise<{ id: string; recipeid: string }>;
-  searchParams: Promise<{ enheter?: string; tilbake?: string }>;
+  searchParams: Promise<{ enheter?: string; tilbake?: string; ganger?: string }>;
 }
 
 // Alt siden trenger, fra ett konsistent snapshot: oppskriften (eid av boken via cookbookId —
@@ -102,7 +103,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
 
 export default async function RecipePage({ params, searchParams }: RecipePageProps) {
   const { cookbookId, recipeId } = await getCookbookAndRecipeIdParams(params);
-  const { enheter, tilbake } = await searchParams;
+  const { enheter, tilbake, ganger: gangerParam } = await searchParams;
 
   const userId = await getCurrentUserId();
   const side = await getOppskriftSide(recipeId, cookbookId, userId);
@@ -111,6 +112,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   if (side.kapittelId) await openChapter(side.kapittelId);
 
   const content = recipeContentSchema.parse(side.content);
+  const ganger = lesGanger(gangerParam, content.info.kanSkaleres);
   const bilder = await Promise.all(content.ferdigprodukt.bilder.map(async (key) => ({ key, url: await bildeUrl(key) })));
 
   const stiBase = uuidHref`/kokebok/${cookbookId}/oppskrift/${recipeId}`;
@@ -134,12 +136,13 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
         beskrivelse={side.description}
         content={content}
         visEnhet={enheter === 'gram' ? 'gram' : 'original'}
+        ganger={ganger}
         stiBase={stiBase}
         ferdigBilder={<RettBilder tittel={side.title} bilder={bilder} recipeId={recipeId} />}
         handlinger={
           <>
             <Link
-              href={`${uuidHref`/bak/${recipeId}`}?fra=${encodeURIComponent(stiBase)}`}
+              href={`${uuidHref`/bak/${recipeId}`}?fra=${encodeURIComponent(stiBase)}${ganger !== 1 ? `&ganger=${ganger}` : ''}`}
               className="rounded-full bg-terra px-5 py-2 text-sm font-medium text-paper hover:bg-terra-deep"
             >
               Sett i gang — bakeview →
@@ -172,7 +175,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
 
             <PrintKnapp />
 
-            <details className="relative">
+            <LukkbarDetails className="relative">
               <summary className="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
                 Flytt …
               </summary>
@@ -188,7 +191,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                   Flytt
                 </button>
               </form>
-            </details>
+            </LukkbarDetails>
           </>
         }
         relasjoner={
