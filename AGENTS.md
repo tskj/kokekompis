@@ -3,7 +3,8 @@
 **Before making code changes, read `docs/HOUSE_STYLE.md`** and follow the relevant section for the kind
 of code you're touching. It is the source of truth for how code here is *structured*:
 
-- **Formatting** — vertical alignment, blank-line grouping, blank line after every guard (no Prettier).
+- **Formatting** — alignment as parallel structure, blank-line grouping, blank line after every
+  guard, 2-space indent, no trailing whitespace (no Prettier).
 - **Logging** — the EAV logger `src/lib/log.ts` (`log.info/warn/error`, `withRequest`,
   `withBackgroundTask`). **No `console.*` in server app code.**
 - **DB cardinality** — express intent with `src/lib/cardinality.ts` helpers

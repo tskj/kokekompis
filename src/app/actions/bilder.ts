@@ -15,7 +15,7 @@ import { log, Attr } from '@/lib/log';
 
 const MAKS_BILDE_BYTES = 15 * 1024 * 1024;
 const MAKS_LANGSIDE_PX = 1600;
-const WEBP_KVALITET = 80;
+const WEBP_KVALITET    = 80;
 
 export async function lastOppRettBilde(recipeId: string, formData: FormData) {
   const userId = await getCurrentUserId();

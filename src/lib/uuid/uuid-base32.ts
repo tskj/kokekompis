@@ -20,8 +20,8 @@ for (let i = 0; i < CROCKFORD_BASE32_CHARS.length; i++) {
  */
 function encodeCrockfordBase32(buffer: Buffer): string {
   let result = '';
-  let bits = 0;
-  let value = 0;
+  let bits   = 0;
+  let value  = 0;
 
   for (let i = 0; i < buffer.length; i++) {
     value = (value << 8) | buffer[i];
@@ -45,7 +45,8 @@ function encodeCrockfordBase32(buffer: Buffer): string {
  */
 function decodeCrockfordBase32(input: string): Buffer {
   let value = 0;
-  let bits = 0;
+  let bits  = 0;
+
   const result: number[] = [];
 
   for (let i = 0; i < input.length; i++) {

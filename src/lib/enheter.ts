@@ -85,9 +85,9 @@ export function formaterMengde(mengde: number | null, enhet: Enhet | null): stri
   const brøk = BRØKER.find(([verdi]) => Math.abs(rest - verdi) < 0.01)?.[1];
 
   let tall: string;
-  if (brøk)             tall = hele > 0 ? `${hele} ${brøk}` : brøk;
-  else if (rest === 0)  tall = String(hele);
-  else                  tall = String(mengde).replace('.', ',');
+  if       (brøk)        tall = hele > 0 ? `${hele} ${brøk}` : brøk;
+  else if  (rest === 0)  tall = String(hele);
+  else                   tall = String(mengde).replace('.', ',');
 
   return enhet ? `${tall} ${enhet}` : tall;
 }

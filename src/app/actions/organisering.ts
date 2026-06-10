@@ -54,7 +54,7 @@ export async function flyttOppskrift(recipeId: string, formData: FormData) {
       await tx.insert(recipeChapters).values({
         recipeId,
         chapterId: målKapittelId,
-        order: (høyeste ?? 0) + 1,
+        order:     (høyeste ?? 0) + 1,
       });
     }
   });

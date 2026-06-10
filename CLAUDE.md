@@ -9,7 +9,7 @@ This is a Next.js project using a "code-first" database approach with Drizzle OR
 - **Migrations:** This project does NOT use a direct push-to-db command. It uses a production-safe workflow: `pnpm db:generate` creates SQL migration files; they're applied automatically (locally on `pnpm dev`, in prod by Railway's pre-deploy `scripts/migrate.mjs`). Never hand-write migrations.
 - **Env & secrets:** Config is committed per environment — dotenvx-encrypted `.env` (shared secrets) + plaintext `.env.development` (local DB url). The decryption key (`.env.keys` locally, `DOTENV_PRIVATE_KEY` on Railway) is the only out-of-band secret. `pnpm dev` runs against a **local** Postgres that it auto-creates + migrates (per git worktree). Don't read env from `.env` with plain `dotenv` — it's encrypted; dotenvx injects it at runtime.
 - **Deploy:** Railway builds from the committed `Dockerfile` (`railway.json`), not Nixpacks. Push to `main` to deploy.
-- **House style:** Before changing code, read `docs/HOUSE_STYLE.md` and follow the relevant section. Highlights: the EAV logger `src/lib/log.ts` (no `console.*` in server code; `withRequest`/`withBackgroundTask`); DB cardinality helpers in `src/lib/cardinality.ts` (`.single()`/`.maybeSingle()`/`.first()`/`.maybeFirst()`/`.exists()` instead of `.limit(1)`, which is eslint-banned); assertions in `src/lib/assert.ts` (`ensure`/`fail`/`unreachable`/`shouldNever`); `withTransaction` in `src/lib/db-tx.ts`; time via `src/lib/clock.ts`. The "Code Style" section below still applies.
+- **House style:** Before changing code, read `docs/HOUSE_STYLE.md` and follow the relevant section. Highlights: the EAV logger `src/lib/log.ts` (no `console.*` in server code; `withRequest`/`withBackgroundTask`); DB cardinality helpers in `src/lib/cardinality.ts` (`.single()`/`.maybeSingle()`/`.first()`/`.maybeFirst()`/`.exists()` instead of `.limit(1)`, which is eslint-banned); assertions in `src/lib/assert.ts` (`ensure`/`fail`/`unreachable`/`shouldNever`); `withTransaction` in `src/lib/db-tx.ts`; time via `src/lib/clock.ts`. Code formatting is §1 of the same doc — see "Code Style" below.
 - **Primary Instruction Source:** The development workflow, especially for database changes, is documented in `README.md`. Always check that file for instructions on how to handle database migrations.
 
 ## Commit Style
@@ -28,60 +28,12 @@ This is a Next.js project using a "code-first" database approach with Drizzle OR
 - **User ID**: `00091a95-ec3b-4119-b1cf-736bb7b02b9c` for testing and seeding data
 
 ## Code Style
-- **Early returns**: Use one-line brace-free style for early returns and guard clauses
-  ```typescript
-  // Preferred
-  if (!isValid) throw new Error('Invalid input');
-  if (!data) return null;
-  if (user.role !== 'admin') notFound();
-  
-  // Avoid
-  if (!isValid) {
-    throw new Error('Invalid input');
-  }
-  ```
-- **Guard clause spacing**: When a guard clause directly validates the line above, no empty line between them
-  ```typescript
-  // Preferred - guard clause belongs to the line above
-  const id = parseUuidParam(param);
-  if (!id) notFound();
-  
-  const data = await fetchData();
-  if (!data) return null;
-  
-  // Also preferred - guard clause is more independent
-  const user = getCurrentUser();
-  
-  if (user.role !== 'admin') notFound();
-  ```
-- **No trailing whitespace**: Never insert whitespace at end of lines, including empty lines
-  ```typescript
-  // WRONG - empty lines with spaces/tabs (shown as · for visibility)
-  export function example() {
-    let result = '';
-  ··
-    for (let i = 0; i < 10; i++) {
-      result += i;
-  ····
-      if (i > 5) break;
-    }
-  ··
-    return result;
-  }
-  
-  // CORRECT - completely empty lines
-  export function example() {
-    let result = '';
-
-    for (let i = 0; i < 10; i++) {
-      result += i;
-
-      if (i > 5) break;
-    }
-
-    return result;
-  }
-  ```
+Defined in `docs/HOUSE_STYLE.md` §1 (Formatting), kept word-for-word identical with `../heartbeet`
+and `../j-rnal` — read it before writing code. The core idea: whitespace shows structure. Align the
+mirrored parts of parallel lines/branches to shared columns; separate unrelated groups with blank
+lines instead of padding across them. Brace-free one-line guards with a blank line after each (and
+none between a guard and the line it directly validates), 2-space indentation, never tabs, no
+trailing whitespace.
 
 ## Database Notes
 - Uses regular `jsonb` columns for now instead of custom validated types (can be improved later)

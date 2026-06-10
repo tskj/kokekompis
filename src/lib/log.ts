@@ -139,10 +139,10 @@ class LoggerImpl implements ScopedLogger {
   info(arg1: string, arg2: FactValue, arg3?: FactValue): void {
     if (arg3 === undefined) {
       // (a, v) — the current entity is the E
-      this.assert(this.entity, arg1, arg2);
+      this.assert(this.entity, arg1,           arg2);
     } else {
       // (e, a, v) — explicit E
-      this.assert(arg1, arg2 as string, arg3);
+      this.assert(arg1,        arg2 as string, arg3);
     }
   }
 
@@ -197,9 +197,9 @@ class SystemLogger implements Logger {
 
   info(arg1: string, arg2: FactValue, arg3?: FactValue): void {
     if (arg3 === undefined) {
-      emit({ e: SYSTEM_ENTITY, a: arg1, v: arg2, ts: nowDate() });
+      emit({ e: SYSTEM_ENTITY, a: arg1,           v: arg2, ts: nowDate() });
     } else {
-      emit({ e: arg1, a: arg2 as string, v: arg3, ts: nowDate() });
+      emit({ e: arg1,          a: arg2 as string, v: arg3, ts: nowDate() });
     }
   }
 

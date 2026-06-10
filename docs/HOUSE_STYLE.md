@@ -2,7 +2,8 @@
 
 How code in this repo is *structured* — formatting, logging, DB-query cardinality, assertions, and
 boundary validation. These are intentional and enforced (eslint where mechanizable, convention
-otherwise). The sister project `../heartbeet` shares this DNA; this doc is distilled from it.
+otherwise). The sister projects `../heartbeet` and `../j-rnal` share this DNA; §1 (Formatting) is
+kept word-for-word identical across all three repos — if you change it in one, change it in all.
 
 > **Before finalizing any code, re-read the relevant section below.** The natural urge is to produce
 > one long uniform run of lines with a `console.log` and a `.limit(1)`; these conventions actively
@@ -12,30 +13,181 @@ otherwise). The sister project `../heartbeet` shares this DNA; this doc is disti
 
 ## 1. Formatting (no Prettier, no auto-format)
 
-The style would fight a formatter, so there isn't one. Apply all of these *together* — a wall of
-evenly-spaced lines with no grouping is the wrong shape even when each line is individually correct.
+The style would fight a formatter, so there isn't one. One principle drives all of it: **whitespace
+shows structure, in both directions**. Horizontal whitespace (padding to shared columns) says "these
+lines are rows of one table — read the differences". Vertical whitespace (blank lines) says "a
+different thing starts here". Alignment is never about the tokens (`=`, `:`, `return`) — it's about
+**parallel structure**: when adjacent lines do the same kind of thing, pad so their identical parts
+sit in identical columns and the differences pop out like a diff. When adjacent lines do *different*
+things, separate them with a blank line — never share padding across the gap; that's a fake table.
+Apply the rules *together* — a wall of evenly-spaced lines with no grouping is the wrong shape even
+when each line is individually correct.
 
-- **Vertical alignment.** Within a contiguous block (no blank lines) where consecutive lines share
-  structure, line up the `=` signs, inline `if (…)` bodies, and object-literal `:` values at the
-  same column. Apply **only** when prefix-length variance is small — if padding would push the value
-  column more than ~6–8 chars past the shortest line, *don't* align; split the block with a blank
-  line instead. Don't re-pad a naturally-aligned group to match a wider neighbouring group — blank
-  line between them, each group reads as its own table.
+Mechanics underneath: **2-space indentation, never tabs** (the column rules assume a fixed grid),
+and **no trailing whitespace**, including on blank lines.
+
+- **Align within a contiguous block.** Where consecutive lines share structure, line up the `=`
+  signs, object-literal `:` values, `return`s of parallel guards, and the repeated arguments of
+  parallel calls:
+
+  ```ts
+  const RESUME_PURPOSE = "provisional-resume";
+  const RESUME_TTL_MS  = PROVISIONAL_RESUME_COOKIE_MAX_AGE * 1000;
+  ```
+
+  ```ts
+  if (timer === 0) return `${rest} min`;
+  if (rest === 0)  return `${timer} t`;
+  ```
+
+- **Parallel `if`/`else` branches are one table**, even though a `} else {` sits between the rows.
+  When the two bodies are the same operation, align the mirrored parts *across* the branch boundary:
+
+  ```ts
+  if (arg3 === undefined) {
+    emit({ e: SYSTEM_ENTITY, a: arg1,           v: arg2, ts: nowDate() });
+  } else {
+    emit({ e: arg1,          a: arg2 as string, v: arg3, ts: nowDate() });
+  }
+  ```
+
+  Aligned, you *see* which argument moved slots without parsing either line. Short paired
+  `if`/`else` bodies go on one line each for the same reason — the eye scans the branches as rows:
+
+  ```ts
+  if (keyboardOpen) section.style.height = `${Math.round(vv.height - TOPNAV_HEIGHT_PX)}px`;
+  else              section.style.removeProperty("height");
+  ```
+
+  A chain of one-line bodies can go full decision-table — keyword column, condition column, body
+  column:
+
+  ```ts
+  let tall: string;
+  if       (brøk)        tall = hele > 0 ? `${hele} ${brøk}` : brøk;
+  else if  (rest === 0)  tall = String(hele);
+  else                   tall = String(mengde).replace('.', ',');
+  ```
+
+  The condition column is optional taste; aligning the *bodies* is the part that matters.
+
+- **Know when to stop.** Alignment is for small variance — if padding would push the value column
+  more than ~6–8 chars past the shortest line, *don't* align; split the block with a blank line
+  instead. Don't re-pad a naturally-aligned group to match a wider neighbouring group (blank line
+  between them, each group reads as its own table). And don't align adjacent lines that merely look
+  alike but do different things:
+
+  ```ts
+  let value = 0;
+  let bits  = 0;
+
+  const result: number[] = [];
+  ```
+
+  `value`/`bits` are one thing (the rolling bit-window); `result` is another (the output
+  accumulator). The `const`/`let` keyword-width mismatch would also fight the `=` column — mixed
+  keywords are themselves a signal to split, unless a coincidental width offset lands the `=` at
+  the same column anyway.
+
 - **Blank lines as grouping.** Inside any non-trivial function body, separate sub-tasks with blank
   lines. Canonical progression: read inputs / set up refs → derive constants → define inner fns /
   build payloads → wire events / fetch / commit → return cleanup. Each chunk is its own alignment
   block.
-- **Blank line *after* every guard.** `if (!x) return;` / `throw` / `return fail(…)` closes "the
-  part where we got x" — follow it with a blank line, and never vertically-align a guard's `return`
-  with the declarations above it. Guards are the *end* of a step, not a row in the table. (This pairs
-  with the existing "guard clause" preferences in `CLAUDE.md`.)
-- **Two spaces minimum after `if (…)`** with an inline body — signals deliberate spacing.
+- **Guards are brace-free one-liners, and they end their step.** `if (!x) return;` / `throw` /
+  `notFound()` closes "the part where we got x": no blank line between a guard and the line it
+  directly validates, a blank line *after* every guard, and never vertically-align a guard's
+  `return` with the declarations above it — a guard is the *end* of a step, not a row in their
+  table. (A run of *consecutive* short guards is its own table — the `timer`/`rest` example above.)
+
+  ```ts
+  const id = parseUuidParam(param);
+  if (!id) notFound();
+
+  const data = await fetchData();
+  if (!data) return null;
+  ```
+
 - **A comment attaches downward.** Blank line *above* a leading comment, none between it and the
-  code it documents. A comment with no blank line above clings to the code above it, which is wrong —
-  it's there to explain the code *below*.
-- **Don't fight the rule with mixed `const`/`let`** (different keyword widths collide with `=`
-  alignment) — keep them as separate blocks, or let a coincidental width offset do the work.
+  code it documents. A comment with no blank line above clings to the code above it, which is
+  wrong — it's there to explain the code *below*.
+- **Not a rule: extra spaces after `if (…)`.** Padding before an inline body exists only as a
+  *consequence* of aligning parallel bodies — a shorter condition gets padded out to the shared
+  column. A lone `if` takes a single space. (Earlier versions of this doc stated "two spaces
+  minimum after `if (…)`" as a freestanding rule; that was a mis-distillation of this side-effect.)
 - **Tests get the same treatment** as source — readable test code is debuggable test code.
+
+### Worked examples
+
+**Three-column accumulator table.** Spaces go *before* the operator so `=` / `+=` line up, and the
+values align too:
+
+```ts
+if (outcome === "sent")    result.sent   += 1;
+if (outcome === "empty")   result.empty  += 1;
+if (outcome === "failed")  result.failed += 1;
+```
+
+**Switch as a table.** Cases padded so the `return` column aligns:
+
+```ts
+switch (varme) {
+  case 'over_under': return 'over- og undervarme';
+  case 'varmluft':   return 'varmluft';
+  case 'grill':      return 'grill';
+}
+```
+
+**Split when variance dominates.** `now` is much shorter than the formatters, so aligning all three
+forces 10+ spaces of padding for `now`. Break it out, then align the related pair below it:
+
+```ts
+const now = nowDate();
+
+const clientToday   = formatDate(now, prefs);
+const clientWeekday = formatWeekday(now, prefs);
+```
+
+**Three-way subgroup split.** Eight counters spanning 6–25 chars of name length don't go in one
+block — split by what they count, align within each group:
+
+```ts
+let embedded = 0;
+let failed   = 0;
+let batches  = 0;
+
+let attachmentCaptioned    = 0;
+let attachmentClipEmbedded = 0;
+let attachmentFailed       = 0;
+
+let captionParagraphsInserted = 0;
+let modelActivityTouched      = false;
+```
+
+**The full shape.** Five blank-line-separated chunks: guard → guard → constants → inner handler →
+wiring. Each guard sits on its own line followed by a blank line, aligned with nothing; the
+constants align at `=`; the paired `if`/`else` inside the handler aligns as branches:
+
+```ts
+useEffect(() => {
+  const vv = typeof window !== "undefined" ? window.visualViewport : null;
+  if (!vv) return;
+
+  const section = editorSectionRef.current;
+  if (!section) return;
+
+  const TOPNAV_HEIGHT_PX      = 56;
+  const KEYBOARD_THRESHOLD_PX = 150;
+
+  const update = () => {
+    const keyboardOpen = (window.innerHeight - vv.height) > KEYBOARD_THRESHOLD_PX;
+    if (keyboardOpen) section.style.height = `${Math.round(vv.height - TOPNAV_HEIGHT_PX)}px`;
+    else              section.style.removeProperty("height");
+  };
+
+  vv.addEventListener("resize", update);
+  return () => vv.removeEventListener("resize", update);
+}, []);
+```
 
 ---
 
