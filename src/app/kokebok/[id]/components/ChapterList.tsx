@@ -10,7 +10,7 @@ interface Recipe {
   id: string;
   title: string;
   description: string | null;
-  order: number | null;
+  order?: number | null;
 }
 
 interface Chapter {
@@ -42,39 +42,35 @@ function Chapter({ chapter, cookbookId, initiallyOpen, currentRecipeId }: Chapte
 
   return (
     <details
-      className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+      className="border-b border-line"
       open={isOpen}
       onToggle={(e) => setIsOpen(e.currentTarget.open)}
     >
-      <summary className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+      <summary className="flex cursor-pointer items-baseline justify-between gap-2 py-2.5 font-display text-lg hover:text-terra">
         {chapter.name}
+        <span className="text-xs text-ink-soft">{isOpen ? '–' : '+'}</span>
       </summary>
 
-      <div className="border-t border-gray-200 dark:border-gray-700">
+      <div className="pb-3">
         {chapter.recipes.length === 0 ? (
-          <p className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-            Ingen oppskrifter
-          </p>
+          <p className="px-1 pb-1 text-sm italic text-ink-soft">Ingen oppskrifter ennå</p>
         ) : (
-          <div className="py-2">
+          <ul>
             {chapter.recipes.map((recipe) => (
-              <Link
-                key={recipe.id}
-                href={uuidHref`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
-                className={`block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors ${currentRecipeId === recipe.id
-                  ? 'bg-blue-100 dark:bg-blue-900/50 border-l-2 border-blue-500 dark:border-blue-400 font-medium'
-                  : ''
+              <li key={recipe.id}>
+                <Link
+                  href={uuidHref`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
+                  className={`block border-l-2 py-1.5 pl-3 text-sm leading-snug transition-colors ${
+                    currentRecipeId === recipe.id
+                      ? 'border-terra font-medium text-terra'
+                      : 'border-transparent text-ink hover:border-line hover:text-terra'
                   }`}
-              >
-                <div className="font-medium">{recipe.title}</div>
-                {recipe.description && (
-                  <div className="text-gray-500 dark:text-gray-400 text-xs mt-1 truncate">
-                    {recipe.description}
-                  </div>
-                )}
-              </Link>
+                >
+                  {recipe.title}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
     </details>
@@ -84,15 +80,16 @@ function Chapter({ chapter, cookbookId, initiallyOpen, currentRecipeId }: Chapte
 interface ChapterListProps {
   cookbookId: string;
   chapters: Chapter[];
+  ukategorisert: Recipe[];
   openChapterIds: string[];
   userId?: string;
 }
 
-export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterListProps) {
+export function ChapterList({ cookbookId, chapters, ukategorisert, openChapterIds }: ChapterListProps) {
   const currentRecipeId = useRecipeId();
 
   return (
-    <div className="space-y-2">
+    <nav aria-label="Innhold" className="border-t border-line">
       {chapters.map((chapter) => (
         <Chapter
           key={chapter.id}
@@ -102,6 +99,29 @@ export function ChapterList({ cookbookId, chapters, openChapterIds }: ChapterLis
           currentRecipeId={currentRecipeId}
         />
       ))}
-    </div>
+
+      {ukategorisert.length > 0 && (
+        <div className="border-b border-line pt-2.5">
+          <h3 className="font-display text-lg italic text-ink-soft">Ukategorisert</h3>
+
+          <ul className="pb-3 pt-1">
+            {ukategorisert.map((recipe) => (
+              <li key={recipe.id}>
+                <Link
+                  href={uuidHref`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
+                  className={`block border-l-2 py-1.5 pl-3 text-sm leading-snug transition-colors ${
+                    currentRecipeId === recipe.id
+                      ? 'border-terra font-medium text-terra'
+                      : 'border-transparent text-ink hover:border-line hover:text-terra'
+                  }`}
+                >
+                  {recipe.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </nav>
   );
 }

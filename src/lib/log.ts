@@ -57,6 +57,21 @@ export const Attr = {
 
   // === auth (NextAuth events) — example domain attribute ===
   AUTH_SIGN_IN: ":auth/sign-in", // value: provider name ("google")
+
+  // === oppskrifter — asserted on the RECIPE's id, so a recipe's history reads as one timeline ===
+  RECIPE_NOTE_ADDED:   ":recipe/note-added",   // value: { farge }
+  RECIPE_NOTE_DELETED: ":recipe/note-deleted", // value: note id
+  RECIPE_SHARED:       ":recipe/shared",       // value: share id
+  RECIPE_IMPORTED:     ":recipe/imported",     // value: { kilde: "url" | "bilde", tittel }
+  RECIPE_UPDATED:      ":recipe/updated",      // value: { tittel }
+  RECIPE_DELETED:      ":recipe/deleted",      // value: true
+  RECIPE_PHOTO_ADDED:   ":recipe/photo-added",   // value: object key
+  RECIPE_PHOTO_DELETED: ":recipe/photo-deleted", // value: object key
+
+  // AI-ekstraksjon (entity: import-forsøkets id) — modell + latens + utfall, queryable per forsøk.
+  IMPORT_MODEL:      ":import/model",
+  IMPORT_LATENCY_MS: ":import/latency-ms",
+  IMPORT_FAILED:     ":import/failed", // value: error message
 } as const;
 
 export type Attr = (typeof Attr)[keyof typeof Attr];

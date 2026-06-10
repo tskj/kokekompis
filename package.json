@@ -10,10 +10,18 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.mjs",
     "db:migrate:local": "dotenvx run --ignore=MISSING_ENV_FILE -f .env.local -f .env.development -- node scripts/worktree-db.mjs",
-    "db:studio": "dotenvx run --ignore=MISSING_ENV_FILE -f .env.local -f .env.development -- drizzle-kit studio"
+    "db:setup:test": "dotenvx run --ignore=MISSING_ENV_FILE -f .env.local -f .env.test -- node scripts/worktree-db.mjs",
+    "db:seed": "dotenvx run --ignore=MISSING_ENV_FILE -f .env.local -f .env.development -- pnpm exec tsx src/lib/db/seed.ts",
+    "db:studio": "dotenvx run --ignore=MISSING_ENV_FILE -f .env.local -f .env.development -- drizzle-kit studio",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cicd": "pnpm typecheck && pnpm lint && pnpm db:setup:test && pnpm test && DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm build"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",
+    "@aws-sdk/client-s3": "^3.1065.0",
+    "@aws-sdk/s3-request-presigner": "^3.1065.0",
     "@dotenvx/dotenvx": "^1.69.1",
     "drizzle-orm": "^0.44.2",
     "next": "15.3.8",
@@ -22,12 +30,17 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.34.5",
     "uuid": "^11.1.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -36,9 +49,12 @@
     "drizzle-kit": "^0.31.2",
     "eslint": "^9",
     "eslint-config-next": "15.3.8",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.20.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.8"
   },
   "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39"
 }

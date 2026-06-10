@@ -1,0 +1,17 @@
+Kokekompis er Marens ønske om en digital kokebok-ting, sånn at hun kan lage sin perfekte kokebok. ideen er at fysiske bøker alltid blir skitne og brukte, og man vil hele tiden kunne legge til nye oppskrifter, og holde den vedlike på en måte. i dette øyemed ønsker hun å kunne skrive ut den digitale boken, eller gjøre om til et produkt hun kan selge, hvor folk kan få trykt sin egen bok; og senere supplert med de nye oppskriftene de har lagt inn siden sist, og enkelt legge inn de sidene i den fysiske boken. men den digitale boken skal altså være et slags levende produkt for den enkelte baker / kokk / person, en privat og personlig greie man har et knyttet forhold til. men man skal kunne legge inn andres oppskrifter, eller gjesteoppskrifter?
+
+det må være lett å scanne en fysisk oppskrift inn
+
+vil kunne legge inn linker fra nettsider, men linker kan forsvinne sant, så det dette betyr er å hente info fra en link her og nå og putte det inn i vårt system;
+dette må sikkert bety noe AI-greier for at det skal gi noe mening?
+
+måleenheten dl er litt koko for mel, eksempelvis, fordi det kommer an på fuktighet og andre egenskaper ved produktet som er variabelt, Maren liker gram. men oppskrifter kommer i ulike enheter og man vil sikkert bevare de sånn at man har det historiske, men også muligens kunne se de i sine foretrekte enheter.
+
+for en gitt oppskrift, skal man ha det klassiske viewet: hvor mange ting av hver ingrediens. et banner eller en boks på sida eller noe forklarer andre viktige ting, som steketider, funksjon på ovnen, grader. helhetlig tid er viktig, fra du starter til det er spiseklart (ikke mulig på alle oppskrifter, men nyttig når det finnes). selve oppskriften / fremgangsmåte. ønsker et eget “bakeview”, feks på ipaden, hvor det er mindre interaktivt og hvor den på en måte er låst til et view som er lett å lese mens man har skitne fingre og jobber. da vil man ha ett og ett steg, en slags punktliste hvor antall og gram og mengde og sånn er putta inn der. i den øverste seksjonen står hvor my egg og hvor mye sukker, i fremgangsmåten under står det “pisk egg og sukker”, mens i dette “arbeidsviewet” er de merga på en måte hvor det kommer fram alt man trenger av hva. ingen scroll, ikke sant? det er kjempeirriterende, mer som en wizard her!
+
+ofte ønsker man å parallelisere arbeid, så man trenger visuelt mulighet til å se flere steg, feks ved siden av hverandre hvor man kan se og jobbe på en annen ting mens “smørret smelter” (dette er ikke for alle, feks noobs vil ha lineær framgangsmåte). kan også bare være to påfølgende punkter under hverandre. dersom man skal ha noe redigeringsfunksjon så må det være noe man går inn i, ut fra bakeviewet, sånn at det ikke skjer accidentally. i bakeviewet derimot trenger man notater: “sjekk gjennom neste gang du lager” / “husk jordbær til pynt” / “denne oppskriften har du prøvd før, den er ikke noe god!”, som postitlapper eller noe man klistrer på oppskriften? sikkert greit å kunne gjøre dette i det vanlige webbaserte viewet.
+
+enten helt nederst eller øverst med steketid, eller et annet sted: hvor kommer oppskriften fra? mormor, instagram? opprinnelsen til oppskriften.
+når disse oppskriftene deles, vil hun at dette skal bli med. hovedsakelig oppskrift som skal kunne deles, men kanskje også hyggelig med en hel bok?
+
+

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Kokekompis: terrakottafarget merke med bakebolle og skje, i bokens palett -->
+  <rect width="64" height="64" rx="14" fill="#b04e28"/>
+  <path d="M13 32h38a2 2 0 0 1 2 2.2C52 45 43.5 53 32 53S12 45 11 34.2A2 2 0 0 1 13 32z" fill="#faf5ea"/>
+  <g transform="rotate(24 42 16)">
+    <rect x="40" y="14" width="4.5" height="20" rx="2.2" fill="#e9b949"/>
+    <ellipse cx="42.2" cy="11" rx="6" ry="7.5" fill="#e9b949"/>
+  </g>
+</svg>

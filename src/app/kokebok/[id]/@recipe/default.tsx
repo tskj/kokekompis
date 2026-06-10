@@ -1,9 +1,9 @@
 export default function DefaultRecipe() {
   return (
-    <div className="flex items-center justify-center h-96 text-gray-500">
+    <div className="flex h-96 items-center justify-center">
       <div className="text-center">
-        <p className="text-xl mb-2">Velg en oppskrift fra listen til venstre</p>
-        <p>Klikk på et kapittel for å se oppskriftene</p>
+        <p className="font-display text-3xl italic text-ink-soft">Slå opp i boken</p>
+        <p className="mt-2 text-ink-soft">Velg en oppskrift fra innholdslista til venstre.</p>
       </div>
     </div>
   );

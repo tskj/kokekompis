@@ -1,10 +1,12 @@
 import { withTransaction } from '@/lib/db-tx';
 import { cookbook, chapters, recipes, recipeChapters, userOpenChapters } from '@/lib/db/schema';
-import { eq, asc, inArray, and } from 'drizzle-orm';
+import { eq, asc, inArray, notInArray, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { auth } from '@/auth';
 import { ChapterList } from './components/ChapterList';
 import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
+import { uuidHref } from '@/lib/uuid/uuid-links';
 
 interface CookbookLayoutProps {
   recipe: React.ReactNode;
@@ -52,6 +54,19 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       .where(eq(chapters.cookbookId, id))
       .orderBy(asc(recipeChapters.order));
 
+    // Bokens oppskrifter uten kapittel — egen "Ukategorisert"-seksjon i innholdslista.
+    const kategorisert = tx
+      .select({ recipeId: recipeChapters.recipeId })
+      .from(recipeChapters)
+      .innerJoin(chapters, eq(recipeChapters.chapterId, chapters.id))
+      .where(eq(chapters.cookbookId, id));
+
+    const ukategorisert = await tx
+      .select({ id: recipes.id, title: recipes.title, description: recipes.description })
+      .from(recipes)
+      .where(and(eq(recipes.cookbookId, id), notInArray(recipes.id, kategorisert)))
+      .orderBy(asc(recipes.title));
+
     // Get user's open chapters for this cookbook using subquery
     let openChapterIds: string[] = [];
     if (userId) {
@@ -89,6 +104,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
     return {
       ...cookbookData,
       chapters: chaptersWithRecipes,
+      ukategorisert,
       openChapterIds,
     };
   });
@@ -102,28 +118,39 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
   if (!cookbookData) notFound();
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8">{cookbookData.name}</h1>
+    <div className="mx-auto max-w-7xl p-6 md:p-10">
+      <header className="mb-8 skjul-ved-print">
+        <Link href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
+        <h1 className="mt-1 font-display text-4xl">{cookbookData.name}</h1>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Chapter sidebar - LEFT side */}
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-4">
+        {/* Innholdslista — bokens venstreside */}
+        <div className="lg:col-span-1 skjul-ved-print">
           <div className="sticky top-6">
-            <h2 className="text-xl font-semibold mb-4">Kapitler</h2>
+            <h2 className="mb-3 text-[11px] uppercase tracking-[0.2em] text-ink-soft">Innhold</h2>
 
             {cookbookData.chapters.length === 0 ? (
-              <p className="text-gray-500">Ingen kapitler ennå</p>
+              <p className="text-ink-soft">Ingen kapitler ennå</p>
             ) : (
               <ChapterList
                 cookbookId={cookbookId}
                 chapters={cookbookData.chapters}
+                ukategorisert={cookbookData.ukategorisert}
                 openChapterIds={cookbookData.openChapterIds}
               />
             )}
+
+            <Link
+              href={uuidHref`/kokebok/${cookbookId}/importer`}
+              className="mt-6 block border-2 border-dashed border-line px-3 py-2.5 text-center text-sm text-ink-soft hover:border-terra hover:text-terra"
+            >
+              + Ny oppskrift — skann eller lim inn lenke
+            </Link>
           </div>
         </div>
 
-        {/* Recipe content - RIGHT side */}
+        {/* Oppskriften — bokens høyreside */}
         <div className="lg:col-span-3">
           {recipe}
         </div>

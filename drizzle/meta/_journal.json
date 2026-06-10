@@ -29,6 +29,27 @@
       "when": 1750871649456,
       "tag": "0003_pink_boomerang",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781108775848,
+      "tag": "0004_melted_wrecker",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781110745529,
+      "tag": "0005_large_king_cobra",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781110920538,
+      "tag": "0006_tense_ender_wiggin",
+      "breakpoints": true
     }
   ]
 }
