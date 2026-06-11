@@ -1,0 +1,1 @@
+ALTER TABLE "cookbook" ADD COLUMN "synlighet" text DEFAULT 'privat' NOT NULL;

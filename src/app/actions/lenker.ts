@@ -1,6 +1,6 @@
 'use server';
 
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { recipes, recipeLinks } from '@/lib/db/schema';
@@ -19,9 +19,9 @@ export async function lenkOppskrifter(fromRecipeId: string, formData: FormData) 
   if (!toRecipeId || toRecipeId === fromRecipeId) return;
 
   await withTransaction({ name: 'oppskrift.lenk' }, async (tx) => {
-    // begge endene må finnes, i samme bok — skjemaverdier er utrustet input
+    // begge endene må finnes, i samme bok, og være dine — skjemaverdier er utrustet input
     const fra = await tx
-      .select({ cookbookId: recipes.cookbookId })
+      .select({ cookbookId: recipes.cookbookId, userId: recipes.userId })
       .from(recipes)
       .where(eq(recipes.id, fromRecipeId))
       .maybeSingle('oppskrift.lenk.fra');
@@ -30,7 +30,7 @@ export async function lenkOppskrifter(fromRecipeId: string, formData: FormData) 
       .from(recipes)
       .where(eq(recipes.id, toRecipeId))
       .maybeSingle('oppskrift.lenk.til');
-    if (!fra || !til || fra.cookbookId !== til.cookbookId) return;
+    if (!fra || !til || fra.cookbookId !== til.cookbookId || fra.userId !== userId) return;
 
     await tx.insert(recipeLinks).values({ fromRecipeId, toRecipeId }).onConflictDoNothing();
   });
@@ -44,7 +44,15 @@ export async function fjernLenke(linkId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) return;
 
-  await db.delete(recipeLinks).where(eq(recipeLinks.id, linkId));
+  // lenken hører til oppskriften den peker fra — bare dens eier får fjerne den
+  const mine = db
+    .select({ id: recipes.id })
+    .from(recipes)
+    .where(eq(recipes.userId, userId));
+
+  await db
+    .delete(recipeLinks)
+    .where(and(eq(recipeLinks.id, linkId), inArray(recipeLinks.fromRecipeId, mine)));
 
   revalidatePath('/', 'layout');
 }

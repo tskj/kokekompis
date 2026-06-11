@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
@@ -37,7 +37,7 @@ export async function oppdaterOppskrift(recipeId: string, utkast: unknown): Prom
       description: parsed.data.beskrivelse,
       content: parsed.data.content,
     })
-    .where(eq(recipes.id, recipeId))
+    .where(and(eq(recipes.id, recipeId), eq(recipes.userId, userId)))
     .returning({ cookbookId: recipes.cookbookId })
     .maybeSingle('oppskrift.oppdater');
   if (!oppdatert) return { feil: 'Fant ikke oppskriften' };
@@ -54,7 +54,7 @@ export async function slettOppskrift(recipeId: string) {
   const slettet = await withTransaction({ name: 'oppskrift.slett' }, async (tx) => {
     return tx
       .delete(recipes)
-      .where(eq(recipes.id, recipeId))
+      .where(and(eq(recipes.id, recipeId), eq(recipes.userId, userId)))
       .returning({ cookbookId: recipes.cookbookId })
       .maybeSingle('oppskrift.slett');
   });

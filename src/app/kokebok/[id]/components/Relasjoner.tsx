@@ -15,12 +15,14 @@ interface RelasjonerProps {
   innkommende: LenketOppskrift[];
   // andre oppskrifter i boken som kan lenkes til (uten en selv og de alt lenkede)
   kandidater: LenkeKandidat[];
+  // gjester i en utstilt bok følger lenkene, men får ikke lage eller fjerne dem
+  kanRedigere: boolean;
 }
 
 // "Se også": manuelle lenker mellom oppskrifter i boken. Skolebollen peker på vaniljekremen;
 // vaniljekremen viser «Brukes i: Skoleboller». Navigasjonen tar med seg en tilbake-sti i URL-en,
 // så hoppet dit og tilbake aldri mister stedet ditt.
-export function Relasjoner({ cookbookId, recipeId, stiBase, utgående, innkommende, kandidater }: RelasjonerProps) {
+export function Relasjoner({ cookbookId, recipeId, stiBase, utgående, innkommende, kandidater, kanRedigere }: RelasjonerProps) {
   const tilHref = (målId: string) =>
     `${uuidHref`/kokebok/${cookbookId}/oppskrift/${målId}`}?tilbake=${encodeURIComponent(stiBase)}`;
 
@@ -34,20 +36,22 @@ export function Relasjoner({ cookbookId, recipeId, stiBase, utgående, innkommen
             <Link href={tilHref(lenke.recipeId)} className="hover:text-terra">
               {lenke.tittel} →
             </Link>
-            <form action={fjernLenke.bind(null, lenke.linkId)}>
-              <button
-                type="submit"
-                aria-label={`Fjern lenken til ${lenke.tittel}`}
-                title="Fjern lenken"
-                className="ml-1 size-6 rounded-full text-ink/30 hover:bg-ink/10 hover:text-ink"
-              >
-                ×
-              </button>
-            </form>
+            {kanRedigere && (
+              <form action={fjernLenke.bind(null, lenke.linkId)}>
+                <button
+                  type="submit"
+                  aria-label={`Fjern lenken til ${lenke.tittel}`}
+                  title="Fjern lenken"
+                  className="ml-1 size-6 rounded-full text-ink/30 hover:bg-ink/10 hover:text-ink"
+                >
+                  ×
+                </button>
+              </form>
+            )}
           </span>
         ))}
 
-        {kandidater.length > 0 && (
+        {kanRedigere && kandidater.length > 0 && (
           <details className="group">
             <summary className="cursor-pointer list-none rounded-full border-2 border-dashed border-line px-4 py-1 text-sm text-ink-soft hover:border-terra hover:text-terra">
               + lenk til en oppskrift

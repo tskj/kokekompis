@@ -21,7 +21,7 @@ export async function flyttOppskrift(recipeId: string, formData: FormData) {
     const oppskrift = await tx
       .select({ cookbookId: recipes.cookbookId })
       .from(recipes)
-      .where(eq(recipes.id, recipeId))
+      .where(and(eq(recipes.id, recipeId), eq(recipes.userId, userId)))
       .maybeSingle('oppskrift.flytt.oppskrift');
     if (!oppskrift) return;
 

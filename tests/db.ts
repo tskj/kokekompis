@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { chapters, cookbook, recipeChapters, recipes, users, recipeContentSchema, type RecipeContent } from "@/lib/db/schema";
+import { chapters, cookbook, recipeChapters, recipes, users, recipeContentSchema, type BokSynlighet, type RecipeContent } from "@/lib/db/schema";
 
 const ALL_TABLES = [
   '"user"',
@@ -57,7 +57,7 @@ export function testOppskrift(overrides?: Partial<RecipeContent>): RecipeContent
 
 // En bruker med kokebok, ett kapittel og én oppskrift lenket inn — utgangspunktet de fleste
 // testene trenger. Innholdet kan overstyres per test.
-export async function makeKokebok(opts?: { content?: RecipeContent; title?: string }) {
+export async function makeKokebok(opts?: { content?: RecipeContent; title?: string; synlighet?: BokSynlighet }) {
   const user = await db
     .insert(users)
     .values({ id: randomUUID(), name: "Maren Test", email: `${randomUUID()}@example.test` })
@@ -66,7 +66,7 @@ export async function makeKokebok(opts?: { content?: RecipeContent; title?: stri
 
   const bok = await db
     .insert(cookbook)
-    .values({ userId: user.id, name: "Testkokeboka" })
+    .values({ userId: user.id, name: "Testkokeboka", synlighet: opts?.synlighet ?? "privat" })
     .returning()
     .single("test.create-cookbook");
 

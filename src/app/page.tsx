@@ -1,7 +1,7 @@
 import { auth, signIn, signOut } from '@/auth';
-import { eq } from 'drizzle-orm';
-import { db } from '@/lib/db';
+import { asc, eq } from 'drizzle-orm';
 import { cookbook, recipeFavorites } from '@/lib/db/schema';
+import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { opprettBok } from '@/app/actions/bok';
@@ -45,32 +45,39 @@ const BOK_FARGER = [
   'bg-butter text-ink',
 ];
 
-async function getCookbooks() {
-  return await db
-    .select({
-      id: cookbook.id,
-      name: cookbook.name,
-    })
-    .from(cookbook);
+// Hylla er personlig: innlogget ser du dine egne bøker — utlogget ser du utvalget av utstilte
+// bøker (Marens utstillingsvindu). Favorittene danner sin egen "bok" med det første hjertet.
+async function getHylla(userId: string | null) {
+  return withTransaction({ name: 'forside' }, async (tx) => {
+    const bøker = await tx
+      .select({ id: cookbook.id, name: cookbook.name })
+      .from(cookbook)
+      .where(userId ? eq(cookbook.userId, userId) : eq(cookbook.synlighet, 'utstilt'))
+      .orderBy(asc(cookbook.name));
+
+    const harFavoritter = userId
+      ? await tx
+          .select({ id: recipeFavorites.id })
+          .from(recipeFavorites)
+          .where(eq(recipeFavorites.userId, userId))
+          .exists()
+      : false;
+
+    return { bøker, harFavoritter };
+  });
 }
 
 export default async function Home() {
   const session = await auth();
-  const cookbooks = await getCookbooks();
 
-  // Favorittene danner sin egen "bok" på hylla — den dukker opp med det første hjertet.
   const userId = await getCurrentUserId();
-  const harFavoritter = userId
-    ? await db
-        .select({ id: recipeFavorites.id })
-        .from(recipeFavorites)
-        .where(eq(recipeFavorites.userId, userId))
-        .exists()
-    : false;
+  const { bøker: cookbooks, harFavoritter } = await getHylla(userId);
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
-      <header className="flex items-end justify-between gap-4">
+      {/* flex-wrap: på smale skjermer faller hilsen + logg ut ned under tittelen i stedet for å
+          presse siden bredere enn telefonen */}
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>
           <h1 className="font-display text-5xl md:text-6xl">Kokekompis</h1>
           <p className="mt-2 text-lg text-ink-soft italic font-display">
@@ -78,7 +85,7 @@ export default async function Home() {
           </p>
         </div>
 
-        <div className="shrink-0 pb-2">
+        <div className="pb-2">
           {session?.user ? (
             <div className="flex items-center gap-3 text-sm text-ink-soft">
               <span>Hei, {session.user.name ?? 'du'}!</span>
@@ -93,12 +100,14 @@ export default async function Home() {
       <section className="mt-14" aria-label="Bokhylla">
         <h2 className="text-[11px] uppercase tracking-[0.2em] text-ink-soft mb-6">Bokhylla</h2>
 
-        <div className="flex flex-wrap items-end gap-6 border-b-8 border-ink/80">
+        {/* På telefon ligger bøkene bortover med litt overlapp og scroller sidelengs — de brekker
+            aldri under hverandre. På store skjermer brer hylla seg utover med luft mellom. */}
+        <div className="flex items-end overflow-x-auto pt-3 border-b-8 border-ink/80 md:flex-wrap md:gap-6 md:overflow-visible">
             {cookbooks.map((bok, index) => (
               <Link
                 key={bok.id}
                 href={uuidHref`/kokebok/${bok.id}`}
-                className={`${BOK_FARGER[index % BOK_FARGER.length]} group relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2`}
+                className={`${BOK_FARGER[index % BOK_FARGER.length]} group relative flex h-64 w-44 shrink-0 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2 -ml-8 first:ml-0 md:ml-0`}
               >
                 <span className="mt-6 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
                   {bok.name}
@@ -112,7 +121,7 @@ export default async function Home() {
             {harFavoritter && (
               <Link
                 href="/favoritter"
-                className="group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok transition-transform hover:-translate-y-2"
+                className="group relative flex h-56 w-40 shrink-0 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok transition-transform hover:-translate-y-2 -ml-8 first:ml-0 md:ml-0"
               >
                 <span className="mt-5 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug shadow-sm">
                   ♥ Favoritter
@@ -124,7 +133,7 @@ export default async function Home() {
             )}
 
             {userId && (
-              <details className="group h-64 w-44">
+              <details className="group h-64 w-44 shrink-0 -ml-8 first:ml-0 md:ml-0">
                 <summary className="flex h-full cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-r-md rounded-l-sm border-2 border-dashed border-line text-ink-soft hover:border-terra hover:text-terra group-open:hidden">
                   <span className="text-3xl leading-none">+</span>
                   <span className="font-display text-lg">ny bok</span>
@@ -149,10 +158,16 @@ export default async function Home() {
             )}
           </div>
 
-        {cookbooks.length === 0 && !userId && (
-          <p className="mt-6 text-ink-soft">
-            Hylla er tom ennå — logg inn for å sette den første boken på plass.
-          </p>
+        {!userId && (
+          cookbooks.length > 0 ? (
+            <p className="mt-6 text-ink-soft">
+              Et lite utvalg fra hylla — logg inn for å lage dine egne bøker.
+            </p>
+          ) : (
+            <p className="mt-6 text-ink-soft">
+              Hylla er tom ennå — logg inn for å sette den første boken på plass.
+            </p>
+          )
         )}
       </section>
     </main>

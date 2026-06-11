@@ -69,9 +69,10 @@ export const Attr = {
   RECIPE_PHOTO_DELETED: ":recipe/photo-deleted", // value: object key
 
   // === bøker — asserted on the COOKBOOK's id ===
-  COOKBOOK_CREATED:  ":cookbook/created",  // value: name
-  COOKBOOK_RENAMED:  ":cookbook/renamed",  // value: new name
-  CHAPTER_CREATED:   ":cookbook/chapter-created", // value: chapter name
+  COOKBOOK_CREATED:    ":cookbook/created",    // value: name
+  COOKBOOK_RENAMED:    ":cookbook/renamed",    // value: new name
+  COOKBOOK_VISIBILITY: ":cookbook/visibility", // value: "privat" | "utstilt"
+  CHAPTER_CREATED:     ":cookbook/chapter-created", // value: chapter name
 
   // AI-ekstraksjon (entity: import-forsøkets id) — modell + latens + utfall, queryable per forsøk.
   IMPORT_MODEL:      ":import/model",

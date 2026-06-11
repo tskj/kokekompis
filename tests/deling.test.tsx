@@ -8,7 +8,8 @@ import { makeKokebok, resetDb } from "./db";
 import "./rtl";
 import { render, screen } from "./rtl";
 
-vi.mock("@/auth", () => ({ auth: vi.fn(async () => null) }));
+const hoisted = vi.hoisted(() => ({ userId: "" }));
+vi.mock("@/auth", () => ({ auth: vi.fn(async () => (hoisted.userId ? { user: { id: hoisted.userId } } : null)) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((url: string) => { throw new Error("NEXT_REDIRECT:" + url); }),
@@ -27,11 +28,13 @@ async function delOgFåToken(recipeId: string): Promise<string> {
 
 describe("deling (ekte actions, ekte database, ekte delingsside)", () => {
   beforeEach(async () => {
+    hoisted.userId = "";
     await resetDb();
   });
 
   it("å dele lager én lenke — og å dele igjen gir samme lenke", async () => {
-    const { oppskrift } = await makeKokebok();
+    const { user, oppskrift } = await makeKokebok();
+    hoisted.userId = user.id;
 
     const token1 = await delOgFåToken(oppskrift.id);
     const token2 = await delOgFåToken(oppskrift.id);
@@ -42,8 +45,20 @@ describe("deling (ekte actions, ekte database, ekte delingsside)", () => {
     expect(encodeUuidToBase32(rader[0].id)).toBe(token1);
   });
 
+  it("bare eieren kan dele — en annens oppskrift forblir udelt", async () => {
+    const { oppskrift } = await makeKokebok();
+    const annen = await makeKokebok();
+    hoisted.userId = annen.user.id;
+
+    await delOppskrift(oppskrift.id);
+
+    const rader = await db.select().from(recipeShares).where(eq(recipeShares.recipeId, oppskrift.id));
+    expect(rader).toHaveLength(0);
+  });
+
   it("delingssiden viser oppskriften med opprinnelsen — den følger alltid med", async () => {
-    const { oppskrift } = await makeKokebok({ title: "Mormors skillingsboller" });
+    const { user, oppskrift } = await makeKokebok({ title: "Mormors skillingsboller" });
+    hoisted.userId = user.id;
     const token = await delOgFåToken(oppskrift.id);
 
     render(await DeltSide({
@@ -62,7 +77,8 @@ describe("deling (ekte actions, ekte database, ekte delingsside)", () => {
   });
 
   it("delingssiden kan også vise gram — mottakeren har samme enhetsvalg", async () => {
-    const { oppskrift } = await makeKokebok();
+    const { user, oppskrift } = await makeKokebok();
+    hoisted.userId = user.id;
     const token = await delOgFåToken(oppskrift.id);
 
     render(await DeltSide({

@@ -4,8 +4,10 @@ import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { recipeNotes, notatFarger } from '@/lib/db/schema';
+import { cookbook, recipes, recipeNotes, notatFarger } from '@/lib/db/schema';
+import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
+import { kanSeBok } from '@/lib/bok-tilgang';
 import { log, Attr } from '@/lib/log';
 
 // Postit-lappene: små personlige notater klistret på en oppskrift. Skjemaene poster hit som
@@ -23,12 +25,26 @@ export async function leggTilNotat(recipeId: string, formData: FormData) {
   const parsed = notatSchema.safeParse({ tekst: formData.get('tekst'), farge: formData.get('farge') });
   if (!parsed.success) return;
 
-  await db.insert(recipeNotes).values({
-    recipeId,
-    userId,
-    tekst: parsed.data.tekst,
-    farge: parsed.data.farge,
+  const lagtTil = await withTransaction({ name: 'notat.legg-til' }, async (tx) => {
+    // lappen er personlig, men oppskriften må være synlig for deg — din egen eller i en utstilt bok
+    const bok = await tx
+      .select({ userId: cookbook.userId, synlighet: cookbook.synlighet })
+      .from(recipes)
+      .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
+      .where(eq(recipes.id, recipeId))
+      .maybeSingle('notat.legg-til.bok');
+    if (!bok || !kanSeBok(bok, userId)) return false;
+
+    await tx.insert(recipeNotes).values({
+      recipeId,
+      userId,
+      tekst: parsed.data.tekst,
+      farge: parsed.data.farge,
+    });
+
+    return true;
   });
+  if (!lagtTil) return;
 
   log.info(recipeId, Attr.RECIPE_NOTE_ADDED, { farge: parsed.data.farge });
   revalidatePath('/', 'layout');

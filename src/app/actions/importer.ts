@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { eq, and, asc, max, sql } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { chapters, recipes, recipeChapters } from '@/lib/db/schema';
+import { chapters, cookbook, recipes, recipeChapters } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
@@ -132,6 +132,14 @@ export async function importerFraUrl(cookbookId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) tilbakeMedFeil(cookbookId, 'Du må være logget inn for å importere');
 
+  // import endrer boken — den må være din (en fremmed bok-id ender bare på forsiden)
+  const minBok = await db
+    .select({ id: cookbook.id })
+    .from(cookbook)
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .exists();
+  if (!minBok) redirect('/');
+
   const valg = lesKapittelValg(formData);
   if (!valg) tilbakeMedFeil(cookbookId, 'Velg et kapittel');
 
@@ -178,6 +186,13 @@ export async function importerFraUrl(cookbookId: string, formData: FormData) {
 export async function importerFraBilde(cookbookId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) tilbakeMedFeil(cookbookId, 'Du må være logget inn for å importere');
+
+  const minBok = await db
+    .select({ id: cookbook.id })
+    .from(cookbook)
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .exists();
+  if (!minBok) redirect('/');
 
   const valg = lesKapittelValg(formData);
   if (!valg) tilbakeMedFeil(cookbookId, 'Velg et kapittel');

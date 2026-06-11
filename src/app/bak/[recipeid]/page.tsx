@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { eq, and, asc } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { recipes, recipeNotes, recipeContentSchema, type RecipeContent, type Steg } from '@/lib/db/schema';
+import { cookbook, recipes, recipeNotes, recipeContentSchema, type RecipeContent, type Steg } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
+import { kanSeBok } from '@/lib/bok-tilgang';
 import { getUuidParam } from '@/lib/uuid/server-uuid-params';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { ingredienserForSteg, pågåendeVenting } from '@/lib/steg';
@@ -86,12 +87,14 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
 
   const userId = await getCurrentUserId();
   const data = await withTransaction({ name: 'bakeview' }, async (tx) => {
+    // tilgangen følger boken oppskriften står i: privat = bare eieren, utstilt = alle
     const oppskrift = await tx
-      .select({ id: recipes.id, title: recipes.title, content: recipes.content })
+      .select({ id: recipes.id, title: recipes.title, content: recipes.content, bokEier: cookbook.userId, synlighet: cookbook.synlighet })
       .from(recipes)
+      .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
       .where(eq(recipes.id, recipeId))
       .maybeSingle('bakeview.recipe');
-    if (!oppskrift) return null;
+    if (!oppskrift || !kanSeBok({ userId: oppskrift.bokEier, synlighet: oppskrift.synlighet }, userId)) return null;
 
     const notater = userId
       ? await tx

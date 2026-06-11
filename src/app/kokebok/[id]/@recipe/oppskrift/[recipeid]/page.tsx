@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { eq, and, asc, ne, inArray, notInArray } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeContentSchema } from '@/lib/db/schema';
+import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
+import { kanSeBok } from '@/lib/bok-tilgang';
 import { openChapter } from '@/app/kokebok/[id]/actions';
 import { getCookbookAndRecipeIdParams } from '@/lib/uuid/server-uuid-params';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
@@ -29,6 +30,14 @@ interface RecipePageProps {
 // kapitler/oppskrifter til flytt- og lenk-skjemaene.
 async function getOppskriftSide(recipeId: string, cookbookId: string, userId: string | null) {
   return withTransaction({ name: 'oppskrift.side' }, async (tx) => {
+    // boken styrer tilgangen: privat = bare eieren, utstilt = alle får lese
+    const bok = await tx
+      .select({ userId: cookbook.userId, synlighet: cookbook.synlighet })
+      .from(cookbook)
+      .where(eq(cookbook.id, cookbookId))
+      .maybeSingle('oppskrift.side.bok');
+    if (!bok || !kanSeBok(bok, userId)) return null;
+
     const oppskrift = await tx
       .select({
         id: recipes.id,
@@ -97,7 +106,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .exists()
       : false;
 
-    return { ...oppskrift, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, utgående, innkommende, kandidater, erFavoritt };
+    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, utgående, innkommende, kandidater, erFavoritt };
   });
 }
 
@@ -138,7 +147,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
         visEnhet={enheter === 'gram' ? 'gram' : 'original'}
         ganger={ganger}
         stiBase={stiBase}
-        ferdigBilder={<RettBilder tittel={side.title} bilder={bilder} recipeId={recipeId} />}
+        ferdigBilder={<RettBilder tittel={side.title} bilder={bilder} recipeId={side.erEier ? recipeId : undefined} />}
         handlinger={
           <>
             <Link
@@ -148,54 +157,62 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               Sett i gang — bakeview →
             </Link>
 
-            <form action={toggleFavoritt.bind(null, recipeId)}>
-              <button
-                type="submit"
-                aria-pressed={side.erFavoritt}
-                aria-label={side.erFavoritt ? 'Fjern fra favoritter' : 'Merk som favoritt'}
-                title={side.erFavoritt ? 'Fjern fra favoritter' : 'Merk som favoritt'}
-                className={`rounded-full border px-4 py-2 text-sm ${side.erFavoritt ? 'border-terra text-terra' : 'border-line hover:border-terra hover:text-terra'}`}
+            {userId && (
+              <form action={toggleFavoritt.bind(null, recipeId)}>
+                <button
+                  type="submit"
+                  aria-pressed={side.erFavoritt}
+                  aria-label={side.erFavoritt ? 'Fjern fra favoritter' : 'Merk som favoritt'}
+                  title={side.erFavoritt ? 'Fjern fra favoritter' : 'Merk som favoritt'}
+                  className={`rounded-full border px-4 py-2 text-sm ${side.erFavoritt ? 'border-terra text-terra' : 'border-line hover:border-terra hover:text-terra'}`}
+                >
+                  {side.erFavoritt ? '♥ Favoritt' : '♡ Favoritt'}
+                </button>
+              </form>
+            )}
+
+            {side.erEier && (
+              <form action={delOppskrift.bind(null, recipeId)}>
+                <button type="submit" className="rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
+                  Del oppskriften
+                </button>
+              </form>
+            )}
+
+            {side.erEier && (
+              <Link
+                href={`${stiBase}/rediger`}
+                className="rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra"
               >
-                {side.erFavoritt ? '♥ Favoritt' : '♡ Favoritt'}
-              </button>
-            </form>
-
-            <form action={delOppskrift.bind(null, recipeId)}>
-              <button type="submit" className="rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
-                Del oppskriften
-              </button>
-            </form>
-
-            <Link
-              href={`${stiBase}/rediger`}
-              className="rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra"
-            >
-              Rediger
-            </Link>
+                Rediger
+              </Link>
+            )}
 
             <PrintKnapp />
 
-            <LukkbarDetails className="relative">
-              <summary className="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
-                Flytt …
-              </summary>
+            {side.erEier && (
+              <LukkbarDetails className="relative">
+                <summary className="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
+                  Flytt …
+                </summary>
 
-              <form action={flyttOppskrift.bind(null, recipeId)} className="absolute z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
-                <select name="kapittel" defaultValue={side.kapittelId ? encodeUuidToBase32(side.kapittelId) : 'ingen'} aria-label="Kapittel" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
-                  {side.kapitlerIBoken.map((kapittel) => (
-                    <option key={kapittel.id} value={encodeUuidToBase32(kapittel.id)}>{kapittel.name}</option>
-                  ))}
-                  <option value="ingen">Ukategorisert</option>
-                </select>
-                <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
-                  Flytt
-                </button>
-              </form>
-            </LukkbarDetails>
+                <form action={flyttOppskrift.bind(null, recipeId)} className="absolute z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
+                  <select name="kapittel" defaultValue={side.kapittelId ? encodeUuidToBase32(side.kapittelId) : 'ingen'} aria-label="Kapittel" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
+                    {side.kapitlerIBoken.map((kapittel) => (
+                      <option key={kapittel.id} value={encodeUuidToBase32(kapittel.id)}>{kapittel.name}</option>
+                    ))}
+                    <option value="ingen">Ukategorisert</option>
+                  </select>
+                  <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
+                    Flytt
+                  </button>
+                </form>
+              </LukkbarDetails>
+            )}
           </>
         }
         relasjoner={
-          (side.utgående.length > 0 || side.innkommende.length > 0 || side.kandidater.length > 0) ? (
+          (side.utgående.length > 0 || side.innkommende.length > 0 || (side.erEier && side.kandidater.length > 0)) ? (
             <Relasjoner
               cookbookId={cookbookId}
               recipeId={recipeId}
@@ -203,10 +220,11 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               utgående={side.utgående}
               innkommende={side.innkommende}
               kandidater={side.kandidater}
+              kanRedigere={side.erEier}
             />
           ) : null
         }
-        notater={<NotatTavle recipeId={recipeId} notater={side.notater} />}
+        notater={userId ? <NotatTavle recipeId={recipeId} notater={side.notater} /> : null}
       />
     </>
   );

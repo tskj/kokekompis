@@ -5,7 +5,7 @@ import { and, eq, max } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { cookbook, chapters } from '@/lib/db/schema';
+import { cookbook, chapters, bokSynligheter } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
@@ -50,6 +50,27 @@ export async function endreBokNavn(cookbookId: string, formData: FormData) {
   if (!endret) return;
 
   log.info(cookbookId, Attr.COOKBOOK_RENAMED, navn.data);
+  revalidatePath('/', 'layout');
+}
+
+// Privat ↔ utstilt. En utstilt bok står fremme på forsiden og kan leses av alle — det er slik
+// Marens utvalg møter en utlogget gjest.
+export async function settBokSynlighet(cookbookId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const synlighet = z.enum(bokSynligheter).safeParse(formData.get('synlighet'));
+  if (!synlighet.success) return;
+
+  const endret = await db
+    .update(cookbook)
+    .set({ synlighet: synlighet.data })
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .returning({ id: cookbook.id })
+    .maybeSingle('bok.synlighet');
+  if (!endret) return;
+
+  log.info(cookbookId, Attr.COOKBOOK_VISIBILITY, synlighet.data);
   revalidatePath('/', 'layout');
 }
 

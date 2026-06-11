@@ -90,12 +90,18 @@ export const recipeContentSchema = z.object({
   }),
 });
 
+// En bok er i utgangspunktet privat for eieren. 'utstilt' setter den frem på forsiden for alle
+// (lesbar, aldri redigerbar) — utvalget en utlogget gjest får se.
+export const bokSynligheter = ['privat', 'utstilt'] as const;
+export type BokSynlighet = (typeof bokSynligheter)[number];
+
 export const cookbook = pgTable('cookbook', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
+  synlighet: text('synlighet').$type<BokSynlighet>().notNull().default('privat'),
 });
 
 export const chapters = pgTable('chapters', {

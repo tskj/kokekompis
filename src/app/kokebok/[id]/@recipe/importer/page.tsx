@@ -1,6 +1,8 @@
-import { asc, eq } from 'drizzle-orm';
-import { db } from '@/lib/db';
-import { chapters } from '@/lib/db/schema';
+import { and, asc, eq } from 'drizzle-orm';
+import { notFound } from 'next/navigation';
+import { chapters, cookbook } from '@/lib/db/schema';
+import { withTransaction } from '@/lib/db-tx';
+import { getCurrentUserId } from '@/lib/current-user';
 import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { importerFraBilde, importerFraUrl } from '@/app/actions/importer';
@@ -35,11 +37,26 @@ export default async function ImporterPage({ params, searchParams }: ImporterPag
   const cookbookId = await getCookbookIdParam(params);
   const { feil } = await searchParams;
 
-  const kapitler = await db
-    .select({ id: chapters.id, name: chapters.name })
-    .from(chapters)
-    .where(eq(chapters.cookbookId, cookbookId))
-    .orderBy(asc(chapters.order));
+  const userId = await getCurrentUserId();
+  if (!userId) notFound();
+
+  const { kapitler } = await withTransaction({ name: 'importer.side' }, async (tx) => {
+    // import er en endring av boken — kun eieren kommer hit, gjester i utstilte bøker gjør ikke
+    const bok = await tx
+      .select({ id: cookbook.id })
+      .from(cookbook)
+      .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+      .maybeSingle('importer.side.bok');
+    if (!bok) notFound();
+
+    return {
+      kapitler: await tx
+        .select({ id: chapters.id, name: chapters.name })
+        .from(chapters)
+        .where(eq(chapters.cookbookId, cookbookId))
+        .orderBy(asc(chapters.order)),
+    };
+  });
 
   return (
     <div className="max-w-2xl">

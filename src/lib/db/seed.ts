@@ -529,9 +529,10 @@ async function seed() {
       .values({ id: USER_ID, name: 'Maren', email: 'maren@kokekompis.no' })
       .onConflictDoNothing();
 
+    // utstilt: showcase-boken som møter utloggede gjester på forsiden
     const [marensKokebok] = await tx
       .insert(cookbook)
-      .values({ userId: USER_ID, name: 'Marens kokebok' })
+      .values({ userId: USER_ID, name: 'Marens kokebok', synlighet: 'utstilt' })
       .returning();
 
     const allChapters = await tx

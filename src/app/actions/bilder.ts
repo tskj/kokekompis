@@ -2,7 +2,8 @@
 
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { recipes, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
@@ -26,6 +27,14 @@ export async function lastOppRettBilde(recipeId: string, formData: FormData) {
   if (!bilde.type.startsWith('image/')) return;
   if (bilde.size > MAKS_BILDE_BYTES) return;
 
+  // eierskap sjekkes FØR skalering og opplasting — ingen skal fylle bøtta via andres oppskrifter
+  const minOppskrift = await db
+    .select({ id: recipes.id })
+    .from(recipes)
+    .where(and(eq(recipes.id, recipeId), eq(recipes.userId, userId)))
+    .exists();
+  if (!minOppskrift) return;
+
   // .rotate() retter opp etter EXIF-orientering og stripper metadataene i samme slengen
   const webp = await sharp(Buffer.from(await bilde.arrayBuffer()))
     .rotate()
@@ -42,7 +51,7 @@ export async function lastOppRettBilde(recipeId: string, formData: FormData) {
     const rad = await tx
       .select({ content: recipes.content })
       .from(recipes)
-      .where(eq(recipes.id, recipeId))
+      .where(and(eq(recipes.id, recipeId), eq(recipes.userId, userId)))
       .maybeSingle('oppskrift.bilde');
     if (!rad) return;
 
@@ -66,7 +75,7 @@ export async function slettRettBilde(recipeId: string, key: string, formData: Fo
     const rad = await tx
       .select({ content: recipes.content })
       .from(recipes)
-      .where(eq(recipes.id, recipeId))
+      .where(and(eq(recipes.id, recipeId), eq(recipes.userId, userId)))
       .maybeSingle('oppskrift.bilde-slett');
     if (!rad) return false;
 
