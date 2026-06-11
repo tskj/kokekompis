@@ -1,6 +1,6 @@
 import { withTransaction } from '@/lib/db-tx';
 import { cookbook, chapters, recipes, recipeChapters, userOpenChapters } from '@/lib/db/schema';
-import { eq, asc, inArray, notInArray, and } from 'drizzle-orm';
+import { eq, asc, inArray, notInArray, and, ne } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChapterList } from './components/ChapterList';
@@ -70,6 +70,15 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       .where(and(eq(recipes.cookbookId, id), notInArray(recipes.id, kategorisert)))
       .orderBy(asc(recipes.title));
 
+    // Dine andre bøker — målene kapittel-stellet kan flytte et helt kapittel til.
+    const andreBøker = userId
+      ? await tx
+          .select({ id: cookbook.id, name: cookbook.name })
+          .from(cookbook)
+          .where(and(eq(cookbook.userId, userId), ne(cookbook.id, id)))
+          .orderBy(asc(cookbook.name))
+      : [];
+
     // Get user's open chapters for this cookbook using subquery
     let openChapterIds: string[] = [];
     if (userId) {
@@ -108,6 +117,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       ...cookbookData,
       chapters: chaptersWithRecipes,
       ukategorisert,
+      andreBøker,
       openChapterIds,
     };
   });
@@ -190,6 +200,8 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                 chapters={cookbookData.chapters}
                 ukategorisert={cookbookData.ukategorisert}
                 openChapterIds={cookbookData.openChapterIds}
+                erEier={erEier}
+                andreBøker={erEier ? cookbookData.andreBøker : []}
               />
             )}
 

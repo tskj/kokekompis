@@ -73,6 +73,8 @@ export const Attr = {
   COOKBOOK_RENAMED:    ":cookbook/renamed",    // value: new name
   COOKBOOK_VISIBILITY: ":cookbook/visibility", // value: "privat" | "utstilt"
   CHAPTER_CREATED:     ":cookbook/chapter-created", // value: chapter name
+  CHAPTER_RENAMED:     ":cookbook/chapter-renamed", // value: new name
+  CHAPTER_MOVED:       ":cookbook/chapter-moved",   // value: { kapittelId, til } — asserted on the OLD book
 
   // AI-ekstraksjon (entity: import-forsøkets id) — modell + latens + utfall, queryable per forsøk.
   IMPORT_MODEL:      ":import/model",
