@@ -1,5 +1,6 @@
 import {
   timestamp,
+  date,
   pgTable,
   text,
   primaryKey,
@@ -225,6 +226,37 @@ export const recipeShares = pgTable('recipe_shares', {
     .unique(),
   createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
 });
+
+
+// ========= Planer =========
+// En plan ("17. mai-frokost", "julebakst") samler oppskrifter på tvers av bøkene dine — nesten
+// som en kokebok, men for en anledning. Personlig som lappene; oppskriftene bare refereres, så
+// planen verken eier eller flytter noe. Handlelisten regnes ut fra oppskriftene ved visning.
+
+export const plans = pgTable('plans', {
+  id: uuid('id').defaultRandom().notNull().primaryKey(),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  // dagen det skal stå på bordet — valgfri ("julebakst" trenger ingen dato)
+  dato: date('dato'),
+});
+
+export const planRecipes = pgTable('plan_recipes', {
+  id: uuid('id').defaultRandom().notNull().primaryKey(),
+  planId: uuid('planId')
+    .notNull()
+    .references(() => plans.id, { onDelete: 'cascade' }),
+  recipeId: uuid('recipeId')
+    .notNull()
+    .references(() => recipes.id, { onDelete: 'cascade' }),
+  order: integer('order').notNull(),
+}, (planRecipes) => [
+  unique().on(planRecipes.planId, planRecipes.recipeId),
+  unique().on(planRecipes.planId, planRecipes.order),
+  check('plan_order_starts_at_one', sql`"order" >= 1`),
+]);
 
 
 // ========= OAuth =========

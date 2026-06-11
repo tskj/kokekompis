@@ -77,6 +77,11 @@ export const Attr = {
   CHAPTER_RENAMED:     ":cookbook/chapter-renamed", // value: new name
   CHAPTER_MOVED:       ":cookbook/chapter-moved",   // value: { kapittelId, til } — asserted on the OLD book
 
+  // === planer — asserted on the PLAN's id ===
+  PLAN_CREATED:      ":plan/created",      // value: name
+  PLAN_DELETED:      ":plan/deleted",      // value: true
+  PLAN_RECIPE_ADDED: ":plan/recipe-added", // value: recipe id
+
   // AI-ekstraksjon (entity: import-forsøkets id) — modell + latens + utfall, queryable per forsøk.
   IMPORT_MODEL:      ":import/model",
   IMPORT_LATENCY_MS: ":import/latency-ms",

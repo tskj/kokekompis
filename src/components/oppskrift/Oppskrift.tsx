@@ -21,6 +21,8 @@ interface OppskriftProps {
   notater?: React.ReactNode;
   // de første lappene, strødd i margen øverst på sida (flyter ved tittelen på brede skjermer)
   notaterStrødd?: React.ReactNode;
+  // avkryssbar handleliste for oppskriften — utelates på delingssiden
+  handleliste?: React.ReactNode;
   // "Se også"-seksjonen (lenker til andre oppskrifter i boken) — utelates på delingssiden
   relasjoner?: React.ReactNode;
   // bildene av den ferdige retten (RettBilder) — siden veksler nøkler inn i visnings-URL-er
@@ -40,7 +42,7 @@ export function lesGanger(rå: string | undefined, kanSkaleres: boolean): number
 
 // Det klassiske oppskriftsviewet: tittel, infolinje, ingredienser ved siden av fremgangsmåten,
 // og opprinnelsen nederst — som en side i en trykt kokebok.
-export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, stiBase, handlinger, notater, notaterStrødd, relasjoner, ferdigBilder }: OppskriftProps) {
+export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, stiBase, handlinger, notater, notaterStrødd, handleliste, relasjoner, ferdigBilder }: OppskriftProps) {
   const kanViseGram = content.ingredienser.some((i) => i.enhet != null && i.enhet !== 'g');
 
   // toggle-lenkene bevarer hverandres valg — alt er URL-state
@@ -111,6 +113,8 @@ export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, 
           <StegListe content={content} />
         </section>
       </div>
+
+      {handleliste && <div className="mt-8">{handleliste}</div>}
 
       {relasjoner && <div className="mt-10">{relasjoner}</div>}
 

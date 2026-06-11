@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { eq, and, asc, ne, inArray, notInArray } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeContentSchema } from '@/lib/db/schema';
+import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, plans, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { kanSeBok } from '@/lib/bok-tilgang';
+import { lagHandleliste } from '@/lib/handleliste';
 import { openChapter } from '@/app/kokebok/[id]/actions';
 import { getCookbookAndRecipeIdParams } from '@/lib/uuid/server-uuid-params';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
@@ -19,10 +20,12 @@ import { LukkbarDetails } from '@/components/LukkbarDetails';
 import { delOppskrift } from '@/app/actions/deling';
 import { toggleFavoritt } from '@/app/actions/favoritter';
 import { flyttOppskrift } from '@/app/actions/organisering';
+import { leggTilIPlan } from '@/app/actions/planer';
+import { Handleliste } from '@/components/oppskrift/Handleliste';
 
 interface RecipePageProps {
   params: Promise<{ id: string; recipeid: string }>;
-  searchParams: Promise<{ enheter?: string; tilbake?: string; ganger?: string }>;
+  searchParams: Promise<{ enheter?: string; tilbake?: string; ganger?: string; handleliste?: string }>;
 }
 
 // Alt siden trenger, fra ett konsistent snapshot: oppskriften (eid av boken via cookbookId —
@@ -106,13 +109,22 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .exists()
       : false;
 
-    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, utgående, innkommende, kandidater, erFavoritt };
+    // dine planer — målene for "Til plan …"
+    const minePlaner = userId
+      ? await tx
+          .select({ id: plans.id, name: plans.name })
+          .from(plans)
+          .where(eq(plans.userId, userId))
+          .orderBy(asc(plans.name))
+      : [];
+
+    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, utgående, innkommende, kandidater, erFavoritt, minePlaner };
   });
 }
 
 export default async function RecipePage({ params, searchParams }: RecipePageProps) {
   const { cookbookId, recipeId } = await getCookbookAndRecipeIdParams(params);
-  const { enheter, tilbake, ganger: gangerParam } = await searchParams;
+  const { enheter, tilbake, ganger: gangerParam, handleliste: handlelisteParam } = await searchParams;
 
   const userId = await getCurrentUserId();
   const side = await getOppskriftSide(recipeId, cookbookId, userId);
@@ -129,6 +141,19 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
 
   // de første lappene strøs i margen ved tittelen på brede skjermer — resten samles på tavla
   const antallStrødd = Math.min(side.notater.length, 3);
+
+  // handlelisten er URL-state som alt annet: ?handleliste=1 bretter den ut, lenken bevarer valgene
+  const visHandleliste = handlelisteParam === '1';
+  const handlelisteQuery = (med: boolean) => {
+    const query = new URLSearchParams();
+    if (enheter === 'gram') query.set('enheter', 'gram');
+    if (ganger !== 1)       query.set('ganger', String(ganger));
+    if (tilbakeSti)         query.set('tilbake', tilbakeSti);
+    if (med)                query.set('handleliste', '1');
+
+    const qs = query.toString();
+    return qs ? `${stiBase}?${qs}` : stiBase;
+  };
 
   return (
     <>
@@ -212,6 +237,32 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                 </form>
               </LukkbarDetails>
             )}
+
+            {userId && (
+              <LukkbarDetails className="relative">
+                <summary className="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
+                  Til plan …
+                </summary>
+
+                {side.minePlaner.length > 0 ? (
+                  <form action={leggTilIPlan.bind(null, recipeId)} className="absolute z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
+                    <select name="plan" aria-label="Plan" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
+                      {side.minePlaner.map((plan) => (
+                        <option key={plan.id} value={encodeUuidToBase32(plan.id)}>{plan.name}</option>
+                      ))}
+                    </select>
+                    <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
+                      Legg i planen
+                    </button>
+                  </form>
+                ) : (
+                  <p className="absolute z-10 mt-2 w-64 rounded-xl border border-line bg-card p-3 text-sm shadow-bok">
+                    Ingen planer ennå —{' '}
+                    <Link href="/planer" className="underline underline-offset-2 hover:text-terra">legg en først</Link>.
+                  </p>
+                )}
+              </LukkbarDetails>
+            )}
           </>
         }
         relasjoner={
@@ -226,6 +277,26 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               kanRedigere={side.erEier}
             />
           ) : null
+        }
+        handleliste={
+          visHandleliste ? (
+            <section aria-label="Handleliste" className="max-w-xl rounded-lg border border-line bg-card p-4 skjul-ved-print">
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <h2 className="font-display text-2xl">Handleliste</h2>
+                <Link href={handlelisteQuery(false)} className="text-sm text-ink-soft underline underline-offset-2 hover:text-terra">
+                  legg den bort
+                </Link>
+              </div>
+              <Handleliste linjer={lagHandleliste([content])} ganger={ganger} />
+            </section>
+          ) : (
+            <Link
+              href={handlelisteQuery(true)}
+              className="text-sm text-ink-soft underline underline-offset-2 hover:text-terra skjul-ved-print"
+            >
+              Handleliste til oppskriften
+            </Link>
+          )
         }
         notater={userId ? <NotatTavle recipeId={recipeId} notater={side.notater} antallStrødd={antallStrødd} /> : null}
         notaterStrødd={userId && antallStrødd > 0 ? <StrøddeNotater notater={side.notater.slice(0, antallStrødd)} /> : null}

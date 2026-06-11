@@ -183,6 +183,22 @@ describe("oppskriftssiden (ekte side rendret mot ekte database)", () => {
     expect(screen.getAllByText("husk jordbær til pynt")).toHaveLength(2);
   });
 
+  it("?handleliste=1 bretter ut en avkryssbar handleliste — ellers bare lenken", async () => {
+    const { user, bok, oppskrift } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    render(await RecipePage(sideProps(bok.id, oppskrift.id)));
+    expect(screen.getByRole("link", { name: "Handleliste til oppskriften" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Handleliste" })).not.toBeInTheDocument();
+
+    cleanup();
+    render(await RecipePage(sideProps(bok.id, oppskrift.id, { handleliste: "1" })));
+    expect(screen.getByRole("heading", { name: "Handleliste" })).toBeInTheDocument();
+    // hvetemel står nå både i ingredienslista og på handlelista
+    expect(screen.getAllByText("hvetemel")).toHaveLength(2);
+    expect(screen.getAllByRole("checkbox").length).toBeGreaterThan(0);
+  });
+
   it("404-er for en oppskrift som ikke hører til boken", async () => {
     const { user, bok } = await makeKokebok();
     const annen = await makeKokebok({ title: "Annen manns suppe" });

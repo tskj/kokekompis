@@ -159,6 +159,17 @@ export default async function Home() {
             )}
           </div>
 
+        {userId && (
+          <p className="mt-10">
+            <Link
+              href="/planer"
+              className="inline-block border-2 border-dashed border-line px-4 py-3 text-sm text-ink-soft hover:border-terra hover:text-terra"
+            >
+              Planlegging → samle det du skal lage til 17. mai, julaften eller bursdagen — med én handleliste
+            </Link>
+          </p>
+        )}
+
         {!userId && (
           cookbooks.length > 0 ? (
             <p className="mt-6 text-ink-soft">
