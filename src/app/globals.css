@@ -14,6 +14,9 @@
   --color-terra-deep:   #8c3a1b;
   --color-butter:       #e9b949;
   --color-sage:         #76814e;
+  /* bokryggfarger utover grunnpaletten — vinrød og nattblå klassikere fra mormors hylle */
+  --color-vin:          #722f37;
+  --color-natt:         #2f3a4a;
   /* teipfargene på notatlappene — bokens egen palett, ikke kontorgult */
   --color-teip-terrakotta: #c97c5d;
   --color-teip-rav:        #e3b04b;
@@ -23,6 +26,8 @@
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-skrift:  var(--font-caveat), cursive;
   --font-sans:    var(--font-geist-sans), system-ui, sans-serif;
+  /* brødteksten: en bokserif som hører sammen med papiret — sansen sto og skar mot bakgrunnen */
+  --font-tekst:   var(--font-alegreya), Georgia, serif;
 
   --shadow-postit: 1px 4px 10px rgb(54 43 30 / 0.18);
   --shadow-bok:    0 2px 4px rgb(54 43 30 / 0.10), 0 12px 28px rgb(54 43 30 / 0.14);
@@ -40,7 +45,7 @@ body {
     repeating-linear-gradient(45deg, rgb(54 43 30 / 0.012) 0 2px, transparent 2px 6px),
     repeating-linear-gradient(-45deg, rgb(54 43 30 / 0.012) 0 2px, transparent 2px 6px);
   color: var(--color-ink);
-  font-family: var(--font-sans);
+  font-family: var(--font-tekst);
 }
 
 ::selection {
@@ -76,6 +81,30 @@ body {
     2% 0, 98% 0, 100% 18%, 97% 38%, 100% 62%, 98% 100%,
     2% 100%, 0 78%, 3% 55%, 0 30%
   );
+}
+
+/* Bokbånd-mønstre: den smale stoffstripen mellom bokens tittel og innholdet — som
+   forsatspapiret i en gammel kokebok. Velges i bokas utseende-panel (src/lib/bok-utseende.ts). */
+.bokbaand-striper {
+  background-color: var(--color-paper-warm);
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-terra) 0 7px,  transparent 7px 24px,
+    var(--color-terra) 24px 27px, transparent 27px 44px
+  );
+}
+
+.bokbaand-ruter {
+  background-color: var(--color-card);
+  background-image:
+    repeating-linear-gradient(0deg,  rgb(118 129 78 / 0.35) 0 12px, transparent 12px 26px),
+    repeating-linear-gradient(90deg, rgb(118 129 78 / 0.35) 0 12px, transparent 12px 26px);
+}
+
+.bokbaand-prikker {
+  background-color: var(--color-card);
+  background-image: radial-gradient(rgb(233 185 73 / 0.6) 4px, transparent 4.5px);
+  background-size: 26px 26px;
 }
 
 @media print {

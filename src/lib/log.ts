@@ -72,6 +72,7 @@ export const Attr = {
   COOKBOOK_CREATED:    ":cookbook/created",    // value: name
   COOKBOOK_RENAMED:    ":cookbook/renamed",    // value: new name
   COOKBOOK_VISIBILITY: ":cookbook/visibility", // value: "privat" | "utstilt"
+  COOKBOOK_STYLED:     ":cookbook/styled",     // value: { farge } | { bånd }
   CHAPTER_CREATED:     ":cookbook/chapter-created", // value: chapter name
   CHAPTER_RENAMED:     ":cookbook/chapter-renamed", // value: new name
   CHAPTER_MOVED:       ":cookbook/chapter-moved",   // value: { kapittelId, til } — asserted on the OLD book

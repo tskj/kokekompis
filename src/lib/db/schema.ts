@@ -95,6 +95,10 @@ export const recipeContentSchema = z.object({
 export const bokSynligheter = ['privat', 'utstilt'] as const;
 export type BokSynlighet = (typeof bokSynligheter)[number];
 
+// Stoffargene en bokrygg kan ha på hylla. null = ikke valgt — hylla veksler da selv.
+export const bokFarger = ['terra', 'sage', 'ink', 'butter', 'vin', 'natt'] as const;
+export type BokFarge = (typeof bokFarger)[number];
+
 export const cookbook = pgTable('cookbook', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
   userId: text('userId')
@@ -102,6 +106,10 @@ export const cookbook = pgTable('cookbook', {
     .references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   synlighet: text('synlighet').$type<BokSynlighet>().notNull().default('privat'),
+  farge: text('farge').$type<BokFarge>(),
+  // bokbåndet mellom tittel og innhold: et mønsternavn (se src/lib/bok-utseende.ts) eller
+  // nøkkelen til et opplastet bilde (bok/<id>/…webp)
+  headerBilde: text('headerBilde'),
 });
 
 export const chapters = pgTable('chapters', {

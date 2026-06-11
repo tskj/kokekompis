@@ -3,8 +3,10 @@ import { asc, eq } from 'drizzle-orm';
 import { cookbook, recipeFavorites } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
+import { bokFargeKlasse } from '@/lib/bok-utseende';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { opprettBok } from '@/app/actions/bok';
+import { Kaffeflekk } from '@/components/Kaffeflekk';
 import Link from 'next/link';
 
 function SignIn() {
@@ -37,20 +39,12 @@ function SignOut() {
   );
 }
 
-// Bokryggene på hylla veksler mellom disse stofffargene.
-const BOK_FARGER = [
-  'bg-terra text-paper',
-  'bg-sage text-paper',
-  'bg-ink text-paper',
-  'bg-butter text-ink',
-];
-
 // Hylla er personlig: innlogget ser du dine egne bøker — utlogget ser du utvalget av utstilte
 // bøker (Marens utstillingsvindu). Favorittene danner sin egen "bok" med det første hjertet.
 async function getHylla(userId: string | null) {
   return withTransaction({ name: 'forside' }, async (tx) => {
     const bøker = await tx
-      .select({ id: cookbook.id, name: cookbook.name })
+      .select({ id: cookbook.id, name: cookbook.name, farge: cookbook.farge })
       .from(cookbook)
       .where(userId ? eq(cookbook.userId, userId) : eq(cookbook.synlighet, 'utstilt'))
       .orderBy(asc(cookbook.name));
@@ -97,7 +91,8 @@ export default async function Home() {
         </div>
       </header>
 
-      <section className="mt-14" aria-label="Bokhylla">
+      <section className="relative mt-14" aria-label="Bokhylla">
+        <Kaffeflekk className="absolute -top-12 right-2 w-28 rotate-12" />
         <h2 className="text-[11px] uppercase tracking-[0.2em] text-ink-soft mb-6">Bokhylla</h2>
 
         {/* På telefon ligger bøkene bortover med litt overlapp og scroller sidelengs — de brekker
@@ -107,8 +102,14 @@ export default async function Home() {
               <Link
                 key={bok.id}
                 href={uuidHref`/kokebok/${bok.id}`}
-                className={`${BOK_FARGER[index % BOK_FARGER.length]} group relative flex h-64 w-44 shrink-0 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2 -ml-8 first:ml-0 md:ml-0`}
+                className={`${bokFargeKlasse(bok.farge, index)} group relative flex h-64 w-44 shrink-0 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2 -ml-8 first:ml-0 md:ml-0`}
               >
+                {/* opphøyde ryggbånd — de tverrgående ribbene på en gammel innbinding */}
+                <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-2 border-t-2 border-current opacity-25" />
+                <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-3.5 border-t border-current opacity-25" />
+                <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-7 border-t border-current opacity-25" />
+                <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-[2.125rem] border-t-2 border-current opacity-25" />
+
                 <span className="mt-6 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
                   {bok.name}
                 </span>

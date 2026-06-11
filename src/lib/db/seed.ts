@@ -532,7 +532,7 @@ async function seed() {
     // utstilt: showcase-boken som møter utloggede gjester på forsiden
     const [marensKokebok] = await tx
       .insert(cookbook)
-      .values({ userId: USER_ID, name: 'Marens kokebok', synlighet: 'utstilt' })
+      .values({ userId: USER_ID, name: 'Marens kokebok', synlighet: 'utstilt', farge: 'terra', headerBilde: 'striper' })
       .returning();
 
     const allChapters = await tx

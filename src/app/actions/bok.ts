@@ -1,13 +1,17 @@
 'use server';
 
+import { randomUUID } from 'node:crypto';
+import sharp from 'sharp';
 import { z } from 'zod';
 import { and, eq, max } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { cookbook, chapters, bokSynligheter } from '@/lib/db/schema';
+import { cookbook, chapters, bokSynligheter, bokFarger } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
+import { erBåndMønster } from '@/lib/bok-utseende';
+import { lagreBilde, slettBilde } from '@/lib/lagring';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { log, Attr } from '@/lib/log';
 
@@ -50,6 +54,109 @@ export async function endreBokNavn(cookbookId: string, formData: FormData) {
   if (!endret) return;
 
   log.info(cookbookId, Attr.COOKBOOK_RENAMED, navn.data);
+  revalidatePath('/', 'layout');
+}
+
+export async function settBokFarge(cookbookId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const farge = z.enum(bokFarger).safeParse(formData.get('farge'));
+  if (!farge.success) return;
+
+  const endret = await db
+    .update(cookbook)
+    .set({ farge: farge.data })
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .returning({ id: cookbook.id })
+    .maybeSingle('bok.farge');
+  if (!endret) return;
+
+  log.info(cookbookId, Attr.COOKBOOK_STYLED, { farge: farge.data });
+  revalidatePath('/', 'layout');
+}
+
+// Bytter bokbåndet (stripen mellom tittel og innhold) til et mønster — eller fjerner det.
+// Lå det et opplastet bilde der fra før, ryddes filen bort etterpå.
+export async function settBokBånd(cookbookId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const valg = String(formData.get('valg') ?? '');
+  if (valg !== 'fjern' && !erBåndMønster(valg)) return;
+
+  const gammelt = await withTransaction({ name: 'bok.bånd' }, async (tx) => {
+    const bok = await tx
+      .select({ headerBilde: cookbook.headerBilde })
+      .from(cookbook)
+      .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+      .maybeSingle('bok.bånd');
+    if (!bok) return null;
+
+    await tx
+      .update(cookbook)
+      .set({ headerBilde: valg === 'fjern' ? null : valg })
+      .where(eq(cookbook.id, cookbookId));
+
+    return { headerBilde: bok.headerBilde };
+  });
+  if (!gammelt) return;
+
+  if (gammelt.headerBilde?.startsWith('bok/')) await slettBilde(gammelt.headerBilde);
+
+  log.info(cookbookId, Attr.COOKBOOK_STYLED, { bånd: valg });
+  revalidatePath('/', 'layout');
+}
+
+const MAKS_BÅND_BYTES = 15 * 1024 * 1024;
+const BÅND_BREDDE_PX  = 1600;
+const BÅND_HØYDE_PX   = 400;
+
+// Eget bilde som bokbånd: skaleres og beskjæres til den smale stripen, lagres som webp i
+// objektlagringen, og nøkkelen legges på boken. Erstattet bilde ryddes bort.
+export async function lastOppBokBånd(cookbookId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const bilde = formData.get('bilde');
+  if (!(bilde instanceof File) || bilde.size === 0) return;
+  if (!bilde.type.startsWith('image/')) return;
+  if (bilde.size > MAKS_BÅND_BYTES) return;
+
+  // eierskap sjekkes FØR skalering og opplasting — ingen skal fylle bøtta via andres bøker
+  const minBok = await db
+    .select({ id: cookbook.id })
+    .from(cookbook)
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .exists();
+  if (!minBok) return;
+
+  const webp = await sharp(Buffer.from(await bilde.arrayBuffer()))
+    .rotate()
+    .resize({ width: BÅND_BREDDE_PX, height: BÅND_HØYDE_PX, fit: 'cover' })
+    .webp({ quality: 80 })
+    .toBuffer();
+
+  const key = `bok/${cookbookId}/baand-${randomUUID()}.webp`;
+  await lagreBilde(key, webp, 'image/webp');
+
+  const gammelt = await withTransaction({ name: 'bok.bånd-bilde' }, async (tx) => {
+    const bok = await tx
+      .select({ headerBilde: cookbook.headerBilde })
+      .from(cookbook)
+      .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+      .maybeSingle('bok.bånd-bilde');
+    if (!bok) return null;
+
+    await tx.update(cookbook).set({ headerBilde: key }).where(eq(cookbook.id, cookbookId));
+
+    return { headerBilde: bok.headerBilde };
+  });
+  if (!gammelt) return;
+
+  if (gammelt.headerBilde?.startsWith('bok/')) await slettBilde(gammelt.headerBilde);
+
+  log.info(cookbookId, Attr.COOKBOOK_STYLED, { bånd: key });
   revalidatePath('/', 'layout');
 }
 

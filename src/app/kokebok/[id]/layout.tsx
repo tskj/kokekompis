@@ -1,5 +1,5 @@
 import { withTransaction } from '@/lib/db-tx';
-import { cookbook, chapters, recipes, recipeChapters, userOpenChapters } from '@/lib/db/schema';
+import { cookbook, chapters, recipes, recipeChapters, userOpenChapters, bokFarger } from '@/lib/db/schema';
 import { eq, asc, inArray, notInArray, and, ne } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -8,7 +8,10 @@ import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { getCurrentUserId } from '@/lib/current-user';
 import { kanSeBok } from '@/lib/bok-tilgang';
-import { endreBokNavn, nyttKapittel, settBokSynlighet } from '@/app/actions/bok';
+import { BOK_FARGE_KLASSER, BÅND_KLASSER, båndMønstre, erBåndMønster } from '@/lib/bok-utseende';
+import { bildeUrl } from '@/lib/lagring';
+import { Kaffeflekk } from '@/components/Kaffeflekk';
+import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBånd, lastOppBokBånd } from '@/app/actions/bok';
 
 interface CookbookLayoutProps {
   recipe: React.ReactNode;
@@ -26,6 +29,8 @@ async function getCookbookWithChapters(id: string, userId?: string) {
         name: cookbook.name,
         userId: cookbook.userId,
         synlighet: cookbook.synlighet,
+        farge: cookbook.farge,
+        headerBilde: cookbook.headerBilde,
       })
       .from(cookbook)
       .where(eq(cookbook.id, id))
@@ -133,6 +138,12 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
   // Gjester (utstilt bok) får lese, aldri stelle: alt som endrer boken rendres kun for eieren.
   const erEier = cookbookData.userId === userId;
 
+  // Bokbåndet — den smale stripen mellom tittel og innhold: et mønster eller et opplastet bilde.
+  const headerBilde = cookbookData.headerBilde;
+  const bånd = headerBilde === null ? null
+             : erBåndMønster(headerBilde) ? { mønster: headerBilde }
+             :                              { bilde: await bildeUrl(headerBilde) };
+
   return (
     <div className="mx-auto max-w-7xl p-6 md:p-10">
       <header className="mb-8 skjul-ved-print">
@@ -184,12 +195,84 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
             </button>
           </form>
         )}
+
+        {erEier && (
+          <details className="mt-1.5 text-xs text-ink-soft">
+            <summary className="cursor-pointer list-none hover:text-terra">bokas utseende …</summary>
+
+            <div className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-line bg-card p-3">
+              <form action={settBokFarge.bind(null, cookbookId)} className="flex flex-wrap items-center gap-2">
+                <span>Farge på ryggen:</span>
+                {bokFarger.map((farge) => (
+                  <button
+                    key={farge}
+                    type="submit"
+                    name="farge"
+                    value={farge}
+                    title={farge}
+                    aria-label={`Gi boken fargen ${farge}`}
+                    className={`${BOK_FARGE_KLASSER[farge]} size-6 rounded-full border border-ink/20 ${cookbookData.farge === farge ? 'ring-2 ring-ink/60' : ''}`}
+                  />
+                ))}
+              </form>
+
+              <form action={settBokBånd.bind(null, cookbookId)} className="flex flex-wrap items-center gap-2">
+                <span>Bånd under tittelen:</span>
+                {båndMønstre.map((mønster) => (
+                  <button
+                    key={mønster}
+                    type="submit"
+                    name="valg"
+                    value={mønster}
+                    title={mønster}
+                    aria-label={`Båndmønsteret ${mønster}`}
+                    className={`${BÅND_KLASSER[mønster]} h-8 w-14 rounded border border-line ${headerBilde === mønster ? 'ring-2 ring-ink/60' : ''}`}
+                  />
+                ))}
+                {headerBilde && (
+                  <button type="submit" name="valg" value="fjern" className="underline underline-offset-2 hover:text-terra">
+                    fjern båndet
+                  </button>
+                )}
+              </form>
+
+              <form action={lastOppBokBånd.bind(null, cookbookId)} className="flex flex-wrap items-center gap-2">
+                <input
+                  type="file"
+                  name="bilde"
+                  accept="image/*"
+                  required
+                  aria-label="Eget bilde til båndet"
+                  className="text-xs file:mr-2 file:rounded-full file:border file:border-line file:bg-paper file:px-3 file:py-1 file:text-xs hover:file:border-terra"
+                />
+                <button type="submit" className="rounded-full border border-line px-3 py-1 hover:border-terra hover:text-terra">
+                  Bruk eget bilde
+                </button>
+              </form>
+            </div>
+          </details>
+        )}
+
+        {/* dobbeltstrek under tittelfeltet — den gamle kokebokens linjespill */}
+        <div aria-hidden className="mt-4 border-b-4 border-double border-ink/25" />
+
+        {bånd && (
+          <div aria-hidden className="mt-4 h-24 overflow-hidden rounded-sm border border-line shadow-sm md:h-32" data-testid="bokbaand">
+            {'bilde' in bånd ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={bånd.bilde} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className={`h-full w-full ${BÅND_KLASSER[bånd.mønster]}`} />
+            )}
+          </div>
+        )}
       </header>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-4">
         {/* Innholdslista — bokens venstreside */}
         <div className="lg:col-span-1 skjul-ved-print">
           <div className="sticky top-6">
+            <Kaffeflekk className="absolute -top-4 -left-6 w-24 -rotate-6" />
             <h2 className="mb-3 text-[11px] uppercase tracking-[0.2em] text-ink-soft">Innhold</h2>
 
             {cookbookData.chapters.length === 0 ? (
