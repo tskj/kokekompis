@@ -10,7 +10,7 @@ import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { Oppskrift, lesGanger } from '@/components/oppskrift/Oppskrift';
-import { NotatTavle } from '@/components/oppskrift/NotatTavle';
+import { NotatTavle, StrøddeNotater } from '@/components/oppskrift/NotatTavle';
 import { RettBilder } from '@/components/oppskrift/RettBilder';
 import { Relasjoner } from '@/app/kokebok/[id]/components/Relasjoner';
 import { bildeUrl } from '@/lib/lagring';
@@ -127,6 +127,9 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   const stiBase = uuidHref`/kokebok/${cookbookId}/oppskrift/${recipeId}`;
   const tilbakeSti = tilbake && tilbake.startsWith('/') ? tilbake : null;
 
+  // de første lappene strøs i margen ved tittelen på brede skjermer — resten samles på tavla
+  const antallStrødd = Math.min(side.notater.length, 3);
+
   return (
     <>
       {tilbakeSti && (
@@ -224,7 +227,8 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             />
           ) : null
         }
-        notater={userId ? <NotatTavle recipeId={recipeId} notater={side.notater} /> : null}
+        notater={userId ? <NotatTavle recipeId={recipeId} notater={side.notater} antallStrødd={antallStrødd} /> : null}
+        notaterStrødd={userId && antallStrødd > 0 ? <StrøddeNotater notater={side.notater.slice(0, antallStrødd)} /> : null}
       />
     </>
   );

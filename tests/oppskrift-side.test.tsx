@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { chapters, recipeChapters, recipeFavorites, recipeLinks, recipes } from "@/lib/db/schema";
+import { chapters, recipeChapters, recipeFavorites, recipeLinks, recipeNotes, recipes } from "@/lib/db/schema";
 import { encodeUuidToBase32 } from "@/lib/uuid/uuid-base32";
 import { uuidHref } from "@/lib/uuid/uuid-links";
 import { makeKokebok, resetDb, testOppskrift } from "./db";
@@ -169,6 +169,18 @@ describe("oppskriftssiden (ekte side rendret mot ekte database)", () => {
     expect(screen.getByRole("heading", { name: "Testboller" })).toBeInTheDocument();
 
     void kapittel;
+  });
+
+  it("lappene strøs i margen på brede skjermer — og ligger på tavla på små", async () => {
+    const { user, bok, oppskrift } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    await db.insert(recipeNotes).values({ recipeId: oppskrift.id, userId: user.id, tekst: "husk jordbær til pynt", farge: "rav" });
+
+    render(await RecipePage(sideProps(bok.id, oppskrift.id)));
+
+    // samme lapp rendres to steder — margen (md+) og tavla (under md); CSS viser én av gangen
+    expect(screen.getAllByText("husk jordbær til pynt")).toHaveLength(2);
   });
 
   it("404-er for en oppskrift som ikke hører til boken", async () => {

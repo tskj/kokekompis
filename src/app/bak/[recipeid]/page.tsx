@@ -36,28 +36,30 @@ function bakHref(recipeId: string, steg: number, modus: Modus, fra: string | und
 function StegKort({ steg, nummer, content, ganger }: { steg: Steg; nummer: number; content: RecipeContent; ganger: number }) {
   const ingredienser = ingredienserForSteg(content, steg);
 
+  // Maren ser ikke så dårlig: på telefon krymper tekst og styr, så steget OG lappene får plass
+  // uten scrolling — lappene er det som må være godt synlig midt i stekingen.
   if (steg.passiv) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 rounded-xl border-2 border-butter bg-butter/20 p-8 text-center">
-        <span aria-hidden className="font-display text-6xl">◷</span>
-        <p className="font-display text-3xl capitalize md:text-4xl">{steg.passiv.hva}</p>
+      <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border-2 border-butter bg-butter/20 p-5 text-center md:gap-4 md:p-8">
+        <span aria-hidden className="font-display text-4xl md:text-6xl">◷</span>
+        <p className="font-display text-2xl capitalize md:text-4xl">{steg.passiv.hva}</p>
         {steg.passiv.minutter != null && (
-          <p className="font-display text-xl text-ink-soft">ca. {formaterMinutter(steg.passiv.minutter)}</p>
+          <p className="font-display text-lg text-ink-soft md:text-xl">ca. {formaterMinutter(steg.passiv.minutter)}</p>
         )}
-        <p className="max-w-xl text-lg leading-relaxed text-ink-soft">{steg.tekst}</p>
+        <p className="max-w-xl text-base leading-relaxed text-ink-soft md:text-lg">{steg.tekst}</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col justify-center gap-6 rounded-xl border border-line bg-card p-8 shadow-bok">
-      <p className="font-display italic text-terra">Steg {nummer}</p>
-      <p className="text-2xl leading-snug md:text-4xl md:leading-snug">{steg.tekst}</p>
+    <div className="flex h-full flex-col justify-center gap-4 rounded-xl border border-line bg-card p-5 shadow-bok md:gap-6 md:p-8">
+      <p className="font-display text-sm italic text-terra md:text-base">Steg {nummer}</p>
+      <p className="text-xl leading-snug md:text-4xl md:leading-snug">{steg.tekst}</p>
 
       {ingredienser.length > 0 && (
-        <ul className="flex flex-wrap gap-3">
+        <ul className="flex flex-wrap gap-2 md:gap-3">
           {ingredienser.map((ingrediens) => (
-            <li key={ingrediens.id} className="rounded-lg border border-line bg-paper px-4 py-2.5 text-lg md:text-xl">
+            <li key={ingrediens.id} className="rounded-lg border border-line bg-paper px-3 py-1.5 text-base md:px-4 md:py-2.5 md:text-xl">
               <Mengde ingrediens={ingrediens} visEnhet="original" ganger={ganger} /> {ingrediens.navn}
             </li>
           ))}
@@ -71,11 +73,11 @@ function ImensKort({ venting }: { venting: Steg }) {
   if (!venting.passiv) return null;
 
   return (
-    <aside className="flex flex-col justify-center gap-2 rounded-xl border-2 border-dashed border-butter bg-butter/15 p-6">
+    <aside className="flex flex-col justify-center gap-1.5 rounded-xl border-2 border-dashed border-butter bg-butter/15 p-4 md:gap-2 md:p-6">
       <p className="text-[11px] uppercase tracking-[0.2em] text-ink-soft">Imens, i bakgrunnen</p>
-      <p className="font-display text-2xl capitalize">◷ {venting.passiv.hva}</p>
+      <p className="font-display text-lg capitalize md:text-2xl">◷ {venting.passiv.hva}</p>
       {venting.passiv.minutter != null && (
-        <p className="text-ink-soft">ca. {formaterMinutter(venting.passiv.minutter)}</p>
+        <p className="text-sm text-ink-soft md:text-base">ca. {formaterMinutter(venting.passiv.minutter)}</p>
       )}
     </aside>
   );
@@ -164,12 +166,12 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
         {stegNummer > 1 ? (
           <Link
             href={bakHref(recipeId, stegNummer - 1, modus, fra, ganger)}
-            className="rounded-xl border border-line bg-card px-6 py-4 text-lg hover:border-terra hover:text-terra md:px-10"
+            className="rounded-xl border border-line bg-card px-4 py-3 text-base hover:border-terra hover:text-terra md:px-10 md:py-4 md:text-lg"
           >
             ← Forrige
           </Link>
         ) : (
-          <span className="rounded-xl border border-line px-6 py-4 text-lg text-line md:px-10">← Forrige</span>
+          <span className="rounded-xl border border-line px-4 py-3 text-base text-line md:px-10 md:py-4 md:text-lg">← Forrige</span>
         )}
 
         <div className="flex flex-1 flex-wrap items-center justify-center gap-1.5" aria-label={`Steg ${stegNummer} av ${content.steg.length}`}>
@@ -186,14 +188,14 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
         {erSiste ? (
           <Link
             href={fra ?? '/'}
-            className="rounded-xl bg-sage px-6 py-4 text-lg font-medium text-paper hover:opacity-90 md:px-10"
+            className="rounded-xl bg-sage px-4 py-3 text-base font-medium text-paper hover:opacity-90 md:px-10 md:py-4 md:text-lg"
           >
             Ferdig ✓
           </Link>
         ) : (
           <Link
             href={bakHref(recipeId, stegNummer + 1, modus, fra, ganger)}
-            className="rounded-xl bg-terra px-6 py-4 text-lg font-medium text-paper hover:bg-terra-deep md:px-10"
+            className="rounded-xl bg-terra px-4 py-3 text-base font-medium text-paper hover:bg-terra-deep md:px-10 md:py-4 md:text-lg"
           >
             Neste →
           </Link>

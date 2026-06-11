@@ -24,7 +24,7 @@ function Teip({ farge, index }: { farge: NotatFarge; index: number }) {
   );
 }
 
-function NotatKort({ notat, index }: { notat: Notat; index: number }) {
+export function NotatKort({ notat, index }: { notat: Notat; index: number }) {
   return (
     <div className={`${ROTASJONER[index % ROTASJONER.length]} relative w-44 drop-shadow-md`}>
       <div className="notatlapp min-h-36 px-4 pb-6 pt-[22px]">
@@ -46,14 +46,31 @@ function NotatKort({ notat, index }: { notat: Notat; index: number }) {
   );
 }
 
+// De første lappene strøs utover sida — teipet i margen ved tittelen på brede skjermer.
+// På små skjermer ligger de i bunntavla i stedet (NotatTavle med antallStrødd skjuler dem der
+// kun på md+), så hver lapp vises nøyaktig én gang uansett bredde.
+export function StrøddeNotater({ notater }: { notater: Notat[] }) {
+  if (notater.length === 0) return null;
+
+  return (
+    <div className="hidden flex-col items-end gap-7 md:flex">
+      {notater.map((notat, index) => (
+        <NotatKort key={notat.id} notat={notat} index={index} />
+      ))}
+    </div>
+  );
+}
+
 // Lapper "teipet på" oppskriften — "husk jordbær til pynt", "denne var ikke god!".
 // Rene <form action>-er hele veien: lappene fungerer uten klient-JS, også i bakeviewet.
-export function NotatTavle({ recipeId, notater }: { recipeId: string; notater: Notat[] }) {
+export function NotatTavle({ recipeId, notater, antallStrødd = 0 }: { recipeId: string; notater: Notat[]; antallStrødd?: number }) {
   return (
     <section aria-label="Notater" className="skjul-ved-print">
       <div className="flex flex-wrap items-start gap-5 pt-3">
         {notater.map((notat, index) => (
-          <NotatKort key={notat.id} notat={notat} index={index} />
+          <div key={notat.id} className={index < antallStrødd ? 'md:hidden' : undefined}>
+            <NotatKort notat={notat} index={index} />
+          </div>
         ))}
 
         <details className="group w-44">
