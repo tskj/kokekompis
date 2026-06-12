@@ -63,6 +63,7 @@ export const Attr = {
   RECIPE_NOTE_ADDED:   ":recipe/note-added",   // value: { farge }
   RECIPE_NOTE_DELETED: ":recipe/note-deleted", // value: note id
   RECIPE_SHARED:       ":recipe/shared",       // value: share id
+  RECIPE_COPIED_FROM_SHARE: ":recipe/copied-from-share", // value: share token — asserted on the COPY
   RECIPE_IMPORTED:     ":recipe/imported",     // value: { kilde: "url" | "bilde", tittel }
   RECIPE_UPDATED:      ":recipe/updated",      // value: { tittel }
   RECIPE_DELETED:      ":recipe/deleted",      // value: true
@@ -81,6 +82,8 @@ export const Attr = {
   COOKBOOK_RENAMED:    ":cookbook/renamed",    // value: new name
   COOKBOOK_VISIBILITY: ":cookbook/visibility", // value: "privat" | "utstilt"
   COOKBOOK_STYLED:     ":cookbook/styled",     // value: { farge } | { bånd }
+  COOKBOOK_SHARED:     ":cookbook/shared",     // value: share id
+  COOKBOOK_COPIED_FROM_SHARE: ":cookbook/copied-from-share", // value: share token — asserted on the COPY
   CHAPTER_CREATED:     ":cookbook/chapter-created", // value: chapter name
   CHAPTER_RENAMED:     ":cookbook/chapter-renamed", // value: new name
   CHAPTER_MOVED:       ":cookbook/chapter-moved",   // value: { kapittelId, til } — asserted on the OLD book

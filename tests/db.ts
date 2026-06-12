@@ -20,6 +20,8 @@ const ALL_TABLES = [
   '"plan_recipes"',
   '"plan_photos"',
   '"recipe_comments"',
+  '"recipe_marginalia"',
+  '"cookbook_shares"',
 ].join(", ");
 
 export async function resetDb(): Promise<void> {
@@ -60,10 +62,10 @@ export function testOppskrift(overrides?: Partial<RecipeContent>): RecipeContent
 
 // En bruker med kokebok, ett kapittel og én oppskrift lenket inn — utgangspunktet de fleste
 // testene trenger. Innholdet kan overstyres per test.
-export async function makeKokebok(opts?: { content?: RecipeContent; title?: string; synlighet?: BokSynlighet }) {
+export async function makeKokebok(opts?: { content?: RecipeContent; title?: string; synlighet?: BokSynlighet; admin?: boolean }) {
   const user = await db
     .insert(users)
-    .values({ id: randomUUID(), name: "Maren Test", email: `${randomUUID()}@example.test` })
+    .values({ id: randomUUID(), name: "Maren Test", email: `${randomUUID()}@example.test`, admin: opts?.admin ?? false })
     .returning()
     .single("test.create-user");
 

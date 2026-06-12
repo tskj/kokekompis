@@ -6,7 +6,8 @@
 @theme {
   --color-paper:        #faf5ea;
   --color-paper-warm:   #f3ebd9;
-  --color-card:         #fffdf6;
+  /* kortene: lyse, men beige — ren hvit sto og skar mot papiret (Maren) */
+  --color-card:         #f7efdd;
   --color-ink:          #362b1e;
   --color-ink-soft:     #74634c;
   --color-line:         #e4d8bf;
@@ -26,8 +27,8 @@
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-skrift:  var(--font-caveat), cursive;
   --font-sans:    var(--font-geist-sans), system-ui, sans-serif;
-  /* brødteksten: en bokserif som hører sammen med papiret — sansen sto og skar mot bakgrunnen */
-  --font-tekst:   var(--font-alegreya), Georgia, serif;
+  /* brødteksten: Montserrat light som standard — Times og Petit Formal kan velges */
+  --font-tekst:   var(--font-montserrat), system-ui, sans-serif;
 
   --shadow-postit: 1px 4px 10px rgb(54 43 30 / 0.18);
   --shadow-bok:    0 2px 4px rgb(54 43 30 / 0.10), 0 12px 28px rgb(54 43 30 / 0.14);
@@ -52,6 +53,8 @@ body {
     repeating-linear-gradient(-45deg, rgb(54 43 30 / 0.012) 0 2px, transparent 2px 6px);
   color: var(--color-ink);
   font-family: var(--font-tekst);
+  /* montserrat light er drakten — de valgbare seriffene setter sin egen vekt */
+  font-weight: 300;
 }
 
 ::selection {
@@ -59,15 +62,14 @@ body {
   color: var(--color-ink);
 }
 
-/* Marens fontprøving: klassene settes på body fra brukerens valg («Aa skrift» på forsiden).
-   Brødtekstvalgene bytter --font-tekst for hele siden; skrift-petit setter selve oppskriften
-   (.oppskrift-tekst i Oppskrift-komponenten) i Petit Formal Script. */
-.tekst-montserrat { --font-tekst: var(--font-montserrat), system-ui, sans-serif; font-weight: 300; }
-.tekst-times      { --font-tekst: 'Times New Roman', Times, serif; }
+/* Skriftvalgene: klassene settes på body fra brukerens valg (innstillingene). Brødtekstvalgene
+   bytter --font-tekst for hele siden; skrift-*-klassene setter selve oppskriften
+   (.oppskrift-tekst i Oppskrift-komponenten). Uten klasse gjelder Montserrat light. */
+.tekst-times { --font-tekst: 'Times New Roman', Times, serif; font-weight: 400; }
+.tekst-petit { --font-tekst: var(--font-petit), cursive;      font-weight: 400; }
 
-.skrift-petit .oppskrift-tekst {
-  font-family: var(--font-petit), cursive;
-}
+.skrift-times .oppskrift-tekst { font-family: 'Times New Roman', Times, serif; font-weight: 400; }
+.skrift-petit .oppskrift-tekst { font-family: var(--font-petit), cursive; }
 
 /* Notatlapp: avrevet linjert notatbokpapir — varm papirtone, skrivelinjer i falmet blekk som
    håndskriften (font-skrift, leading 24px) hviler på, og en ujevn rivekant nederst. */

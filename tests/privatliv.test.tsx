@@ -113,21 +113,28 @@ describe("privatliv: bøker er private, utstilte bøker kan alle lese", () => {
     expect(screen.getByLabelText("Endre navn på boken")).toBeInTheDocument();
   });
 
-  it("eieren stiller ut og gjør privat — en fremmed får ikke røre synligheten", async () => {
-    const { user, bok } = await makeKokebok();
-    const fremmed = await makeKokebok();
+  it("utstilling er forbeholdt admin — vanlige eiere og fremmede preller av", async () => {
+    const { user: admin, bok } = await makeKokebok({ admin: true });
+    const vanlig = await makeKokebok();
 
     const skjema = new FormData();
     skjema.set("synlighet", "utstilt");
 
-    hoisted.userId = fremmed.user.id;
-    await settBokSynlighet(bok.id, skjema);
-    let rad = await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.fremmed");
+    // en vanlig eier får ikke stilt ut sin egen bok
+    hoisted.userId = vanlig.user.id;
+    await settBokSynlighet(vanlig.bok.id, skjema);
+    let rad = await db.select().from(cookbook).where(eq(cookbook.id, vanlig.bok.id)).single("test.vanlig");
     expect(rad.synlighet).toBe("privat");
 
-    hoisted.userId = user.id;
+    // en admin får heller ikke stilt ut andres bøker
+    hoisted.userId = admin.id;
+    await settBokSynlighet(vanlig.bok.id, skjema);
+    rad = await db.select().from(cookbook).where(eq(cookbook.id, vanlig.bok.id)).single("test.fremmed");
+    expect(rad.synlighet).toBe("privat");
+
+    // admin stiller ut sin egen
     await settBokSynlighet(bok.id, skjema);
-    rad = await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.eier");
+    rad = await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.admin");
     expect(rad.synlighet).toBe("utstilt");
   });
 

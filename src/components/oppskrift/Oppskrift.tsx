@@ -22,6 +22,8 @@ interface OppskriftProps {
   notater?: React.ReactNode;
   // de første lappene, strødd i margen øverst på sida (flyter ved tittelen på brede skjermer)
   notaterStrødd?: React.ReactNode;
+  // margskriften (MargSkrift): margstabel + fritt plasserbare skrifter over hele oppskriften
+  marg?: React.ReactNode;
   // avkryssbar handleliste for oppskriften — utelates på delingssiden
   handleliste?: React.ReactNode;
   // marg-kommentarene under hvert steg (StegKommentarer) — utelates på delingssiden
@@ -37,7 +39,7 @@ export { GANGER_VALG, lesGanger } from '@/lib/skalering';
 
 // Det klassiske oppskriftsviewet: tittel, infolinje, ingredienser ved siden av fremgangsmåten,
 // og opprinnelsen nederst — som en side i en trykt kokebok.
-export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, stiBase, handlinger, notater, notaterStrødd, handleliste, kommentarFelt, relasjoner, ferdigBilder }: OppskriftProps) {
+export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, stiBase, handlinger, notater, notaterStrødd, marg, handleliste, kommentarFelt, relasjoner, ferdigBilder }: OppskriftProps) {
   const kanViseGram = content.ingredienser.some((i) => i.enhet != null && i.enhet !== 'g');
 
   // toggle-lenkene bevarer hverandres valg — alt er URL-state
@@ -54,7 +56,10 @@ export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, 
   };
 
   return (
-    <article className="oppskrift-tekst max-w-4xl">
+    <article className="oppskrift-tekst relative max-w-4xl">
+      {/* margskriften: stabelen flyter selv, og de plasserte skriftene ligger fritt over flaten */}
+      {marg}
+
       {/* lapper i margen: flyter ved tittelen, og resten av sida legger seg rundt dem */}
       {notaterStrødd && <div className="float-right ml-8 mb-6 skjul-ved-print">{notaterStrødd}</div>}
 

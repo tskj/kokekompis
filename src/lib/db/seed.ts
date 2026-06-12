@@ -523,10 +523,11 @@ async function seed() {
     await tx.delete(cookbook);
     await tx.delete(recipes);
 
-    // Seed-brukeren (CLAUDE.md sin test-bruker) — må finnes for FK-ene.
+    // Seed-brukeren (CLAUDE.md sin test-bruker) — må finnes for FK-ene. Admin: utstilling av
+    // eksempelbøker på forsiden er forbeholdt henne.
     await tx
       .insert(users)
-      .values({ id: USER_ID, name: 'Maren', email: 'maren@kokekompis.no' })
+      .values({ id: USER_ID, name: 'Maren', email: 'maren@kokekompis.no', admin: true })
       .onConflictDoNothing();
 
     // utstilt: showcase-boken som møter utloggede gjester på forsiden

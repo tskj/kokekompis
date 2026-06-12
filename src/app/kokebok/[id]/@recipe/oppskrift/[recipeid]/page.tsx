@@ -96,10 +96,10 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(recipeNotes.createdAt))
       : [];
 
-    // margskriften — håndskrevne påminnelser i margen, personlige som lappene
+    // margskriften — håndskrevne påminnelser, i margen eller plassert fritt på flaten
     const marginalia = userId
       ? await tx
-          .select({ id: recipeMarginalia.id, tekst: recipeMarginalia.tekst, krussedull: recipeMarginalia.krussedull })
+          .select({ id: recipeMarginalia.id, tekst: recipeMarginalia.tekst, krussedull: recipeMarginalia.krussedull, posX: recipeMarginalia.posX, posY: recipeMarginalia.posY })
           .from(recipeMarginalia)
           .where(and(eq(recipeMarginalia.recipeId, recipeId), eq(recipeMarginalia.userId, userId)))
           .orderBy(asc(recipeMarginalia.createdAt))
@@ -436,18 +436,9 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             </Link>
           )
         }
-        notater={userId ? (
-          <>
-            <div className="mb-6 md:hidden"><MargSkrift recipeId={recipeId} marginalia={side.marginalia} /></div>
-            <NotatTavle recipeId={recipeId} notater={side.notater} antallStrødd={antallStrødd} />
-          </>
-        ) : null}
-        notaterStrødd={userId ? (
-          <div className="hidden flex-col items-end gap-7 md:flex">
-            <MargSkrift recipeId={recipeId} marginalia={side.marginalia} />
-            {antallStrødd > 0 && <StrøddeNotater notater={side.notater.slice(0, antallStrødd)} />}
-          </div>
-        ) : null}
+        marg={userId ? <MargSkrift recipeId={recipeId} marginalia={side.marginalia} /> : null}
+        notater={userId ? <NotatTavle recipeId={recipeId} notater={side.notater} antallStrødd={antallStrødd} /> : null}
+        notaterStrødd={userId && antallStrødd > 0 ? <StrøddeNotater notater={side.notater.slice(0, antallStrødd)} /> : null}
       />
     </>
   );

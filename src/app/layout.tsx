@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Fraunces, Caveat, Alegreya, Montserrat, Petit_Formal_Script } from "next/font/google";
+import { Geist, Fraunces, Caveat, Montserrat, Petit_Formal_Script } from "next/font/google";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { getCurrentUserId } from "@/lib/current-user";
+import { lesFont } from "@/lib/fonter";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,15 +24,8 @@ const caveat = Caveat({
   subsets: ["latin"],
 });
 
-// Brødteksten — en klassisk bokserif som hører sammen med papirbakgrunnen (sansen gjorde det
-// ikke). Geist beholdes som font-sans der et nøytralt UI-innslag trenger den.
-const alegreya = Alegreya({
-  variable: "--font-alegreya",
-  subsets: ["latin"],
-});
-
-// Marens fontprøving (velges under «Aa skrift» på forsiden): Montserrat light som alternativ
-// brødtekst, og Petit Formal Script for selve oppskriftene. Times-varianten er systemfont.
+// Brødteksten — Montserrat light er standarden; Times og Petit Formal kan velges i
+// innstillingene, både for siden og for selve oppskriftene. Times-varianten er systemfont.
 const montserrat = Montserrat({
   variable: "--font-montserrat",
   weight: ["300", "500"],
@@ -64,15 +58,16 @@ export default async function RootLayout({
         .maybeSingle('layout.skrift')
     : null;
 
-  const tekstKlasse     = skrift?.tekstFont === 'montserrat' ? 'tekst-montserrat'
-                        : skrift?.tekstFont === 'times'      ? 'tekst-times'
-                        :                                      '';
-  const oppskriftKlasse = skrift?.oppskriftFont === 'petit' ? 'skrift-petit' : '';
+  const tekst     = lesFont(skrift?.tekstFont ?? 'montserrat');
+  const oppskrift = lesFont(skrift?.oppskriftFont ?? 'montserrat');
+
+  const tekstKlasse     = tekst === 'times' ? 'tekst-times'  : tekst === 'petit' ? 'tekst-petit'  : '';
+  const oppskriftKlasse = oppskrift === 'times' ? 'skrift-times' : oppskrift === 'petit' ? 'skrift-petit' : '';
 
   return (
     <html lang="nb">
       <body
-        className={`${geistSans.variable} ${fraunces.variable} ${caveat.variable} ${alegreya.variable} ${montserrat.variable} ${petitFormalScript.variable} ${tekstKlasse} ${oppskriftKlasse} antialiased`}
+        className={`${geistSans.variable} ${fraunces.variable} ${caveat.variable} ${montserrat.variable} ${petitFormalScript.variable} ${tekstKlasse} ${oppskriftKlasse} antialiased`}
       >
         {children}
       </body>

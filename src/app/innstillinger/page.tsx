@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { signOut } from '@/auth';
 import { getCurrentUserId } from '@/lib/current-user';
+import { lesFont, FONT_PRØVER } from '@/lib/fonter';
 import { settSkrift } from '@/app/actions/skrift';
 
 // Innstillingene: hvem som er logget inn, veien ut, og skriftvalgene — samlet på ett sted
@@ -58,9 +59,9 @@ export default async function InnstillingerSide() {
             <form action={settSkrift} className="flex flex-col gap-4 rounded-lg border border-line bg-card p-4 text-sm">
               <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brødtekst på siden">
                 <span className="text-ink-soft">Teksten på siden:</span>
-                {([['standard', 'Bokserif', 'var(--font-alegreya)'], ['montserrat', 'Montserrat', 'var(--font-montserrat)'], ['times', 'Times', "'Times New Roman', Times, serif"]] as const).map(([verdi, navn, font]) => (
+                {FONT_PRØVER.map(([verdi, navn, font]) => (
                   <label key={verdi} className="cursor-pointer">
-                    <input type="radio" name="tekst" value={verdi} defaultChecked={bruker.tekstFont === verdi} className="peer sr-only" />
+                    <input type="radio" name="tekst" value={verdi} defaultChecked={lesFont(bruker.tekstFont) === verdi} className="peer sr-only" />
                     <span style={{ fontFamily: font }} className="block rounded border border-line bg-paper px-2.5 py-1 peer-checked:ring-2 peer-checked:ring-ink/60">
                       {navn}
                     </span>
@@ -70,9 +71,9 @@ export default async function InnstillingerSide() {
 
               <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Skrift i oppskriftene">
                 <span className="text-ink-soft">Selve oppskriftene:</span>
-                {([['standard', 'Bokserif', 'var(--font-alegreya)'], ['petit', 'Petit Formal', 'var(--font-petit)']] as const).map(([verdi, navn, font]) => (
+                {FONT_PRØVER.map(([verdi, navn, font]) => (
                   <label key={verdi} className="cursor-pointer">
-                    <input type="radio" name="oppskrift" value={verdi} defaultChecked={bruker.oppskriftFont === verdi} className="peer sr-only" />
+                    <input type="radio" name="oppskrift" value={verdi} defaultChecked={lesFont(bruker.oppskriftFont) === verdi} className="peer sr-only" />
                     <span style={{ fontFamily: font }} className="block rounded border border-line bg-paper px-2.5 py-1 peer-checked:ring-2 peer-checked:ring-ink/60">
                       {navn}
                     </span>

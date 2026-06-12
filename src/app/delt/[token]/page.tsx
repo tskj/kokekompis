@@ -1,12 +1,15 @@
 import Link from 'next/link';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { recipes, recipeShares, users, recipeContentSchema } from '@/lib/db/schema';
+import { cookbook, recipes, recipeShares, users, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
+import { getCurrentUserId } from '@/lib/current-user';
 import { getUuidParam } from '@/lib/uuid/server-uuid-params';
 import { uuidHref } from '@/lib/uuid/uuid-links';
+import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { Oppskrift, lesGanger } from '@/components/oppskrift/Oppskrift';
 import { RettBilder } from '@/components/oppskrift/RettBilder';
+import { leggDeltOppskriftIBok } from '@/app/actions/deling';
 import { bildeUrl } from '@/lib/lagring';
 
 interface DeltSideProps {
@@ -21,6 +24,7 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
   const token = getUuidParam(await params, 'token');
   const { enheter, ganger: gangerParam } = await searchParams;
 
+  const userId = await getCurrentUserId();
   const delt = await withTransaction({ name: 'oppskrift.delt' }, async (tx) => {
     const share = await tx
       .select({ recipeId: recipeShares.recipeId })
@@ -29,7 +33,7 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
       .maybeSingle('oppskrift.delt.share');
     if (!share) return null;
 
-    return tx
+    const oppskrift = await tx
       .select({
         title: recipes.title,
         description: recipes.description,
@@ -40,6 +44,17 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
       .innerJoin(users, eq(recipes.userId, users.id))
       .where(eq(recipes.id, share.recipeId))
       .single('oppskrift.delt.recipe');
+
+    // mottakerens egne bøker — "legg den i en av bøkene dine"
+    const mineBøker = userId
+      ? await tx
+          .select({ id: cookbook.id, name: cookbook.name })
+          .from(cookbook)
+          .where(eq(cookbook.userId, userId))
+          .orderBy(asc(cookbook.name))
+      : [];
+
+    return { ...oppskrift, mineBøker };
   });
   if (!delt) notFound();
 
@@ -56,6 +71,21 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
         </p>
         <Link href="/" className="text-sm text-ink-soft hover:text-terra">Kokekompis</Link>
       </header>
+
+      {/* lettvint tilgang til venners oppskrifter: kopien blir din egen, opprinnelsen følger med */}
+      {delt.mineBøker.length > 0 && (
+        <form action={leggDeltOppskriftIBok.bind(null, token)} className="mb-8 flex flex-wrap items-center gap-2 rounded-xl border-2 border-dashed border-line bg-card px-4 py-3 skjul-ved-print">
+          <span className="text-sm">Vil du ha den? Legg den i en av bøkene dine:</span>
+          <select name="bok" aria-label="Bok" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
+            {delt.mineBøker.map((bok) => (
+              <option key={bok.id} value={encodeUuidToBase32(bok.id)}>{bok.name}</option>
+            ))}
+          </select>
+          <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
+            Legg den i boken
+          </button>
+        </form>
+      )}
 
       <Oppskrift
         tittel={delt.title}

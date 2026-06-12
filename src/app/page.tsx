@@ -177,10 +177,9 @@ export default async function Home() {
 
                 <form action={opprettBok} className="flex h-full flex-col justify-center gap-3 rounded-r-md rounded-l-sm border border-line bg-card p-4 shadow-bok">
                   <label className="block text-sm">
-                    <span className="text-ink-soft">Hva skal boken hete?</span>
+                    <span className="text-ink-soft">Hva skal boken hete? (kan stå tomt)</span>
                     <input
                       name="navn"
-                      required
                       maxLength={100}
                       placeholder="Mormors arvegods"
                       className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2 font-display focus:border-terra focus:outline-none"

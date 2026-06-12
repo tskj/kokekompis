@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { withTransaction } from '@/lib/db-tx';
 import { nowDate, nowMs } from '@/lib/clock';
-import { cookbook, chapters, recipes, recipeChapters, bokFarger } from '@/lib/db/schema';
+import { cookbook, chapters, recipes, recipeChapters, users, bokFarger } from '@/lib/db/schema';
 import { eq, asc, notInArray, isNull, and, ne } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -18,6 +18,7 @@ import { Skisse } from '@/components/skisser';
 import { BlaOm } from '@/components/BlaOm';
 import { BlaMedSvipe } from '@/components/BlaMedSvipe';
 import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBånd, lastOppBokBånd, settBokForside } from '@/app/actions/bok';
+import { delBok } from '@/app/actions/deling';
 import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 interface CookbookLayoutProps {
@@ -86,6 +87,15 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       .where(and(eq(recipes.cookbookId, id), isNull(recipes.utkastAv), notInArray(recipes.id, kategorisert)))
       .orderBy(asc(recipes.title));
 
+    // utstilling er forbeholdt admin — eksemplene på forsiden, ikke deling
+    const erAdmin = userId
+      ? (await tx
+          .select({ admin: users.admin })
+          .from(users)
+          .where(eq(users.id, userId))
+          .maybeSingle('cookbook.layout.admin'))?.admin ?? false
+      : false;
+
     // Dine andre bøker — målene kapittel-stellet kan flytte et helt kapittel til.
     const andreBøker = userId
       ? await tx
@@ -113,6 +123,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       chapters: chaptersWithRecipes,
       ukategorisert,
       andreBøker,
+      erAdmin,
     };
   });
 }
@@ -186,22 +197,36 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
           )}
         </div>
 
+        {/* utstilling (eksemplene på forsiden) er forbeholdt admin — alle eiere kan derimot
+            dele boken med en venn via en lenke */}
         {erEier && (
-          <form action={settBokSynlighet.bind(null, cookbookId)} className="mt-1.5 flex items-center gap-2 text-xs text-ink-soft">
-            <input
-              type="hidden"
-              name="synlighet"
-              value={cookbookData.synlighet === 'utstilt' ? 'privat' : 'utstilt'}
-            />
-            <span>
-              {cookbookData.synlighet === 'utstilt'
-                ? 'Utstilt på forsiden — alle kan lese boken.'
-                : 'Privat bok — bare du ser den.'}
-            </span>
-            <button type="submit" className="underline underline-offset-2 hover:text-terra">
-              {cookbookData.synlighet === 'utstilt' ? 'Gjør den privat' : 'Still den ut'}
-            </button>
-          </form>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-soft">
+            {cookbookData.erAdmin ? (
+              <form action={settBokSynlighet.bind(null, cookbookId)} className="flex items-center gap-2">
+                <input
+                  type="hidden"
+                  name="synlighet"
+                  value={cookbookData.synlighet === 'utstilt' ? 'privat' : 'utstilt'}
+                />
+                <span>
+                  {cookbookData.synlighet === 'utstilt'
+                    ? 'Utstilt på forsiden — alle kan lese boken.'
+                    : 'Privat bok — bare du ser den.'}
+                </span>
+                <button type="submit" className="underline underline-offset-2 hover:text-terra">
+                  {cookbookData.synlighet === 'utstilt' ? 'Gjør den privat' : 'Still den ut'}
+                </button>
+              </form>
+            ) : (
+              <span>{cookbookData.synlighet === 'utstilt' ? 'Utstilt på forsiden.' : 'Privat bok — bare du ser den.'}</span>
+            )}
+
+            <form action={delBok.bind(null, cookbookId)}>
+              <button type="submit" title="Lag en delingslenke — vennen kan lese boken og legge den på sin egen hylle" className="underline underline-offset-2 hover:text-terra">
+                Del boken med en venn
+              </button>
+            </form>
+          </div>
         )}
 
         {erEier && (

@@ -25,15 +25,26 @@ export async function opprettBok(formData: FormData) {
   if (!userId) return;
 
   const navn = navnSchema.safeParse(formData.get('navn'));
-  if (!navn.success) return;
 
-  const bok = await db
-    .insert(cookbook)
-    .values({ userId, name: navn.data })
-    .returning({ id: cookbook.id })
-    .single('bok.opprett');
+  const bok = await withTransaction({ name: 'bok.opprett' }, async (tx) => {
+    // uten navn døpes den "Kokebok #N" — nummeret den får på hylla (omdøping er ett ✎ unna)
+    let name = navn.success ? navn.data : null;
+    if (!name) {
+      const mine = await tx
+        .select({ id: cookbook.id })
+        .from(cookbook)
+        .where(eq(cookbook.userId, userId));
+      name = `Kokebok #${mine.length + 1}`;
+    }
 
-  log.info(bok.id, Attr.COOKBOOK_CREATED, navn.data);
+    return tx
+      .insert(cookbook)
+      .values({ userId, name })
+      .returning({ id: cookbook.id, name: cookbook.name })
+      .single('bok.opprett');
+  });
+
+  log.info(bok.id, Attr.COOKBOOK_CREATED, bok.name);
   revalidatePath('/', 'layout');
   redirect(uuidHref`/kokebok/${bok.id}`);
 }
@@ -259,8 +270,9 @@ export async function settBokForside(cookbookId: string, formData: FormData) {
   revalidatePath('/', 'layout');
 }
 
-// Privat ↔ utstilt. En utstilt bok står fremme på forsiden og kan leses av alle — det er slik
-// Marens utvalg møter en utlogget gjest.
+// Privat ↔ utstilt. En utstilt bok står fremme på forsiden for alle — det er eksemplene en
+// utlogget gjest møter. Forbeholdt admin (Maren): deling med venner går via delingslenker,
+// ikke utstilling.
 export async function settBokSynlighet(cookbookId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) return;
@@ -268,12 +280,21 @@ export async function settBokSynlighet(cookbookId: string, formData: FormData) {
   const synlighet = z.enum(bokSynligheter).safeParse(formData.get('synlighet'));
   if (!synlighet.success) return;
 
-  const endret = await db
-    .update(cookbook)
-    .set({ synlighet: synlighet.data })
-    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
-    .returning({ id: cookbook.id })
-    .maybeSingle('bok.synlighet');
+  const endret = await withTransaction({ name: 'bok.synlighet' }, async (tx) => {
+    const meg = await tx
+      .select({ admin: users.admin })
+      .from(users)
+      .where(eq(users.id, userId))
+      .maybeSingle('bok.synlighet.admin');
+    if (!meg?.admin) return null;
+
+    return tx
+      .update(cookbook)
+      .set({ synlighet: synlighet.data })
+      .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+      .returning({ id: cookbook.id })
+      .maybeSingle('bok.synlighet');
+  });
   if (!endret) return;
 
   log.info(cookbookId, Attr.COOKBOOK_VISIBILITY, synlighet.data);

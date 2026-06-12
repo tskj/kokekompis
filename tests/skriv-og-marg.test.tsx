@@ -25,7 +25,7 @@ vi.mock("next/navigation", () => ({
 
 import { settSkrift } from "@/app/actions/skrift";
 import { opprettTomOppskrift } from "@/app/actions/rediger";
-import { skrivIMargen, slettMarginal } from "@/app/actions/marginalia";
+import { skrivIMargen, slettMarginal, flyttMarginal } from "@/app/actions/marginalia";
 import RecipePage from "@/app/kokebok/[id]/@recipe/oppskrift/[recipeid]/page";
 import InnstillingerSide from "@/app/innstillinger/page";
 
@@ -42,17 +42,17 @@ describe("skriftvalg, skriv-selv-oppskrift og margskrift", () => {
     await resetDb();
   });
 
-  it("skriftvalgene huskes på brukeren — og tull faller til standard", async () => {
+  it("skriftvalgene huskes på brukeren — og tull faller til montserrat (standarden)", async () => {
     const { user } = await makeKokebok();
     hoisted.userId = user.id;
 
     const skjema = new FormData();
-    skjema.set("tekst", "montserrat");
+    skjema.set("tekst", "times");
     skjema.set("oppskrift", "petit");
     await settSkrift(skjema);
 
     let rad = await db.select().from(users).where(eq(users.id, user.id)).single("test.skrift");
-    expect(rad.tekstFont).toBe("montserrat");
+    expect(rad.tekstFont).toBe("times");
     expect(rad.oppskriftFont).toBe("petit");
 
     skjema.set("tekst", "comic-sans");
@@ -60,8 +60,41 @@ describe("skriftvalg, skriv-selv-oppskrift og margskrift", () => {
     await settSkrift(skjema);
 
     rad = await db.select().from(users).where(eq(users.id, user.id)).single("test.tull");
-    expect(rad.tekstFont).toBe("standard");
-    expect(rad.oppskriftFont).toBe("standard");
+    expect(rad.tekstFont).toBe("montserrat");
+    expect(rad.oppskriftFont).toBe("montserrat");
+  });
+
+  it("margskriften kan plasseres fritt på flaten — bare av sin eier, og bare innenfor", async () => {
+    const { user, oppskrift } = await makeKokebok();
+    const annen = await makeKokebok();
+    hoisted.userId = user.id;
+
+    // en ren krussedull uten tekst er lov — ringen rundt et ord sier sitt selv
+    const skjema = new FormData();
+    skjema.set("krussedull", "ring");
+    await skrivIMargen(oppskrift.id, skjema);
+
+    const marginal = await db.select().from(recipeMarginalia).where(eq(recipeMarginalia.recipeId, oppskrift.id)).single("test.ring");
+    expect(marginal.tekst).toBeNull();
+    expect(marginal.posX).toBeNull();
+
+    await flyttMarginal(marginal.id, 0.42, 0.6);
+    let flyttet = await db.select().from(recipeMarginalia).where(eq(recipeMarginalia.id, marginal.id)).single("test.plassert");
+    expect(flyttet.posX).toBeCloseTo(0.42);
+    expect(flyttet.posY).toBeCloseTo(0.6);
+
+    // utenfor flaten og fremmede preller av
+    await flyttMarginal(marginal.id, 7, -1);
+    hoisted.userId = annen.user.id;
+    await flyttMarginal(marginal.id, 0.1, 0.1);
+
+    flyttet = await db.select().from(recipeMarginalia).where(eq(recipeMarginalia.id, marginal.id)).single("test.urørt");
+    expect(flyttet.posX).toBeCloseTo(0.42);
+
+    // og helt tomt blir ingenting
+    hoisted.userId = user.id;
+    await skrivIMargen(oppskrift.id, new FormData());
+    expect(await db.select().from(recipeMarginalia).where(eq(recipeMarginalia.recipeId, oppskrift.id))).toHaveLength(1);
   });
 
   it("innstillingene viser hvem som er logget inn, veien ut, og skriftvalgene", async () => {

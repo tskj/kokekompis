@@ -108,7 +108,8 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-12 border-t border-current opacity-25" />
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-[3.375rem] border-t-2 border-current opacity-25" />
 
-            <span className="mt-6 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
+            {/* lange ord bryter med bindestrek (hyphens følger lang="nb") — og aldri utenfor feltet */}
+            <span className="mt-6 block overflow-hidden break-words [hyphens:auto] bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
               {bok.name}
             </span>
             {/* trykt inn i stoffet: mørkere enn omslaget, med en anelse lys under pregekanten */}

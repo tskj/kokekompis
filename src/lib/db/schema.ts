@@ -6,6 +6,7 @@ import {
   primaryKey,
   integer,
   real,
+  boolean,
   uuid,
   unique,
   check,
@@ -238,8 +239,14 @@ export const recipeMarginalia = pgTable('recipe_marginalia', {
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  tekst: text('tekst').notNull(),
+  // teksten kan utelates — en ren krussedull (ringen rundt et ord) sier sitt selv
+  tekst: text('tekst'),
   krussedull: text('krussedull').$type<Krussedull>(),
+  // plassering på oppskriftsflaten (andel av bredde/høyde, 0–1) — null betyr "står i margen".
+  // Margskriften kan dras fritt rundt på siden: rett ved steget den gjelder, eller ringen
+  // rundt akkurat det ordet.
+  posX: real('posX'),
+  posY: real('posY'),
   createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -264,6 +271,17 @@ export const recipeShares = pgTable('recipe_shares', {
   recipeId: uuid('recipeId')
     .notNull()
     .references(() => recipes.id, { onDelete: 'cascade' })
+    .unique(),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
+});
+
+// Delingslenke for en hel bok — venner får lese hele boken og kan legge den på sin egen hylle.
+// Samme idempotente mønster som oppskriftsdelingen: raden er tokenet, én lenke per bok.
+export const cookbookShares = pgTable('cookbook_shares', {
+  id: uuid('id').defaultRandom().notNull().primaryKey(),
+  cookbookId: uuid('cookbookId')
+    .notNull()
+    .references(() => cookbook.id, { onDelete: 'cascade' })
     .unique(),
   createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
 });
@@ -329,13 +347,11 @@ export const planRecipes = pgTable('plan_recipes', {
 // ========= OAuth =========
 
 
-// Skriftvalgene — Marens fontprøving: brødteksten kan byttes til Montserrat light eller en
-// Times-aktig serif, og selve oppskriftene kan settes i Petit Formal Script.
-export const tekstFonter = ['standard', 'montserrat', 'times'] as const;
-export type TekstFont = (typeof tekstFonter)[number];
-
-export const oppskriftFonter = ['standard', 'petit'] as const;
-export type OppskriftFont = (typeof oppskriftFonter)[number];
+// Skriftvalgene — samme tre valg for brødteksten og for selve oppskriftene: Montserrat light
+// (standard), en Times-aktig serif, og Petit Formal Script. ('standard' — bokserifen fra
+// fontprøvingens første runde — kan stå i gamle rader; den leses som montserrat.)
+export const fontValg = ['montserrat', 'times', 'petit'] as const;
+export type FontValg = (typeof fontValg)[number];
 
 export const users = pgTable('user', {
   id: text('id').notNull().primaryKey(),
@@ -345,8 +361,10 @@ export const users = pgTable('user', {
   image: text('image'),
   // hvordan hylla på forsiden sorteres — brukerens eget valg, husket mellom besøk
   hylleSortering: text('hylleSortering').$type<HylleSortering>().notNull().default('egen'),
-  tekstFont: text('tekstFont').$type<TekstFont>().notNull().default('standard'),
-  oppskriftFont: text('oppskriftFont').$type<OppskriftFont>().notNull().default('standard'),
+  tekstFont: text('tekstFont').$type<FontValg>().notNull().default('montserrat'),
+  oppskriftFont: text('oppskriftFont').$type<FontValg>().notNull().default('montserrat'),
+  // utstilling på forsiden er forbeholdt admin (Maren) — eksempler, ikke SoMe
+  admin: boolean('admin').notNull().default(false),
 });
 
 export const accounts = pgTable('account', {
