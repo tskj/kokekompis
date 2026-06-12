@@ -33,9 +33,10 @@ function planSkjema(navn: string, dato?: string): FormData {
   return formData;
 }
 
-function leggTilSkjema(planId: string): FormData {
+function leggTilSkjema(planId: string, ganger?: number): FormData {
   const formData = new FormData();
   formData.set("plan", encodeUuidToBase32(planId));
+  if (ganger !== undefined) formData.set("ganger", String(ganger));
 
   return formData;
 }
@@ -158,6 +159,45 @@ describe("planer (ekte actions, ekte database, ekte planside)", () => {
     // to testoppskrifter à 9 dl hvetemel og 2 ss kanel → én linje av hver, summert
     expect(screen.getByText("18 dl")).toBeInTheDocument();
     expect(screen.getByText("4 ss")).toBeInTheDocument();
+  });
+
+  it("størrelsen følger med inn i planen — 4× boller er 4× mel på handlelisten", async () => {
+    const { user, oppskrift } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    const plan = await lagPlan(user.id, "17. mai-frokost");
+    await leggTilIPlan(oppskrift.id, leggTilSkjema(plan.id, 4));
+
+    const rad = await db
+      .select({ ganger: planRecipes.ganger })
+      .from(planRecipes)
+      .where(eq(planRecipes.planId, plan.id))
+      .single("test.ganger");
+    expect(rad.ganger).toBe(4);
+
+    render(await PlanSide(sideProps(plan.id)));
+
+    // testoppskriften har 9 dl hvetemel — 4× gir 36 dl, og raden er merket 4×
+    expect(screen.getByText("36 dl")).toBeInTheDocument();
+    expect(screen.getByText("4×")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Testboller/ }).getAttribute("href")).toContain("ganger=4");
+  });
+
+  it("å legge til på nytt oppdaterer størrelsen — og tull i ganger faller til 1", async () => {
+    const { user, oppskrift } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    const plan = await lagPlan(user.id);
+    await leggTilIPlan(oppskrift.id, leggTilSkjema(plan.id, 4));
+    await leggTilIPlan(oppskrift.id, leggTilSkjema(plan.id, 2));
+
+    let rad = await db.select().from(planRecipes).where(eq(planRecipes.planId, plan.id)).single("test.oppdatert");
+    expect(rad.ganger).toBe(2);
+    expect(rad.order).toBe(1);
+
+    await leggTilIPlan(oppskrift.id, leggTilSkjema(plan.id, 3));
+    rad = await db.select().from(planRecipes).where(eq(planRecipes.planId, plan.id)).single("test.tull");
+    expect(rad.ganger).toBe(1);
   });
 
   it("oppskriftssiden viser hvilke planer den ligger i — og tilbyr bare resten", async () => {

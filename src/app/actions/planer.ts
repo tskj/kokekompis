@@ -9,6 +9,7 @@ import { cookbook, plans, planRecipes, recipes } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { kanSeBok } from '@/lib/bok-tilgang';
+import { GANGER_VALG } from '@/lib/skalering';
 import { parseUuidParam } from '@/lib/uuid/uuid-base32';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { log, Attr } from '@/lib/log';
@@ -57,14 +58,18 @@ export async function slettPlan(planId: string, formData: FormData) {
   redirect('/planer');
 }
 
-// Legg en oppskrift bakerst i en av dine planer. Oppskriften må være synlig for deg — din egen
-// eller fra en utstilt bok; planen må være din. Å legge til samme oppskrift to ganger er no-op.
+// Legg en oppskrift bakerst i en av dine planer — i størrelsen den står i akkurat nå (4×
+// boller i planen er 4× mel på handlelisten). Oppskriften må være synlig for deg — din egen
+// eller fra en utstilt bok; planen må være din. Ligger den der alt, oppdateres størrelsen.
 export async function leggTilIPlan(recipeId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) return;
 
   const planId = parseUuidParam(String(formData.get('plan') ?? ''));
   if (!planId) return;
+
+  const gangerTall = Number(formData.get('ganger') ?? 1);
+  const ganger = (GANGER_VALG as readonly number[]).includes(gangerTall) ? gangerTall : 1;
 
   const lagtTil = await withTransaction({ name: 'plan.legg-til' }, async (tx) => {
     const minPlan = await tx
@@ -90,8 +95,8 @@ export async function leggTilIPlan(recipeId: string, formData: FormData) {
 
     await tx
       .insert(planRecipes)
-      .values({ planId, recipeId, order: (høyeste ?? 0) + 1 })
-      .onConflictDoNothing();
+      .values({ planId, recipeId, order: (høyeste ?? 0) + 1, ganger })
+      .onConflictDoUpdate({ target: [planRecipes.planId, planRecipes.recipeId], set: { ganger } });
 
     return true;
   });

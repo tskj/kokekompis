@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { and, asc, eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { cookbook, plans, planRecipes, recipes, recipeContentSchema, type RecipeContent } from '@/lib/db/schema';
+import { cookbook, plans, planRecipes, recipes, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { kanSeBok } from '@/lib/bok-tilgang';
@@ -41,6 +41,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
         cookbookId: recipes.cookbookId,
         title: recipes.title,
         content: recipes.content,
+        ganger: planRecipes.ganger,
         bokEier: cookbook.userId,
         synlighet: cookbook.synlighet,
       })
@@ -56,18 +57,19 @@ export default async function PlanSide({ params }: PlanSideProps) {
 
   const synlige = data.rader.filter((rad) => kanSeBok({ userId: rad.bokEier, synlighet: rad.synlighet }, userId));
 
-  // handlelisten regnes fra oppskriftenes innhold ved visning — en rad som ikke parser hopper
-  // bare over, den skal ikke velte hele planen
-  const innhold = synlige
-    .map((rad) => recipeContentSchema.safeParse(rad.content))
-    .filter((resultat) => resultat.success)
-    .map((resultat) => resultat.data as RecipeContent);
+  // handlelisten regnes fra oppskriftenes innhold ved visning, ganget med størrelsen hver rett
+  // ble lagt til i — en rad som ikke parser hopper bare over, den skal ikke velte hele planen
+  const retter = synlige.flatMap((rad) => {
+    const content = recipeContentSchema.safeParse(rad.content);
+    return content.success ? [{ content: content.data, ganger: rad.ganger }] : [];
+  });
 
   const tilbake = encodeURIComponent(uuidHref`/planer/${planId}`);
 
   return (
     <main className="relative mx-auto max-w-3xl px-6 py-12">
-      <Kaffeflekk className="absolute -top-8 right-0 w-44 rotate-45" />
+      {/* dekor nederst/ytterst — utenfor innholdet */}
+      <Kaffeflekk className="absolute bottom-0 -left-28 w-44 rotate-12 skjul-ved-print" />
 
       <header className="mb-8 skjul-ved-print">
         <Link href="/planer" className="text-sm text-ink-soft hover:text-terra">← Planer</Link>
@@ -98,12 +100,19 @@ export default async function PlanSide({ params }: PlanSideProps) {
           <ul className="divide-y divide-line border-y border-line">
             {synlige.map((rad) => (
               <li key={rad.recipeId} className="flex items-baseline justify-between gap-4 py-3">
-                <Link
-                  href={`${uuidHref`/kokebok/${rad.cookbookId}/oppskrift/${rad.recipeId}`}?tilbake=${tilbake}`}
-                  className="font-display text-xl hover:text-terra"
-                >
-                  {rad.title}
-                </Link>
+                <span className="flex items-baseline gap-2">
+                  <Link
+                    href={`${uuidHref`/kokebok/${rad.cookbookId}/oppskrift/${rad.recipeId}`}?tilbake=${tilbake}${rad.ganger !== 1 ? `&ganger=${rad.ganger}` : ''}`}
+                    className="font-display text-xl hover:text-terra"
+                  >
+                    {rad.title}
+                  </Link>
+                  {rad.ganger !== 1 && (
+                    <span className="rounded-full bg-terra px-2 py-0.5 text-sm font-medium text-paper">
+                      {rad.ganger === 0.5 ? '½' : rad.ganger}×
+                    </span>
+                  )}
+                </span>
 
                 <form action={fjernFraPlan.bind(null, planId, rad.recipeId)}>
                   <button
@@ -121,7 +130,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
         )}
       </section>
 
-      {innhold.length > 0 && (
+      {retter.length > 0 && (
         <section aria-labelledby="handleliste" className="mt-10">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
             <h2 id="handleliste" className="font-display text-3xl">Handleliste</h2>
@@ -129,10 +138,10 @@ export default async function PlanSide({ params }: PlanSideProps) {
           </div>
 
           <p className="mb-4 text-sm text-ink-soft skjul-ved-print">
-            Alt fra alle oppskriftene, lagt sammen — samme vare i samme mål blir én linje.
+            Alt fra alle oppskriftene, i størrelsene de skal lages i — samme vare i samme mål blir én linje.
           </p>
 
-          <Handleliste linjer={lagHandleliste(innhold)} />
+          <Handleliste linjer={lagHandleliste(retter)} />
         </section>
       )}
     </main>

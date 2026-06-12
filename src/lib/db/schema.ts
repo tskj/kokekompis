@@ -5,6 +5,7 @@ import {
   text,
   primaryKey,
   integer,
+  real,
   uuid,
   unique,
   check,
@@ -101,6 +102,11 @@ export type BokSynlighet = (typeof bokSynligheter)[number];
 export const bokFarger = ['terra', 'sage', 'ink', 'butter', 'vin', 'natt'] as const;
 export type BokFarge = (typeof bokFarger)[number];
 
+// Hylla kan sorteres på to vis (users.hylleSortering): brukerens egen rekkefølge, eller etter
+// når boken sist ble åpnet av eieren sin.
+export const hylleSorteringer = ['egen', 'sist-åpnet'] as const;
+export type HylleSortering = (typeof hylleSorteringer)[number];
+
 export const cookbook = pgTable('cookbook', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
   userId: text('userId')
@@ -112,6 +118,10 @@ export const cookbook = pgTable('cookbook', {
   // bokbåndet mellom tittel og innhold: et mønsternavn (se src/lib/bok-utseende.ts) eller
   // nøkkelen til et opplastet bilde (bok/<id>/…webp)
   headerBilde: text('headerBilde'),
+  // plassen på hylla i eierens egen sortering — null til boken første gang sorteres
+  rekkefølge: integer('rekkefølge'),
+  // når eieren sist slo opp i boken — driver "sist åpnet"-sorteringen
+  sistÅpnet: timestamp('sistApnet', { mode: 'date', withTimezone: true }),
 });
 
 export const chapters = pgTable('chapters', {
@@ -274,6 +284,8 @@ export const planRecipes = pgTable('plan_recipes', {
     .notNull()
     .references(() => recipes.id, { onDelete: 'cascade' }),
   order: integer('order').notNull(),
+  // størrelsen oppskriften ble lagt til i (½/1/2/4) — handlelisten ganger mengdene med denne
+  ganger: real('ganger').notNull().default(1),
 }, (planRecipes) => [
   unique().on(planRecipes.planId, planRecipes.recipeId),
   unique().on(planRecipes.planId, planRecipes.order),
@@ -290,6 +302,8 @@ export const users = pgTable('user', {
   email: text('email').notNull(),
   emailVerified: timestamp('emailVerified', { mode: 'date' }),
   image: text('image'),
+  // hvordan hylla på forsiden sorteres — brukerens eget valg, husket mellom besøk
+  hylleSortering: text('hylleSortering').$type<HylleSortering>().notNull().default('egen'),
 });
 
 export const accounts = pgTable('account', {

@@ -149,7 +149,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
 
     const iPlaner = userId
       ? await tx
-          .select({ id: plans.id, name: plans.name })
+          .select({ id: plans.id, name: plans.name, ganger: planRecipes.ganger })
           .from(planRecipes)
           .innerJoin(plans, eq(planRecipes.planId, plans.id))
           .where(and(eq(planRecipes.recipeId, recipeId), eq(plans.userId, userId)))
@@ -353,13 +353,15 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
 
                 {valgbarePlaner.length > 0 ? (
                   <form action={leggTilIPlan.bind(null, recipeId)} className="absolute z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
+                    {/* størrelsen følger med: står oppskriften i 4× akkurat nå, planlegges 4× */}
+                    <input type="hidden" name="ganger" value={ganger} />
                     <select name="plan" aria-label="Plan" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
                       {valgbarePlaner.map((plan) => (
                         <option key={plan.id} value={encodeUuidToBase32(plan.id)}>{plan.name}</option>
                       ))}
                     </select>
                     <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
-                      Legg i planen
+                      {ganger !== 1 ? `Legg i planen — ${ganger === 0.5 ? '½' : ganger}×` : 'Legg i planen'}
                     </button>
                   </form>
                 ) : (
@@ -375,7 +377,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             {!erUtkast && side.iPlaner.map((plan) => (
               <span key={plan.id} className="flex items-center gap-0.5 rounded-full border border-sage/50 bg-sage/10 py-1 pl-3 pr-1 text-sm">
                 <Link href={uuidHref`/planer/${plan.id}`} className="hover:text-terra" title="Åpne planen">
-                  På planen: {plan.name}
+                  På planen: {plan.name}{plan.ganger !== 1 && ` — ${plan.ganger === 0.5 ? '½' : plan.ganger}×`}
                 </Link>
                 <form action={fjernFraPlan.bind(null, plan.id, recipeId)}>
                   <button
@@ -416,7 +418,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                   legg den bort
                 </Link>
               </div>
-              <Handleliste linjer={lagHandleliste([content])} ganger={ganger} />
+              <Handleliste linjer={lagHandleliste([{ content }])} ganger={ganger} />
             </section>
           ) : (
             <Link

@@ -1,12 +1,12 @@
 import { auth, signIn, signOut } from '@/auth';
-import { asc, eq } from 'drizzle-orm';
-import { cookbook, plans, recipeFavorites } from '@/lib/db/schema';
+import { asc, eq, sql } from 'drizzle-orm';
+import { cookbook, plans, recipeFavorites, users } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { bokFargeKlasse } from '@/lib/bok-utseende';
 import { formaterDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
-import { opprettBok } from '@/app/actions/bok';
+import { opprettBok, settHylleSortering, flyttBokPåHylla } from '@/app/actions/bok';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import Link from 'next/link';
 
@@ -42,13 +42,26 @@ function SignOut() {
 
 // Hylla er personlig: innlogget ser du dine egne bøker — utlogget ser du utvalget av utstilte
 // bøker (Marens utstillingsvindu). Favorittene danner sin egen "bok" med det første hjertet.
+// Eieren velger selv om hylla står i egen rekkefølge eller etter sist åpnet.
 async function getHylla(userId: string | null) {
   return withTransaction({ name: 'forside' }, async (tx) => {
+    const sortering = userId
+      ? (await tx
+          .select({ hylleSortering: users.hylleSortering })
+          .from(users)
+          .where(eq(users.id, userId))
+          .maybeSingle('forside.sortering'))?.hylleSortering ?? 'egen'
+      : 'egen';
+
     const bøker = await tx
       .select({ id: cookbook.id, name: cookbook.name, farge: cookbook.farge })
       .from(cookbook)
       .where(userId ? eq(cookbook.userId, userId) : eq(cookbook.synlighet, 'utstilt'))
-      .orderBy(asc(cookbook.name));
+      .orderBy(...(
+        !userId                     ? [asc(cookbook.name)]
+        : sortering === 'sist-åpnet' ? [sql`${cookbook.sistÅpnet} desc nulls last`, asc(cookbook.name)]
+        :                              [sql`${cookbook.rekkefølge} asc nulls last`, asc(cookbook.name)]
+      ));
 
     const harFavoritter = userId
       ? await tx
@@ -67,7 +80,7 @@ async function getHylla(userId: string | null) {
           .orderBy(asc(plans.dato), asc(plans.name))
       : [];
 
-    return { bøker, harFavoritter, planer };
+    return { bøker, harFavoritter, planer, sortering };
   });
 }
 
@@ -75,10 +88,15 @@ export default async function Home() {
   const session = await auth();
 
   const userId = await getCurrentUserId();
-  const { bøker: cookbooks, harFavoritter, planer } = await getHylla(userId);
+  const { bøker: cookbooks, harFavoritter, planer, sortering } = await getHylla(userId);
+
+  // pilene for egen sortering vises bare når de kan utrette noe
+  const kanSortere = !!userId && sortering === 'egen' && cookbooks.length > 1;
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
+    <main className="relative mx-auto max-w-4xl px-6 py-12">
+      {/* dekor nederst/ytterst på siden — aldri over innholdet */}
+      <Kaffeflekk className="absolute bottom-2 -left-32 w-52 rotate-12" />
       {/* flex-wrap: på smale skjermer faller hilsen + logg ut ned under tittelen i stedet for å
           presse siden bredere enn telefonen */}
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
@@ -102,31 +120,82 @@ export default async function Home() {
       </header>
 
       <section className="relative mt-14" aria-label="Bokhylla">
-        <Kaffeflekk className="absolute -top-24 right-0 w-48 rotate-12 md:w-56" />
-        <h2 className="text-[11px] uppercase tracking-[0.2em] text-ink-soft mb-6">Bokhylla</h2>
+        <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <h2 className="text-[11px] uppercase tracking-[0.2em] text-ink-soft">Bokhylla</h2>
+
+          {userId && cookbooks.length > 1 && (
+            <form action={settHylleSortering} className="flex items-center gap-2 text-xs text-ink-soft">
+              <span>Sortert etter:</span>
+              <button
+                type="submit"
+                name="sortering"
+                value="egen"
+                aria-pressed={sortering === 'egen'}
+                className={sortering === 'egen' ? 'rounded-full bg-ink/10 px-2.5 py-0.5 font-medium' : 'underline underline-offset-2 hover:text-terra'}
+              >
+                min rekkefølge
+              </button>
+              <button
+                type="submit"
+                name="sortering"
+                value="sist-åpnet"
+                aria-pressed={sortering === 'sist-åpnet'}
+                className={sortering === 'sist-åpnet' ? 'rounded-full bg-ink/10 px-2.5 py-0.5 font-medium' : 'underline underline-offset-2 hover:text-terra'}
+              >
+                sist åpnet
+              </button>
+            </form>
+          )}
+        </div>
 
         {/* På telefon ligger bøkene bortover med litt overlapp og scroller sidelengs — de brekker
             aldri under hverandre. På store skjermer brer hylla seg utover med luft mellom. */}
-        <div className="flex items-end overflow-x-auto pt-3 border-b-8 border-ink/80 md:flex-wrap md:gap-6 md:overflow-visible">
+        <div className="flex items-end overflow-x-auto pt-5 border-b-8 border-ink/80 md:flex-wrap md:gap-6 md:overflow-visible">
             {cookbooks.map((bok, index) => (
-              <Link
-                key={bok.id}
-                href={uuidHref`/kokebok/${bok.id}`}
-                className={`${bokFargeKlasse(bok.farge, index)} group relative flex h-64 w-44 shrink-0 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2 -ml-8 first:ml-0 md:ml-0`}
-              >
-                {/* opphøyde ryggbånd — de tverrgående ribbene på en gammel innbinding */}
-                <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-2 border-t-2 border-current opacity-25" />
-                <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-3.5 border-t border-current opacity-25" />
-                <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-7 border-t border-current opacity-25" />
-                <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-[2.125rem] border-t-2 border-current opacity-25" />
+              <div key={bok.id} className="relative shrink-0 -ml-8 first:ml-0 md:ml-0">
+                <Link
+                  href={uuidHref`/kokebok/${bok.id}`}
+                  className={`${bokFargeKlasse(bok.farge, index)} relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2`}
+                >
+                  {/* opphøyde ryggbånd — de tverrgående ribbene på en gammel innbinding */}
+                  <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-2 border-t-2 border-current opacity-25" />
+                  <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-3.5 border-t border-current opacity-25" />
+                  <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-7 border-t border-current opacity-25" />
+                  <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-[2.125rem] border-t-2 border-current opacity-25" />
 
-                <span className="mt-6 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
-                  {bok.name}
-                </span>
-                <span className="text-center text-[10px] uppercase tracking-[0.25em] opacity-70">
-                  Kokekompis
-                </span>
-              </Link>
+                  <span className="mt-6 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
+                    {bok.name}
+                  </span>
+                  <span className="text-center text-[10px] uppercase tracking-[0.25em] opacity-70">
+                    Kokekompis
+                  </span>
+                </Link>
+
+                {kanSortere && (
+                  <span className="absolute -top-3.5 left-1/2 z-10 flex -translate-x-1/2 gap-1">
+                    <form action={flyttBokPåHylla.bind(null, bok.id, 'venstre')}>
+                      <button
+                        type="submit"
+                        aria-label={`Flytt ${bok.name} mot venstre`}
+                        title="Flytt boken mot venstre"
+                        className="size-7 rounded-full border border-line bg-card text-xs shadow-sm hover:border-terra hover:text-terra"
+                      >
+                        ←
+                      </button>
+                    </form>
+                    <form action={flyttBokPåHylla.bind(null, bok.id, 'høyre')}>
+                      <button
+                        type="submit"
+                        aria-label={`Flytt ${bok.name} mot høyre`}
+                        title="Flytt boken mot høyre"
+                        className="size-7 rounded-full border border-line bg-card text-xs shadow-sm hover:border-terra hover:text-terra"
+                      >
+                        →
+                      </button>
+                    </form>
+                  </span>
+                )}
+              </div>
             ))}
 
             {harFavoritter && (

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { RecipeContent } from '@/lib/db/schema';
+import { GANGER_VALG } from '@/lib/skalering';
 import { InfoLinje } from './InfoLinje';
 import { IngrediensListe } from './IngrediensListe';
 import { StegListe } from './StegListe';
@@ -31,16 +32,8 @@ interface OppskriftProps {
   ferdigBilder?: React.ReactNode;
 }
 
-export const GANGER_VALG = [0.5, 1, 2, 4] as const;
-
-// ?ganger=… fra URL-en: bare de faste valgene slipper gjennom, og aldri når oppskriften har
-// skrudd av skalering.
-export function lesGanger(rå: string | undefined, kanSkaleres: boolean): number {
-  if (!kanSkaleres) return 1;
-
-  const tall = Number(rå);
-  return (GANGER_VALG as readonly number[]).includes(tall) ? tall : 1;
-}
+// Flyttet til lib (planene trenger dem på serversiden) — re-eksportert her for visningens skyld.
+export { GANGER_VALG, lesGanger } from '@/lib/skalering';
 
 // Det klassiske oppskriftsviewet: tittel, infolinje, ingredienser ved siden av fremgangsmåten,
 // og opprinnelsen nederst — som en side i en trykt kokebok.

@@ -3,11 +3,11 @@
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { z } from 'zod';
-import { and, eq, max } from 'drizzle-orm';
+import { and, asc, eq, max, sql } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { cookbook, chapters, bokSynligheter, bokFarger } from '@/lib/db/schema';
+import { cookbook, chapters, users, bokSynligheter, bokFarger, hylleSorteringer } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { lesBåndValg } from '@/lib/bok-utseende';
@@ -54,6 +54,52 @@ export async function endreBokNavn(cookbookId: string, formData: FormData) {
   if (!endret) return;
 
   log.info(cookbookId, Attr.COOKBOOK_RENAMED, navn.data);
+  revalidatePath('/', 'layout');
+}
+
+// Hvordan hylla sorteres: din egen rekkefølge (pilene på bokryggene) eller sist åpnet.
+// Valget huskes på brukeren, ikke i URL-en — hylla skal stå slik du forlot den.
+export async function settHylleSortering(formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const sortering = z.enum(hylleSorteringer).safeParse(formData.get('sortering'));
+  if (!sortering.success) return;
+
+  await db.update(users).set({ hylleSortering: sortering.data }).where(eq(users.id, userId));
+
+  revalidatePath('/', 'layout');
+}
+
+// Flytt en bok mot venstre eller høyre i din egen rekkefølge. Hele hylla normaliseres til
+// 1..n ved hvert bytte — bøker som aldri er sortert (null) står da bakerst i navnerekkefølge,
+// samme rekkefølge som visningen bruker, så pilene flytter alltid det øyet ser.
+export async function flyttBokPåHylla(cookbookId: string, retning: 'venstre' | 'høyre', formData: FormData) {
+  void formData;
+
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  await withTransaction({ name: 'bok.flytt-på-hylla' }, async (tx) => {
+    const bøker = await tx
+      .select({ id: cookbook.id })
+      .from(cookbook)
+      .where(eq(cookbook.userId, userId))
+      .orderBy(sql`${cookbook.rekkefølge} asc nulls last`, asc(cookbook.name));
+
+    const index = bøker.findIndex((bok) => bok.id === cookbookId);
+    if (index === -1) return;
+
+    const nabo = retning === 'venstre' ? index - 1 : index + 1;
+    if (nabo < 0 || nabo >= bøker.length) return;
+
+    [bøker[index], bøker[nabo]] = [bøker[nabo], bøker[index]];
+
+    for (const [plass, bok] of bøker.entries()) {
+      await tx.update(cookbook).set({ rekkefølge: plass + 1 }).where(eq(cookbook.id, bok.id));
+    }
+  });
+
   revalidatePath('/', 'layout');
 }
 

@@ -21,17 +21,26 @@ describe("handleliste-summeringen", () => {
       ingrediens({ id: "smor", navn: "Smør", mengde: 200, enhet: "g" }),
     ]);
 
-    const linjer = lagHandleliste([boller, kake]);
+    const linjer = lagHandleliste([{ content: boller }, { content: kake }]);
     expect(linjer).toHaveLength(1);
     expect(linjer[0].mengde).toBe(350);
     expect(linjer[0].enhet).toBe("g");
   });
 
+  it("ganger hver rett med størrelsen den skal lages i — 4× boller er 4× mel", () => {
+    const boller = oppskriftMed([ingrediens({ id: "mel", navn: "hvetemel", mengde: 9, enhet: "dl" })]);
+    const kake   = oppskriftMed([ingrediens({ id: "mel", navn: "hvetemel", mengde: 4, enhet: "dl" })]);
+
+    const linjer = lagHandleliste([{ content: boller, ganger: 4 }, { content: kake, ganger: 0.5 }]);
+    expect(linjer).toHaveLength(1);
+    expect(linjer[0].mengde).toBe(38);
+  });
+
   it("blander aldri mål — 2 dl og 100 g av samme vare er to linjer", () => {
-    const linjer = lagHandleliste([oppskriftMed([
+    const linjer = lagHandleliste([{ content: oppskriftMed([
       ingrediens({ id: "a", navn: "sukker", mengde: 2,   enhet: "dl" }),
       ingrediens({ id: "b", navn: "sukker", mengde: 100, enhet: "g" }),
-    ])]);
+    ]) }]);
 
     expect(linjer).toHaveLength(2);
     expect(linjer.map((l) => l.enhet).sort()).toEqual(["dl", "g"]);
@@ -39,8 +48,8 @@ describe("handleliste-summeringen", () => {
 
   it("mengdeløse varer («salt») samles til én linje uten mengde", () => {
     const linjer = lagHandleliste([
-      oppskriftMed([ingrediens({ id: "a", navn: "salt" })]),
-      oppskriftMed([ingrediens({ id: "b", navn: "salt" })]),
+      { content: oppskriftMed([ingrediens({ id: "a", navn: "salt" })]) },
+      { content: oppskriftMed([ingrediens({ id: "b", navn: "salt" })]), ganger: 4 },
     ]);
 
     expect(linjer).toHaveLength(1);
@@ -48,11 +57,11 @@ describe("handleliste-summeringen", () => {
   });
 
   it("sorterer alfabetisk — en handleliste leses ovenfra og ned i butikken", () => {
-    const linjer = lagHandleliste([oppskriftMed([
+    const linjer = lagHandleliste([{ content: oppskriftMed([
       ingrediens({ id: "a", navn: "vaniljesukker", mengde: 1, enhet: "ts" }),
       ingrediens({ id: "b", navn: "egg",           mengde: 2, enhet: "stk" }),
       ingrediens({ id: "c", navn: "ananas",        mengde: 1, enhet: "stk" }),
-    ])]);
+    ]) }]);
 
     expect(linjer.map((l) => l.navn)).toEqual(["ananas", "egg", "vaniljesukker"]);
   });

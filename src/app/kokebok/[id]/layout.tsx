@@ -1,4 +1,6 @@
+import { db } from '@/lib/db';
 import { withTransaction } from '@/lib/db-tx';
+import { nowDate } from '@/lib/clock';
 import { cookbook, chapters, recipes, recipeChapters, userOpenChapters, bokFarger } from '@/lib/db/schema';
 import { eq, asc, inArray, notInArray, isNull, and, ne } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
@@ -139,6 +141,9 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
   // Gjester (utstilt bok) får lese, aldri stelle: alt som endrer boken rendres kun for eieren.
   const erEier = cookbookData.userId === userId;
 
+  // bokmerket for "sist åpnet"-sorteringen på hylla — å slå opp i boken ER å bruke den
+  if (erEier) await db.update(cookbook).set({ sistÅpnet: nowDate() }).where(eq(cookbook.id, cookbookId));
+
   // Bokbåndet — den smale stripen mellom tittel og innhold: et mønster i en bokfarge, eller et
   // opplastet bilde (nøkler starter med bok/). Ukjente verdier viser ingenting fremfor å feile.
   const headerBilde = cookbookData.headerBilde;
@@ -148,7 +153,9 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
              :                                   null;
 
   return (
-    <div className="mx-auto max-w-7xl p-6 md:p-10">
+    <div className="relative mx-auto max-w-7xl p-6 md:p-10">
+      {/* dekor nederst/ytterst — aldri over innholdet (negative venstrekanter gir ikke scroll) */}
+      <Kaffeflekk className="absolute bottom-0 -left-36 w-52 rotate-6 skjul-ved-print" />
       <header className="mb-8 skjul-ved-print">
         <Link href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
 
@@ -288,7 +295,6 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
         {/* Innholdslista — bokens venstreside */}
         <div className="lg:col-span-1 skjul-ved-print">
           <div className="sticky top-6">
-            <Kaffeflekk className="absolute -top-14 -left-16 w-44 -rotate-12" />
             <h2 className="mb-3 text-[11px] uppercase tracking-[0.2em] text-ink-soft">Innhold</h2>
 
             {cookbookData.chapters.length === 0 ? (
