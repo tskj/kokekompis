@@ -11,6 +11,7 @@ import {
   jsonb,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import type { AdapterAccount } from 'next-auth/adapters';
 
@@ -138,6 +139,10 @@ export const recipes = pgTable('recipes', {
   title: text('title').notNull(),
   description: text('description'),
   content: jsonb('content').notNull(),
+  // satt = dette er et utkast av oppskriften den peker på: en kopi å eksperimentere i. Utkast
+  // står utenfor kapitler og innholdslister, og kan tas i bruk (skrive over originalen) eller
+  // forkastes. Forsvinner originalen, følger utkastene med.
+  utkastAv: uuid('utkastAv').references((): AnyPgColumn => recipes.id, { onDelete: 'cascade' }),
 });
 
 // Manuell lenking innad i boken: skolebollen peker på vaniljekremen. Rettet kant — visningen
@@ -199,6 +204,23 @@ export const recipeNotes = pgTable('recipe_notes', {
     .references(() => users.id, { onDelete: 'cascade' }),
   tekst: text('tekst').notNull(),
   farge: text('farge').$type<NotatFarge>().notNull().default('terrakotta'),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
+});
+
+// Marg-kommentarer — google-docs-følelsen: en liten merknad hengt på et bestemt steg.
+// "Oi, denne ble svidd i kantene — prøv mindre egg neste gang." Personlige som lappene
+// (følger ikke med ved deling), og de overlever redigering så lenge steget består.
+export const recipeComments = pgTable('recipe_comments', {
+  id: uuid('id').defaultRandom().notNull().primaryKey(),
+  recipeId: uuid('recipeId')
+    .notNull()
+    .references(() => recipes.id, { onDelete: 'cascade' }),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  // id-en til steget kommentaren henger på (fra content.steg)
+  stegId: text('stegId').notNull(),
+  tekst: text('tekst').notNull(),
   createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
 });
 

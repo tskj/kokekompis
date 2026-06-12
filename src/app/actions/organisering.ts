@@ -1,6 +1,6 @@
 'use server';
 
-import { and, eq, inArray, max } from 'drizzle-orm';
+import { and, eq, inArray, isNull, max } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { chapters, recipeChapters, recipes } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
@@ -18,10 +18,11 @@ export async function flyttOppskrift(recipeId: string, formData: FormData) {
   if (valg !== 'ingen' && !målKapittelId) return;
 
   await withTransaction({ name: 'oppskrift.flytt' }, async (tx) => {
+    // utkast bor på originalens side og skal aldri inn i et kapittel
     const oppskrift = await tx
       .select({ cookbookId: recipes.cookbookId })
       .from(recipes)
-      .where(and(eq(recipes.id, recipeId), eq(recipes.userId, userId)))
+      .where(and(eq(recipes.id, recipeId), eq(recipes.userId, userId), isNull(recipes.utkastAv)))
       .maybeSingle('oppskrift.flytt.oppskrift');
     if (!oppskrift) return;
 

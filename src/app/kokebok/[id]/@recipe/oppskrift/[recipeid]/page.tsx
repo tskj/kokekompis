@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { eq, and, asc, ne, inArray, notInArray } from 'drizzle-orm';
+import { eq, and, asc, ne, isNull, inArray, notInArray } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, plans, recipeContentSchema } from '@/lib/db/schema';
+import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeComments, plans, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { kanSeBok } from '@/lib/bok-tilgang';
 import { lagHandleliste } from '@/lib/handleliste';
@@ -21,7 +21,9 @@ import { delOppskrift } from '@/app/actions/deling';
 import { toggleFavoritt } from '@/app/actions/favoritter';
 import { flyttOppskrift } from '@/app/actions/organisering';
 import { leggTilIPlan } from '@/app/actions/planer';
+import { lagUtkast, taIBrukUtkast, forkastUtkast } from '@/app/actions/utkast';
 import { Handleliste } from '@/components/oppskrift/Handleliste';
+import { StegKommentarer } from '@/components/oppskrift/StegKommentarer';
 
 interface RecipePageProps {
   params: Promise<{ id: string; recipeid: string }>;
@@ -47,11 +49,27 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
         title: recipes.title,
         description: recipes.description,
         content: recipes.content,
+        utkastAv: recipes.utkastAv,
       })
       .from(recipes)
       .where(and(eq(recipes.id, recipeId), eq(recipes.cookbookId, cookbookId)))
       .maybeSingle('oppskrift.side');
     if (!oppskrift) return null;
+
+    // utkast-benken: er dette en original, finn utkastene dens; er det et utkast, finn originalen
+    const utkast = await tx
+      .select({ id: recipes.id, title: recipes.title })
+      .from(recipes)
+      .where(eq(recipes.utkastAv, recipeId))
+      .orderBy(asc(recipes.id));
+
+    const original = oppskrift.utkastAv
+      ? await tx
+          .select({ id: recipes.id, title: recipes.title })
+          .from(recipes)
+          .where(eq(recipes.id, oppskrift.utkastAv))
+          .maybeSingle('oppskrift.side.original')
+      : null;
 
     const kapitlerIBoken = await tx
       .select({ id: chapters.id, name: chapters.name })
@@ -78,6 +96,15 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(recipeNotes.createdAt))
       : [];
 
+    // marg-kommentarene — personlige som lappene, hengt på hvert sitt steg
+    const kommentarer = userId
+      ? await tx
+          .select({ id: recipeComments.id, stegId: recipeComments.stegId, tekst: recipeComments.tekst })
+          .from(recipeComments)
+          .where(and(eq(recipeComments.recipeId, recipeId), eq(recipeComments.userId, userId)))
+          .orderBy(asc(recipeComments.createdAt))
+      : [];
+
     const utgående = await tx
       .select({ linkId: recipeLinks.id, recipeId: recipeLinks.toRecipeId, tittel: recipes.title })
       .from(recipeLinks)
@@ -97,6 +124,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
       .where(and(
         eq(recipes.cookbookId, cookbookId),
         ne(recipes.id, recipeId),
+        isNull(recipes.utkastAv),
         ...(alleredeLenket.length > 0 ? [notInArray(recipes.id, alleredeLenket)] : []),
       ))
       .orderBy(asc(recipes.title));
@@ -118,7 +146,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(plans.name))
       : [];
 
-    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, utgående, innkommende, kandidater, erFavoritt, minePlaner };
+    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner };
   });
 }
 
@@ -155,6 +183,16 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
     return qs ? `${stiBase}?${qs}` : stiBase;
   };
 
+  // marg-kommentarene grupperes per steg — StegListe henter sine via kommentarFelt
+  const kommentarerPerSteg = new Map<string, { id: string; tekst: string }[]>();
+  for (const kommentar of side.kommentarer) {
+    const liste = kommentarerPerSteg.get(kommentar.stegId) ?? [];
+    liste.push({ id: kommentar.id, tekst: kommentar.tekst });
+    kommentarerPerSteg.set(kommentar.stegId, liste);
+  }
+
+  const erUtkast = side.utkastAv !== null;
+
   return (
     <>
       {tilbakeSti && (
@@ -166,6 +204,50 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             ← Tilbake dit du var
           </Link>
         </p>
+      )}
+
+      {erUtkast && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-dashed border-butter bg-butter/10 px-4 py-3 skjul-ved-print">
+          <p className="text-sm">
+            Et utkast{side.original && (
+              <> av{' '}
+                <Link href={uuidHref`/kokebok/${cookbookId}/oppskrift/${side.original.id}`} className="underline underline-offset-2 hover:text-terra">
+                  {side.original.title}
+                </Link>
+              </>
+            )} — eksperimenter i vei, originalen står urørt.
+          </p>
+
+          {side.erEier && (
+            <span className="flex flex-wrap gap-2">
+              <form action={taIBrukUtkast.bind(null, recipeId)}>
+                <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
+                  Ta i bruk — skriv over originalen
+                </button>
+              </form>
+              <form action={forkastUtkast.bind(null, recipeId)}>
+                <button type="submit" className="rounded-full border border-line px-4 py-1.5 text-sm hover:border-terra hover:text-terra">
+                  Forkast utkastet
+                </button>
+              </form>
+            </span>
+          )}
+        </div>
+      )}
+
+      {side.erEier && side.utkast.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-line bg-card px-4 py-2.5 text-sm skjul-ved-print">
+          <span className="text-ink-soft">På benken:</span>
+          {side.utkast.map((utkast, index) => (
+            <Link
+              key={utkast.id}
+              href={uuidHref`/kokebok/${cookbookId}/oppskrift/${utkast.id}`}
+              className="underline underline-offset-2 hover:text-terra"
+            >
+              utkast {index + 1}
+            </Link>
+          ))}
+        </div>
       )}
 
       <Oppskrift
@@ -185,7 +267,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               Sett i gang — bakeview →
             </Link>
 
-            {userId && (
+            {userId && !erUtkast && (
               <form action={toggleFavoritt.bind(null, recipeId)}>
                 <button
                   type="submit"
@@ -199,7 +281,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               </form>
             )}
 
-            {side.erEier && (
+            {side.erEier && !erUtkast && (
               <form action={delOppskrift.bind(null, recipeId)}>
                 <button type="submit" className="rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
                   Del oppskriften
@@ -216,9 +298,21 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               </Link>
             )}
 
+            {side.erEier && !erUtkast && (
+              <form action={lagUtkast.bind(null, recipeId)}>
+                <button
+                  type="submit"
+                  title="En kopi å eksperimentere i — originalen står urørt"
+                  className="rounded-full border border-dashed border-line px-4 py-2 text-sm hover:border-terra hover:text-terra"
+                >
+                  Lag et utkast
+                </button>
+              </form>
+            )}
+
             <PrintKnapp />
 
-            {side.erEier && (
+            {side.erEier && !erUtkast && (
               <LukkbarDetails className="relative">
                 <summary className="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
                   Flytt …
@@ -238,7 +332,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               </LukkbarDetails>
             )}
 
-            {userId && (
+            {userId && !erUtkast && (
               <LukkbarDetails className="relative">
                 <summary className="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
                   Til plan …
@@ -265,8 +359,11 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             )}
           </>
         }
+        kommentarFelt={userId ? (stegId) => (
+          <StegKommentarer recipeId={recipeId} stegId={stegId} kommentarer={kommentarerPerSteg.get(stegId) ?? []} />
+        ) : undefined}
         relasjoner={
-          (side.utgående.length > 0 || side.innkommende.length > 0 || (side.erEier && side.kandidater.length > 0)) ? (
+          !erUtkast && (side.utgående.length > 0 || side.innkommende.length > 0 || (side.erEier && side.kandidater.length > 0)) ? (
             <Relasjoner
               cookbookId={cookbookId}
               recipeId={recipeId}

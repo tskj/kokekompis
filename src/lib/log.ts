@@ -67,6 +67,11 @@ export const Attr = {
   RECIPE_DELETED:      ":recipe/deleted",      // value: true
   RECIPE_PHOTO_ADDED:   ":recipe/photo-added",   // value: object key
   RECIPE_PHOTO_DELETED: ":recipe/photo-deleted", // value: object key
+  RECIPE_DRAFTED:         ":recipe/drafted",         // value: draft id — asserted on the ORIGINAL
+  RECIPE_DRAFT_ADOPTED:   ":recipe/draft-adopted",   // value: draft id — asserted on the ORIGINAL
+  RECIPE_DRAFT_DISCARDED: ":recipe/draft-discarded", // value: draft id — asserted on the ORIGINAL
+  RECIPE_COMMENT_ADDED:   ":recipe/comment-added",   // value: { stegId }
+  RECIPE_COMMENT_DELETED: ":recipe/comment-deleted", // value: comment id
 
   // === bøker — asserted on the COOKBOOK's id ===
   COOKBOOK_CREATED:    ":cookbook/created",    // value: name

@@ -1,6 +1,6 @@
 import { withTransaction } from '@/lib/db-tx';
 import { cookbook, chapters, recipes, recipeChapters, userOpenChapters, bokFarger } from '@/lib/db/schema';
-import { eq, asc, inArray, notInArray, and, ne } from 'drizzle-orm';
+import { eq, asc, inArray, notInArray, isNull, and, ne } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChapterList } from './components/ChapterList';
@@ -63,6 +63,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       .orderBy(asc(recipeChapters.order));
 
     // Bokens oppskrifter uten kapittel — egen "Ukategorisert"-seksjon i innholdslista.
+    // Utkast hører til på originalens side, ikke i innholdslista.
     const kategorisert = tx
       .select({ recipeId: recipeChapters.recipeId })
       .from(recipeChapters)
@@ -72,7 +73,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
     const ukategorisert = await tx
       .select({ id: recipes.id, title: recipes.title, description: recipes.description })
       .from(recipes)
-      .where(and(eq(recipes.cookbookId, id), notInArray(recipes.id, kategorisert)))
+      .where(and(eq(recipes.cookbookId, id), isNull(recipes.utkastAv), notInArray(recipes.id, kategorisert)))
       .orderBy(asc(recipes.title));
 
     // Dine andre bøker — målene kapittel-stellet kan flytte et helt kapittel til.
