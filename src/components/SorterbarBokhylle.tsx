@@ -16,6 +16,8 @@ export type HylleBok = { id: string; name: string; farge: BokFarge | null };
 export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleBok[]; kanSortere: boolean; hale?: React.ReactNode }) {
   const [rekkefølge, setRekkefølge] = useState(() => bøker.map((bok) => bok.id));
   const [drasId, setDrasId] = useState<string | null>(null);
+  // grep og piler står fremme bare når man faktisk vil sortere — ellers er hylla ren
+  const [sorterer, setSorterer] = useState(false);
   const [, startTransition] = useTransition();
 
   // refs så slipp alltid ser siste rekkefølge, uten å re-binde lyttere per bevegelse
@@ -71,7 +73,21 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
   const sorterte = [...bøker].sort((a, b) => (plass.get(a.id) ?? bøker.length) - (plass.get(b.id) ?? bøker.length));
 
   return (
-    <div className="flex items-end overflow-x-auto pt-5 border-b-8 border-ink/80 md:flex-wrap md:gap-6 md:overflow-visible">
+    <div>
+      {kanSortere && (
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setSorterer((nå) => !nå)}
+            aria-pressed={sorterer}
+            className={`rounded-full border px-3.5 py-1.5 text-xs ${sorterer ? 'border-terra bg-terra/10 text-terra' : 'border-line text-ink-soft hover:border-terra hover:text-terra'}`}
+          >
+            {sorterer ? '✓ Ferdig sortert' : '⠿ Sorter hylla'}
+          </button>
+        </div>
+      )}
+
+      <div className="flex items-end overflow-x-auto pt-5 border-b-8 border-ink/80 md:flex-wrap md:gap-6 md:overflow-visible">
       {sorterte.map((bok) => (
         <div
           key={bok.id}
@@ -97,7 +113,7 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
             </span>
           </Link>
 
-          {kanSortere && (
+          {kanSortere && sorterer && (
             <span className="absolute -top-3.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1">
               <form action={flyttBokPåHylla.bind(null, bok.id, 'venstre')}>
                 <button
@@ -138,7 +154,8 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
         </div>
       ))}
 
-      {hale}
+        {hale}
+      </div>
     </div>
   );
 }

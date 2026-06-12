@@ -5,7 +5,6 @@ import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, 
 import { withTransaction } from '@/lib/db-tx';
 import { kanSeBok } from '@/lib/bok-tilgang';
 import { lagHandleliste } from '@/lib/handleliste';
-import { openChapter } from '@/app/kokebok/[id]/actions';
 import { getCookbookAndRecipeIdParams } from '@/lib/uuid/server-uuid-params';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { getCurrentUserId } from '@/lib/current-user';
@@ -167,8 +166,6 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   const userId = await getCurrentUserId();
   const side = await getOppskriftSide(recipeId, cookbookId, userId);
   if (!side) notFound();
-
-  if (side.kapittelId) await openChapter(side.kapittelId);
 
   const content = recipeContentSchema.parse(side.content);
   const ganger = lesGanger(gangerParam, content.info.kanSkaleres);

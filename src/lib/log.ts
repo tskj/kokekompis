@@ -87,6 +87,10 @@ export const Attr = {
   PLAN_DELETED:      ":plan/deleted",      // value: true
   PLAN_RECIPE_ADDED: ":plan/recipe-added", // value: recipe id
   PLAN_EVALUATED:    ":plan/evaluated",    // value: { kom, harDagbok }
+  PLAN_ARCHIVED:      ":plan/archived",      // value: true
+  PLAN_RESTORED:      ":plan/restored",      // value: true
+  PLAN_PHOTO_ADDED:   ":plan/photo-added",   // value: object key
+  PLAN_PHOTO_DELETED: ":plan/photo-deleted", // value: object key
 
   // AI-ekstraksjon (entity: import-forsøkets id) — modell + latens + utfall, queryable per forsøk.
   IMPORT_MODEL:      ":import/model",

@@ -16,7 +16,10 @@ const ALL_TABLES = [
   '"recipe_shares"',
   '"recipe_links"',
   '"recipe_favorites"',
-  '"user_open_chapters"',
+  '"plans"',
+  '"plan_recipes"',
+  '"plan_photos"',
+  '"recipe_comments"',
 ].join(", ");
 
 export async function resetDb(): Promise<void> {

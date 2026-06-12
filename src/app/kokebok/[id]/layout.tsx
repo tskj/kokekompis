@@ -1,8 +1,8 @@
 import { db } from '@/lib/db';
 import { withTransaction } from '@/lib/db-tx';
 import { nowDate } from '@/lib/clock';
-import { cookbook, chapters, recipes, recipeChapters, userOpenChapters, bokFarger } from '@/lib/db/schema';
-import { eq, asc, inArray, notInArray, isNull, and, ne } from 'drizzle-orm';
+import { cookbook, chapters, recipes, recipeChapters, bokFarger } from '@/lib/db/schema';
+import { eq, asc, notInArray, isNull, and, ne } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChapterList } from './components/ChapterList';
@@ -10,10 +10,11 @@ import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { getCurrentUserId } from '@/lib/current-user';
 import { kanSeBok } from '@/lib/bok-tilgang';
-import { BOK_FARGE_KLASSER, BOK_FARGE_VAR, BÅND_KLASSER, båndMønstre, lesBåndValg } from '@/lib/bok-utseende';
+import { BOK_FARGE_KLASSER, BOK_FARGE_VAR, BÅND_KLASSER, båndMønstre, lesBåndValg, skisseNavn } from '@/lib/bok-utseende';
 import { bildeUrl } from '@/lib/lagring';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
-import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBånd, lastOppBokBånd } from '@/app/actions/bok';
+import { Skisse } from '@/components/skisser';
+import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBånd, lastOppBokBånd, settBokForside } from '@/app/actions/bok';
 
 interface CookbookLayoutProps {
   recipe: React.ReactNode;
@@ -21,8 +22,8 @@ interface CookbookLayoutProps {
 }
 
 async function getCookbookWithChapters(id: string, userId?: string) {
-  // All reads run in one SERIALIZABLE transaction (src/lib/db-tx.ts) so the cookbook, its chapters,
-  // the recipe↔chapter links, and the user's open-chapter set come from a single consistent snapshot.
+  // All reads run in one SERIALIZABLE transaction (src/lib/db-tx.ts) so the cookbook, its chapters
+  // and the recipe↔chapter links come from a single consistent snapshot.
   return withTransaction({ name: 'cookbook.layout' }, async (tx) => {
     // Get cookbook info
     const cookbookData = await tx
@@ -33,6 +34,8 @@ async function getCookbookWithChapters(id: string, userId?: string) {
         synlighet: cookbook.synlighet,
         farge: cookbook.farge,
         headerBilde: cookbook.headerBilde,
+        beskrivelse: cookbook.beskrivelse,
+        skisse: cookbook.skisse,
       })
       .from(cookbook)
       .where(eq(cookbook.id, id))
@@ -87,27 +90,6 @@ async function getCookbookWithChapters(id: string, userId?: string) {
           .orderBy(asc(cookbook.name))
       : [];
 
-    // Get user's open chapters for this cookbook using subquery
-    let openChapterIds: string[] = [];
-    if (userId) {
-      const chaptersInCookbook = tx
-        .select({ id: chapters.id })
-        .from(chapters)
-        .where(eq(chapters.cookbookId, id));
-
-      const openChapters = await tx
-        .select({ chapterId: userOpenChapters.chapterId })
-        .from(userOpenChapters)
-        .where(
-          and(
-            eq(userOpenChapters.userId, userId),
-            inArray(userOpenChapters.chapterId, chaptersInCookbook)
-          )
-        );
-
-      openChapterIds = openChapters.map(oc => oc.chapterId);
-    }
-
     // Combine the data
     const chaptersWithRecipes = chaptersData.map((chapter) => ({
       ...chapter,
@@ -126,7 +108,6 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       chapters: chaptersWithRecipes,
       ukategorisert,
       andreBøker,
-      openChapterIds,
     };
   });
 }
@@ -269,6 +250,39 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                   Bruk eget bilde
                 </button>
               </form>
+
+              <form action={settBokForside.bind(null, cookbookId)} className="flex flex-col gap-2 border-t border-line pt-3">
+                <span>Forsiden — det man møter før noe er slått opp:</span>
+
+                <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Skisse på forsiden">
+                  {skisseNavn.map((navn) => (
+                    <label key={navn} className="cursor-pointer">
+                      <input type="radio" name="skisse" value={navn} defaultChecked={cookbookData.skisse === navn} className="peer sr-only" />
+                      <span title={navn} className="block rounded border border-line bg-paper p-0.5 peer-checked:ring-2 peer-checked:ring-ink/60">
+                        <Skisse navn={navn} className="w-12" />
+                      </span>
+                    </label>
+                  ))}
+                  <label className="cursor-pointer">
+                    <input type="radio" name="skisse" value="ingen" defaultChecked={!cookbookData.skisse} className="peer sr-only" />
+                    <span className="block rounded border border-line bg-paper px-2 py-1 peer-checked:ring-2 peer-checked:ring-ink/60">ingen skisse</span>
+                  </label>
+                </div>
+
+                <textarea
+                  name="beskrivelse"
+                  maxLength={500}
+                  rows={2}
+                  defaultValue={cookbookData.beskrivelse ?? undefined}
+                  placeholder="Noen ord om boken — «Alt mormor aldri målte opp» …"
+                  aria-label="Kort om boken"
+                  className="w-full resize-y rounded-lg border border-line bg-paper px-3 py-2 focus:border-terra focus:outline-none"
+                />
+
+                <button type="submit" className="self-start rounded-full border border-line px-3 py-1 hover:border-terra hover:text-terra">
+                  Lagre forsiden
+                </button>
+              </form>
             </div>
           </details>
         )}
@@ -304,7 +318,6 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                 cookbookId={cookbookId}
                 chapters={cookbookData.chapters}
                 ukategorisert={cookbookData.ukategorisert}
-                openChapterIds={cookbookData.openChapterIds}
                 erEier={erEier}
                 andreBøker={erEier ? cookbookData.andreBøker : []}
               />

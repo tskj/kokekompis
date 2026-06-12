@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 import { cookbook, chapters, users, bokSynligheter, bokFarger, hylleSorteringer } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
-import { lesBåndValg } from '@/lib/bok-utseende';
+import { lesBåndValg, erSkisse } from '@/lib/bok-utseende';
 import { lagreBilde, slettBilde } from '@/lib/lagring';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { log, Attr } from '@/lib/log';
@@ -234,6 +234,28 @@ export async function lastOppBokBånd(cookbookId: string, formData: FormData) {
   if (gammelt.headerBilde?.startsWith('bok/')) await slettBilde(gammelt.headerBilde);
 
   log.info(cookbookId, Attr.COOKBOOK_STYLED, { bånd: key });
+  revalidatePath('/', 'layout');
+}
+
+// Bokens forside: noen ord om boken og en valgfri tegnet skisse — det man møter når ingen
+// oppskrift er slått opp.
+export async function settBokForside(cookbookId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const beskrivelse = z.string().trim().min(1).max(500).nullable().catch(null).parse(formData.get('beskrivelse') || null);
+  const skisseValg = String(formData.get('skisse') ?? 'ingen');
+  const skisse = erSkisse(skisseValg) ? skisseValg : null;
+
+  const endret = await db
+    .update(cookbook)
+    .set({ beskrivelse, skisse })
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .returning({ id: cookbook.id })
+    .maybeSingle('bok.forside');
+  if (!endret) return;
+
+  log.info(cookbookId, Attr.COOKBOOK_STYLED, { skisse, harBeskrivelse: beskrivelse !== null });
   revalidatePath('/', 'layout');
 }
 

@@ -6,7 +6,8 @@ import { getCurrentUserId } from '@/lib/current-user';
 import { nowDate } from '@/lib/clock';
 import { formaterDag, erTidligereDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
-import { opprettPlan } from '@/app/actions/planer';
+import { opprettPlan, gjenåpnePlan, slettPlan } from '@/app/actions/planer';
+import { BekreftKnapp } from '@/components/BekreftKnapp';
 
 // Planene: nesten en kokebok, men for en anledning — 17. mai-frokosten, julebaksten, bursdagen.
 // Kommende planer samler det som skal lages; tidligere arrangementer er hukommelsen — menyen,
@@ -17,7 +18,7 @@ export default async function PlanerSide() {
   const planer = userId
     ? await withTransaction({ name: 'planer.liste' }, async (tx) => {
         const mine = await tx
-          .select({ id: plans.id, name: plans.name, dato: plans.dato, merke: plans.merke, personer: plans.personer, kom: plans.kom, dagbok: plans.dagbok })
+          .select({ id: plans.id, name: plans.name, dato: plans.dato, merke: plans.merke, personer: plans.personer, kom: plans.kom, dagbok: plans.dagbok, arkivert: plans.arkivert })
           .from(plans)
           .where(eq(plans.userId, userId))
           .orderBy(asc(plans.dato), asc(plans.name));
@@ -36,8 +37,11 @@ export default async function PlanerSide() {
 
   const iDag = nowDate().toISOString().slice(0, 10);
 
-  const kommende = planer.filter((plan) => !erTidligereDag(plan.dato, iDag));
-  const tidligere = planer
+  const aktive = planer.filter((plan) => !plan.arkivert);
+  const arkiverte = planer.filter((plan) => plan.arkivert);
+
+  const kommende = aktive.filter((plan) => !erTidligereDag(plan.dato, iDag));
+  const tidligere = aktive
     .filter((plan) => erTidligereDag(plan.dato, iDag))
     .sort((a, b) => (b.dato ?? '').localeCompare(a.dato ?? ''));
 
@@ -171,6 +175,39 @@ export default async function PlanerSide() {
                 ))}
               </ul>
             </section>
+          )}
+
+          {arkiverte.length > 0 && (
+            <details className="mt-14">
+              <summary className="cursor-pointer list-none text-sm text-ink-soft underline underline-offset-2 hover:text-terra">
+                Arkivet ({arkiverte.length})
+              </summary>
+
+              <ul className="mt-3 divide-y divide-line border-y border-line">
+                {arkiverte.map((plan) => (
+                  <li key={plan.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
+                    <Link href={uuidHref`/planer/${plan.id}`} className="hover:text-terra">
+                      <span className="font-display text-lg">{plan.name}</span>
+                      {plan.dato && <span className="ml-2 text-sm text-ink-soft">{formaterDag(plan.dato)}</span>}
+                    </Link>
+
+                    <span className="flex items-center gap-3 text-sm">
+                      <form action={gjenåpnePlan.bind(null, plan.id)}>
+                        <button type="submit" className="underline underline-offset-2 hover:text-terra">hent frem</button>
+                      </form>
+                      <form action={slettPlan.bind(null, plan.id)}>
+                        <BekreftKnapp
+                          spørsmål={`Slette «${plan.name}» for godt? Det kan ikke angres — meny, etterord og bilder følger med.`}
+                          className="text-ink/50 underline underline-offset-2 hover:text-terra"
+                        >
+                          slett for godt
+                        </BekreftKnapp>
+                      </form>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
         </>
       )}

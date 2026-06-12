@@ -1,5 +1,5 @@
 import { auth, signIn, signOut } from '@/auth';
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { cookbook, plans, recipeFavorites, users } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
@@ -72,12 +72,12 @@ async function getHylla(userId: string | null) {
           .exists()
       : false;
 
-    // planene ligger som lapper på skrivebordet under hylla — de nærmeste først
+    // planene ligger som lapper på skrivebordet under hylla — de nærmeste først, arkivet ligger bort
     const planer = userId
       ? await tx
           .select({ id: plans.id, name: plans.name, dato: plans.dato })
           .from(plans)
-          .where(eq(plans.userId, userId))
+          .where(and(eq(plans.userId, userId), isNull(plans.arkivert)))
           .orderBy(asc(plans.dato), asc(plans.name))
       : [];
 

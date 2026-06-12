@@ -1,8 +1,12 @@
 // @vitest-environment jsdom
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { plans, planRecipes, recipes } from "@/lib/db/schema";
+import { plans, planRecipes, planPhotos, recipes } from "@/lib/db/schema";
 import { encodeUuidToBase32 } from "@/lib/uuid/uuid-base32";
 import { makeKokebok, resetDb, testOppskrift } from "./db";
 import "./rtl";
@@ -20,11 +24,18 @@ vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }),
 }));
 
-import { opprettPlan, slettPlan, leggTilIPlan, fjernFraPlan, evaluerPlan } from "@/app/actions/planer";
+import { opprettPlan, slettPlan, arkiverPlan, gjenåpnePlan, leggTilIPlan, fjernFraPlan, settPlanGanger, evaluerPlan, lastOppPlanBilde, slettPlanBilde } from "@/app/actions/planer";
 import PlanSide from "@/app/planer/[id]/page";
 import PlanerSide from "@/app/planer/page";
 import RecipePage from "@/app/kokebok/[id]/@recipe/oppskrift/[recipeid]/page";
 import Home from "@/app/page";
+
+function skjema(felt: string, verdi: string): FormData {
+  const formData = new FormData();
+  formData.set(felt, verdi);
+
+  return formData;
+}
 
 function planSkjema(navn: string, dato?: string): FormData {
   const formData = new FormData();
@@ -58,6 +69,7 @@ describe("planer (ekte actions, ekte database, ekte planside)", () => {
   beforeEach(async () => {
     hoisted.userId = "";
     await resetDb();
+    vi.stubEnv("LOKAL_LAGRING_DIR", await mkdtemp(path.join(tmpdir(), "kokekompis-lagring-")));
   });
 
   it("legger en plan med dato og sendes rett inn i den", async () => {
@@ -325,6 +337,111 @@ describe("planer (ekte actions, ekte database, ekte planside)", () => {
     render(await Home());
     expect(screen.getByText("Sommerfest 2099")).toBeInTheDocument();
     expect(screen.queryByText("Nyttår 2021")).not.toBeInTheDocument();
+  });
+
+  it("størrelsen kan endres inne i planen — og handlelisten følger med", async () => {
+    const { user, oppskrift } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    const plan = await lagPlan(user.id);
+    await leggTilIPlan(oppskrift.id, leggTilSkjema(plan.id));
+
+    await settPlanGanger(plan.id, oppskrift.id, skjema("ganger", "4"));
+    let rad = await db.select().from(planRecipes).where(eq(planRecipes.planId, plan.id)).single("test.firedoblet");
+    expect(rad.ganger).toBe(4);
+
+    render(await PlanSide(sideProps(plan.id)));
+    expect(screen.getByText("36 dl")).toBeInTheDocument();
+
+    // tull preller av, og fremmede får ikke skalere
+    await settPlanGanger(plan.id, oppskrift.id, skjema("ganger", "3"));
+    const annen = await makeKokebok();
+    hoisted.userId = annen.user.id;
+    await settPlanGanger(plan.id, oppskrift.id, skjema("ganger", "2"));
+
+    rad = await db.select().from(planRecipes).where(eq(planRecipes.planId, plan.id)).single("test.urørt");
+    expect(rad.ganger).toBe(4);
+  });
+
+  it("arkivet: planen legges bort, forsvinner fra listene, og kan hentes frem", async () => {
+    const { user } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    const fest = await lagPlan(user.id, "Sommerfest 2099", "2099-06-20");
+
+    const feil = await arkiverPlan(fest.id, new FormData()).then(() => null, (e: Error) => e);
+    expect(feil?.message).toBe("NEXT_REDIRECT:/planer");
+    expect((await db.select().from(plans).where(eq(plans.id, fest.id)).single("test.arkivert")).arkivert).not.toBeNull();
+
+    render(await PlanerSide());
+    expect(screen.getByText(/Arkivet \(1\)/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "hent frem" })).toBeInTheDocument();
+
+    cleanup();
+    render(await Home());
+    expect(screen.queryByText("Sommerfest 2099")).not.toBeInTheDocument();
+
+    await gjenåpnePlan(fest.id, new FormData());
+    expect((await db.select().from(plans).where(eq(plans.id, fest.id)).single("test.frem")).arkivert).toBeNull();
+  });
+
+  it("fremmede verken arkiverer eller henter frem dine planer", async () => {
+    const { user } = await makeKokebok();
+    const annen = await makeKokebok();
+    const fest = await lagPlan(user.id);
+
+    hoisted.userId = annen.user.id;
+    await arkiverPlan(fest.id, new FormData()).catch(() => null);
+
+    expect((await db.select().from(plans).where(eq(plans.id, fest.id)).single("test.urørt")).arkivert).toBeNull();
+  });
+
+  it("bilder fra arrangementet: lastes opp som webp, vises, og følger planen ut ved sletting", async () => {
+    const { user } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    const fest = await lagPlan(user.id, "Julebord");
+
+    const png = await sharp({ create: { width: 800, height: 600, channels: 3, background: { r: 150, g: 100, b: 60 } } }).png().toBuffer();
+    const formData = new FormData();
+    formData.set("bilde", new File([new Uint8Array(png)], "bord.png", { type: "image/png" }));
+    await lastOppPlanBilde(fest.id, formData);
+
+    const bilde = await db.select().from(planPhotos).where(eq(planPhotos.planId, fest.id)).single("test.bilde");
+    expect(bilde.key).toMatch(new RegExp(`^plan/${fest.id}/[0-9a-f-]+\\.webp$`));
+
+    const fil = path.join(process.env.LOKAL_LAGRING_DIR!, bilde.key);
+    expect((await sharp(fil).metadata()).format).toBe("webp");
+
+    render(await PlanSide(sideProps(fest.id)));
+    expect(screen.getByAltText("Julebord — bilde 1")).toBeInTheDocument();
+
+    // sletting for godt rydder både raden og filen
+    await slettPlan(fest.id, new FormData()).catch(() => null);
+    expect(await db.select().from(planPhotos).where(eq(planPhotos.planId, fest.id))).toHaveLength(0);
+    await expect(sharp(fil).metadata()).rejects.toThrow();
+  });
+
+  it("fremmede laster ikke opp bilder i dine planer — og sletter ikke dine", async () => {
+    const { user } = await makeKokebok();
+    const annen = await makeKokebok();
+    const fest = await lagPlan(user.id);
+
+    const png = await sharp({ create: { width: 200, height: 200, channels: 3, background: { r: 1, g: 2, b: 3 } } }).png().toBuffer();
+
+    hoisted.userId = annen.user.id;
+    const formData = new FormData();
+    formData.set("bilde", new File([new Uint8Array(png)], "x.png", { type: "image/png" }));
+    await lastOppPlanBilde(fest.id, formData);
+    expect(await db.select().from(planPhotos).where(eq(planPhotos.planId, fest.id))).toHaveLength(0);
+
+    hoisted.userId = user.id;
+    await lastOppPlanBilde(fest.id, formData);
+    const bilde = await db.select().from(planPhotos).where(eq(planPhotos.planId, fest.id)).single("test.mitt");
+
+    hoisted.userId = annen.user.id;
+    await slettPlanBilde(bilde.id, new FormData());
+    expect(await db.select().from(planPhotos).where(eq(planPhotos.id, bilde.id))).toHaveLength(1);
   });
 
   it("river ut planen — oppskriftene den pekte på består", async () => {

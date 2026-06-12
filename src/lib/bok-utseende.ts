@@ -72,3 +72,11 @@ export function lesBåndValg(verdi: string): BåndValg | null {
 
   return { mønster, farge: erBokFarge(farge) ? farge : STANDARD_FARGE[mønster] };
 }
+
+// Skissene på bokens forside — tegningene bor i src/components/skisser.tsx.
+export const skisseNavn = ['bolle', 'kake', 'gryte', 'kanne'] as const;
+export type SkisseNavn = (typeof skisseNavn)[number];
+
+export function erSkisse(verdi: string): verdi is SkisseNavn {
+  return (skisseNavn as readonly string[]).includes(verdi);
+}

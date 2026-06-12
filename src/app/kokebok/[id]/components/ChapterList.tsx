@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { openChapter, closeChapter } from '@/app/kokebok/[id]/actions';
+import { useState } from 'react';
 import { endreKapittelNavn, flyttKapittel, flyttKapittelTilBok, flyttOppskriftIKapittel, type Retning } from '@/app/actions/kapittel';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
@@ -97,24 +96,20 @@ function KapittelStell({ chapter, andreBøker }: { chapter: Chapter; andreBøker
 interface ChapterComponentProps {
   chapter: Chapter;
   cookbookId: string;
-  initiallyOpen: boolean;
   currentRecipeId?: string;
   erEier: boolean;
   andreBøker: Bok[];
 }
 
-function Chapter({ chapter, cookbookId, initiallyOpen, currentRecipeId, erEier, andreBøker }: ChapterComponentProps) {
-  const [isOpen, setIsOpen] = useState(initiallyOpen);
+// Kapitlene står lukket når boken åpnes — bare kapittelet til oppskriften man leser slår seg
+// opp av seg selv. (Åpen/lukket ble før husket i databasen; Maren ville ha en lukket bok.)
+function Chapter({ chapter, cookbookId, currentRecipeId, erEier, andreBøker }: ChapterComponentProps) {
+  const [isOpen, setIsOpen] = useState(false);
 
   const isActiveChapter = chapter.recipes.some(recipe => recipe.id === currentRecipeId);
   if (isActiveChapter && !isOpen) {
     setIsOpen(true);
   }
-
-  useEffect(() => {
-    if (isOpen) openChapter(chapter.id);
-    else closeChapter(chapter.id);
-  }, [isOpen, chapter.id]);
 
   return (
     <details
@@ -166,12 +161,11 @@ interface ChapterListProps {
   cookbookId: string;
   chapters: Chapter[];
   ukategorisert: Recipe[];
-  openChapterIds: string[];
   erEier: boolean;
   andreBøker: Bok[];
 }
 
-export function ChapterList({ cookbookId, chapters, ukategorisert, openChapterIds, erEier, andreBøker }: ChapterListProps) {
+export function ChapterList({ cookbookId, chapters, ukategorisert, erEier, andreBøker }: ChapterListProps) {
   const currentRecipeId = useRecipeId();
 
   return (
@@ -181,7 +175,6 @@ export function ChapterList({ cookbookId, chapters, ukategorisert, openChapterId
           key={chapter.id}
           chapter={chapter}
           cookbookId={cookbookId}
-          initiallyOpen={openChapterIds.includes(chapter.id)}
           currentRecipeId={currentRecipeId}
           erEier={erEier}
           andreBøker={andreBøker}

@@ -122,6 +122,10 @@ export const cookbook = pgTable('cookbook', {
   rekkefølge: integer('rekkefølge'),
   // når eieren sist slo opp i boken — driver "sist åpnet"-sorteringen
   sistÅpnet: timestamp('sistApnet', { mode: 'date', withTimezone: true }),
+  // forsiden man møter når ingen oppskrift er slått opp: noen ord om boken, og en valgfri
+  // tegnet skisse (se src/components/skisser.tsx)
+  beskrivelse: text('beskrivelse'),
+  skisse: text('skisse'),
 });
 
 export const chapters = pgTable('chapters', {
@@ -183,19 +187,6 @@ export const recipeChapters = pgTable('recipe_chapters', {
   unique().on(recipeChapters.chapterId, recipeChapters.order),
   unique().on(recipeChapters.recipeId, recipeChapters.chapterId),
   check('recipe_order_starts_at_one', sql`"order" >= 1`),
-]);
-
-export const userOpenChapters = pgTable('user_open_chapters', {
-  id: uuid('id').defaultRandom().notNull().primaryKey(),
-  userId: text('userId')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  chapterId: uuid('chapterId')
-    .notNull()
-    .references(() => chapters.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
-}, (userOpenChapters) => [
-  unique().on(userOpenChapters.userId, userOpenChapters.chapterId),
 ]);
 
 // Lapper "teipet på" en oppskrift: "husk jordbær til pynt", "denne var ikke god!". Kremhvite
@@ -283,7 +274,21 @@ export const plans = pgTable('plans', {
   // "litt for lite mat", "alt for mange salater" — så neste år blir bedre
   kom: integer('kom'),
   dagbok: text('dagbok'),
+  // arkivet: planer rives ikke ut, de legges bort — og kan alltid hentes frem igjen
+  arkivert: timestamp('arkivert', { mode: 'date', withTimezone: true }),
 });
+
+// Bilder fra arrangementet — det ferdige kakebordet, det pyntede langbordet. Nøkler i
+// objektlagringen (plan/<id>/…webp), som rettbildene.
+export const planPhotos = pgTable('plan_photos', {
+  id: uuid('id').defaultRandom().notNull().primaryKey(),
+  planId: uuid('planId')
+    .notNull()
+    .references(() => plans.id, { onDelete: 'cascade' }),
+  key: text('key').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
+});
+
 
 export const planRecipes = pgTable('plan_recipes', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
