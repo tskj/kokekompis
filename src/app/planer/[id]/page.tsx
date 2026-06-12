@@ -96,7 +96,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
       <Kaffeflekk className="absolute bottom-0 -left-28 w-44 rotate-12 skjul-ved-print" />
 
       <header className="mb-8 skjul-ved-print">
-        <Link href="/planer" className="text-sm text-ink-soft hover:text-terra">← Planer</Link>
+        <Link prefetch={true} href="/planer" className="text-sm text-ink-soft hover:text-terra">← Planer</Link>
 
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <h1 className="mt-1 font-display text-5xl">{data.plan.name}</h1>
@@ -230,7 +230,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
           <ul className="divide-y divide-line border-y border-line">
             {synlige.map((rad) => (
               <li key={rad.recipeId} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
-                <Link
+                <Link prefetch={true}
                   href={`${uuidHref`/kokebok/${rad.cookbookId}/oppskrift/${rad.recipeId}`}?tilbake=${tilbake}${rad.ganger !== 1 ? `&ganger=${rad.ganger}` : ''}`}
                   className="font-display text-xl hover:text-terra"
                 >
@@ -287,7 +287,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
           <ul className="divide-y divide-line border-y border-line">
             {data.sammeMerke.map((forrige) => (
               <li key={forrige.id}>
-                <Link
+                <Link prefetch={true}
                   href={uuidHref`/planer/${forrige.id}`}
                   className="group flex items-baseline justify-between gap-4 py-3 hover:text-terra"
                 >

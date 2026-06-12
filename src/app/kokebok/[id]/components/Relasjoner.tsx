@@ -33,7 +33,7 @@ export function Relasjoner({ cookbookId, recipeId, stiBase, utgående, innkommen
       <div className="flex flex-wrap items-center gap-2">
         {utgående.map((lenke) => (
           <span key={lenke.linkId} className="group flex items-center rounded-full border border-line bg-card pl-4 pr-1 py-1">
-            <Link href={tilHref(lenke.recipeId)} className="hover:text-terra">
+            <Link prefetch={true} href={tilHref(lenke.recipeId)} className="hover:text-terra">
               {lenke.tittel} →
             </Link>
             {kanRedigere && (
@@ -77,7 +77,7 @@ export function Relasjoner({ cookbookId, recipeId, stiBase, utgående, innkommen
           {innkommende.map((lenke, index) => (
             <span key={lenke.linkId}>
               {index > 0 && ', '}
-              <Link href={tilHref(lenke.recipeId)} className="underline underline-offset-2 hover:text-terra">
+              <Link prefetch={true} href={tilHref(lenke.recipeId)} className="underline underline-offset-2 hover:text-terra">
                 {lenke.tittel}
               </Link>
             </span>

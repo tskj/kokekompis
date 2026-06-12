@@ -65,7 +65,7 @@ export default async function ImporterPage({ params, searchParams }: ImporterPag
     <div className="max-w-2xl">
       <header className="relative mb-8">
         {/* veien ut — kom man hit ved et uhell, er bokens forside ett trykk unna */}
-        <Link
+        <Link prefetch={true}
           href={uuidHref`/kokebok/${cookbookId}`}
           aria-label="Lukk — tilbake til boken"
           title="Tilbake til boken"

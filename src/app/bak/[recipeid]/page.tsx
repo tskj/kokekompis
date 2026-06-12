@@ -128,7 +128,7 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
   return (
     <div className="flex h-dvh flex-col overflow-hidden p-4 md:p-6">
       <header className="flex items-baseline justify-between gap-4 pb-3">
-        <Link href={fra ?? '/'} className="text-sm text-ink-soft hover:text-terra">← Legg fra deg bakeviewet</Link>
+        <Link prefetch={true} href={fra ?? '/'} className="text-sm text-ink-soft hover:text-terra">← Legg fra deg bakeviewet</Link>
 
         <p className="hidden truncate font-display italic text-ink-soft md:block">
           {data.title}
@@ -137,11 +137,11 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
 
         <p className="text-sm text-ink-soft" aria-label="Modus">
           {modus === 'parallell' ? (
-            <Link href={bakHref(recipeId, stegNummer, 'linear', fra, ganger)} className="underline underline-offset-2 hover:text-terra">
+            <Link prefetch={true} href={bakHref(recipeId, stegNummer, 'linear', fra, ganger)} className="underline underline-offset-2 hover:text-terra">
               vis ett og ett steg
             </Link>
           ) : (
-            <Link href={bakHref(recipeId, stegNummer, 'parallell', fra, ganger)} className="underline underline-offset-2 hover:text-terra">
+            <Link prefetch={true} href={bakHref(recipeId, stegNummer, 'parallell', fra, ganger)} className="underline underline-offset-2 hover:text-terra">
               vis ventinger parallelt
             </Link>
           )}
@@ -164,7 +164,7 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
 
       <nav className="flex items-center gap-3 pt-3" aria-label="Steg">
         {stegNummer > 1 ? (
-          <Link
+          <Link prefetch={true}
             href={bakHref(recipeId, stegNummer - 1, modus, fra, ganger)}
             className="rounded-xl border border-line bg-card px-4 py-3 text-base hover:border-terra hover:text-terra md:px-10 md:py-4 md:text-lg"
           >
@@ -176,7 +176,7 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
 
         <div className="flex flex-1 flex-wrap items-center justify-center gap-1.5" aria-label={`Steg ${stegNummer} av ${content.steg.length}`}>
           {content.steg.map((s, i) => (
-            <Link
+            <Link prefetch={true}
               key={s.id}
               href={bakHref(recipeId, i + 1, modus, fra, ganger)}
               aria-label={`Gå til steg ${i + 1}`}
@@ -186,14 +186,14 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
         </div>
 
         {erSiste ? (
-          <Link
+          <Link prefetch={true}
             href={fra ?? '/'}
             className="rounded-xl bg-sage px-4 py-3 text-base font-medium text-paper hover:opacity-90 md:px-10 md:py-4 md:text-lg"
           >
             Ferdig ✓
           </Link>
         ) : (
-          <Link
+          <Link prefetch={true}
             href={bakHref(recipeId, stegNummer + 1, modus, fra, ganger)}
             className="rounded-xl bg-terra px-4 py-3 text-base font-medium text-paper hover:bg-terra-deep md:px-10 md:py-4 md:text-lg"
           >

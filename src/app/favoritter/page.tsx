@@ -27,7 +27,7 @@ export default async function FavoritterSide() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <header className="mb-10">
-        <Link href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
+        <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
         <h1 className="mt-1 font-display text-5xl">♥ Favoritter</h1>
         <p className="mt-2 font-display italic text-lg text-ink-soft">
           De du lager igjen og igjen — din egen beste-av-bok.
@@ -42,7 +42,7 @@ export default async function FavoritterSide() {
         <ul className="divide-y divide-line border-y border-line">
           {favoritter.map((favoritt) => (
             <li key={favoritt.id}>
-              <Link
+              <Link prefetch={true}
                 href={`${uuidHref`/kokebok/${favoritt.cookbookId}/oppskrift/${favoritt.id}`}?tilbake=${encodeURIComponent('/favoritter')}`}
                 className="group flex items-baseline justify-between gap-4 py-4 hover:text-terra"
               >

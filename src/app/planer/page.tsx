@@ -48,7 +48,7 @@ export default async function PlanerSide() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <header className="mb-10">
-        <Link href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
+        <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
         <h1 className="mt-1 font-display text-5xl">Planer</h1>
         <p className="mt-2 font-display italic text-lg text-ink-soft">
           17. mai-frokosten, julebaksten, bursdagen — samle det du skal lage, fra alle bøkene dine.
@@ -63,7 +63,7 @@ export default async function PlanerSide() {
             <ul className="mb-10 divide-y divide-line border-y border-line">
               {kommende.map((plan) => (
                 <li key={plan.id}>
-                  <Link
+                  <Link prefetch={true}
                     href={uuidHref`/planer/${plan.id}`}
                     className="group flex items-baseline justify-between gap-4 py-4 hover:text-terra"
                   >
@@ -150,7 +150,7 @@ export default async function PlanerSide() {
               <ul className="divide-y divide-line border-y border-line">
                 {tidligere.map((plan) => (
                   <li key={plan.id}>
-                    <Link
+                    <Link prefetch={true}
                       href={uuidHref`/planer/${plan.id}`}
                       className="group flex items-baseline justify-between gap-4 py-4 hover:text-terra"
                     >
@@ -186,7 +186,7 @@ export default async function PlanerSide() {
               <ul className="mt-3 divide-y divide-line border-y border-line">
                 {arkiverte.map((plan) => (
                   <li key={plan.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
-                    <Link href={uuidHref`/planer/${plan.id}`} className="hover:text-terra">
+                    <Link prefetch={true} href={uuidHref`/planer/${plan.id}`} className="hover:text-terra">
                       <span className="font-display text-lg">{plan.name}</span>
                       {plan.dato && <span className="ml-2 text-sm text-ink-soft">{formaterDag(plan.dato)}</span>}
                     </Link>

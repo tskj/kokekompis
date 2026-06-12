@@ -200,7 +200,7 @@ export default async function Home() {
         <SorterbarBokhylle bøker={cookbooks} kanSortere={kanSortere} hale={
           <>
             {harFavoritter && (
-              <Link
+              <Link prefetch={true}
                 href="/favoritter"
                 className="group relative flex h-56 w-40 shrink-0 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok transition-transform hover:-translate-y-2 -ml-8 first:ml-0 md:ml-0"
               >
@@ -264,7 +264,7 @@ export default async function Home() {
 
           <div className="flex flex-wrap items-stretch gap-5">
             {kommendePlaner.slice(0, 4).map((plan, index) => (
-              <Link
+              <Link prefetch={true}
                 key={plan.id}
                 href={uuidHref`/planer/${plan.id}`}
                 className={`${['-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2'][index % 4]} notatlapp w-44 px-4 pb-6 pt-[18px] drop-shadow-md transition-transform hover:-translate-y-1`}
@@ -275,12 +275,12 @@ export default async function Home() {
             ))}
 
             {planer.length > kommendePlaner.slice(0, 4).length && (
-              <Link href="/planer" className="self-center text-sm text-ink-soft underline underline-offset-2 hover:text-terra">
+              <Link prefetch={true} href="/planer" className="self-center text-sm text-ink-soft underline underline-offset-2 hover:text-terra">
                 alle planene →
               </Link>
             )}
 
-            <Link
+            <Link prefetch={true}
               href="/planer"
               className="flex min-h-24 w-44 flex-col items-center justify-center gap-1 border-2 border-dashed border-line text-ink-soft hover:border-terra hover:text-terra"
             >

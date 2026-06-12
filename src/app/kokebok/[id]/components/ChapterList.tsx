@@ -131,7 +131,7 @@ function Chapter({ chapter, cookbookId, currentRecipeId, erEier, andreBøker }: 
           <ul>
             {chapter.recipes.map((recipe) => (
               <li key={recipe.id} className="flex items-center">
-                <Link
+                <Link prefetch={true}
                   href={uuidHref`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
                   className={`block flex-1 border-l-2 py-1.5 pl-3 text-sm leading-snug transition-colors ${
                     currentRecipeId === recipe.id
@@ -188,7 +188,7 @@ export function ChapterList({ cookbookId, chapters, ukategorisert, erEier, andre
           <ul className="pb-3 pt-1">
             {ukategorisert.map((recipe) => (
               <li key={recipe.id}>
-                <Link
+                <Link prefetch={true}
                   href={uuidHref`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
                   className={`block border-l-2 py-1.5 pl-3 text-sm leading-snug transition-colors ${
                     currentRecipeId === recipe.id

@@ -217,7 +217,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
     <>
       {tilbakeSti && (
         <p className="mb-4 skjul-ved-print">
-          <Link
+          <Link prefetch={true}
             href={tilbakeSti}
             className="inline-block rounded-full bg-butter/40 border border-butter px-4 py-1.5 text-sm hover:bg-butter/70"
           >
@@ -231,7 +231,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
           <p className="text-sm">
             Et utkast{side.original && (
               <> av{' '}
-                <Link href={uuidHref`/kokebok/${cookbookId}/oppskrift/${side.original.id}`} className="underline underline-offset-2 hover:text-terra">
+                <Link prefetch={true} href={uuidHref`/kokebok/${cookbookId}/oppskrift/${side.original.id}`} className="underline underline-offset-2 hover:text-terra">
                   {side.original.title}
                 </Link>
               </>
@@ -259,7 +259,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
         <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-line bg-card px-4 py-2.5 text-sm skjul-ved-print">
           <span className="text-ink-soft">På benken:</span>
           {side.utkast.map((utkast, index) => (
-            <Link
+            <Link prefetch={true}
               key={utkast.id}
               href={uuidHref`/kokebok/${cookbookId}/oppskrift/${utkast.id}`}
               className="underline underline-offset-2 hover:text-terra"
@@ -280,7 +280,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
         ferdigBilder={<RettBilder tittel={side.title} bilder={bilder} recipeId={side.erEier ? recipeId : undefined} />}
         handlinger={
           <>
-            <Link
+            <Link prefetch={true}
               href={`${uuidHref`/bak/${recipeId}`}?fra=${encodeURIComponent(stiBase)}${ganger !== 1 ? `&ganger=${ganger}` : ''}`}
               className="rounded-full bg-terra px-5 py-2 text-sm font-medium text-paper hover:bg-terra-deep"
             >
@@ -310,7 +310,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             )}
 
             {side.erEier && (
-              <Link
+              <Link prefetch={true}
                 href={`${stiBase}/rediger`}
                 className="rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra"
               >
@@ -374,7 +374,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                 ) : (
                   <p className="absolute z-10 mt-2 w-64 rounded-xl border border-line bg-card p-3 text-sm shadow-bok">
                     Ingen planer ennå —{' '}
-                    <Link href="/planer" className="underline underline-offset-2 hover:text-terra">legg en først</Link>.
+                    <Link prefetch={true} href="/planer" className="underline underline-offset-2 hover:text-terra">legg en først</Link>.
                   </p>
                 )}
               </LukkbarDetails>
@@ -383,7 +383,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             {/* så man ser det herfra: merkene viser hvilke planer oppskriften alt ligger i */}
             {!erUtkast && side.iPlaner.map((plan) => (
               <span key={plan.id} className="flex items-center gap-0.5 rounded-full border border-sage/50 bg-sage/10 py-1 pl-3 pr-1 text-sm">
-                <Link href={uuidHref`/planer/${plan.id}`} className="hover:text-terra" title="Åpne planen">
+                <Link prefetch={true} href={uuidHref`/planer/${plan.id}`} className="hover:text-terra" title="Åpne planen">
                   På planen: {plan.name}{plan.ganger !== 1 && ` — ${plan.ganger === 0.5 ? '½' : plan.ganger}×`}
                 </Link>
                 <form action={fjernFraPlan.bind(null, plan.id, recipeId)}>
@@ -421,14 +421,14 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             <section aria-label="Handleliste" className="max-w-xl rounded-lg border border-line bg-card p-4 skjul-ved-print">
               <div className="mb-3 flex items-baseline justify-between gap-3">
                 <h2 className="font-display text-2xl">Handleliste</h2>
-                <Link href={handlelisteQuery(false)} className="text-sm text-ink-soft underline underline-offset-2 hover:text-terra">
+                <Link prefetch={true} href={handlelisteQuery(false)} className="text-sm text-ink-soft underline underline-offset-2 hover:text-terra">
                   legg den bort
                 </Link>
               </div>
               <Handleliste linjer={lagHandleliste([{ content }])} ganger={ganger} />
             </section>
           ) : (
-            <Link
+            <Link prefetch={true}
               href={handlelisteQuery(true)}
               className="text-sm text-ink-soft underline underline-offset-2 hover:text-terra skjul-ved-print"
             >

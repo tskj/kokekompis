@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { withTransaction } from '@/lib/db-tx';
-import { nowDate } from '@/lib/clock';
+import { nowDate, nowMs } from '@/lib/clock';
 import { cookbook, chapters, recipes, recipeChapters, bokFarger } from '@/lib/db/schema';
 import { eq, asc, notInArray, isNull, and, ne } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
@@ -37,6 +37,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
         headerBilde: cookbook.headerBilde,
         beskrivelse: cookbook.beskrivelse,
         skisse: cookbook.skisse,
+        sistÅpnet: cookbook.sistÅpnet,
       })
       .from(cookbook)
       .where(eq(cookbook.id, id))
@@ -123,8 +124,12 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
   // Gjester (utstilt bok) får lese, aldri stelle: alt som endrer boken rendres kun for eieren.
   const erEier = cookbookData.userId === userId;
 
-  // bokmerket for "sist åpnet"-sorteringen på hylla — å slå opp i boken ER å bruke den
-  if (erEier) await db.update(cookbook).set({ sistÅpnet: nowDate() }).where(eq(cookbook.id, cookbookId));
+  // bokmerket for "sist åpnet"-sorteringen på hylla — å slå opp i boken ER å bruke den, men
+  // én gang i timen holder: hvert oppslagsbytte (og hver prefetch) skal ikke koste en skriving
+  const BOKMERKE_INTERVALL_MS = 60 * 60 * 1000;
+  if (erEier && (!cookbookData.sistÅpnet || nowMs() - cookbookData.sistÅpnet.getTime() > BOKMERKE_INTERVALL_MS)) {
+    await db.update(cookbook).set({ sistÅpnet: nowDate() }).where(eq(cookbook.id, cookbookId));
+  }
 
   // Bokbåndet — den smale stripen mellom tittel og innhold: et mønster i en bokfarge, eller et
   // opplastet bilde (nøkler starter med bok/). Ukjente verdier viser ingenting fremfor å feile.
@@ -139,7 +144,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
       {/* dekor nederst/ytterst — aldri over innholdet (negative venstrekanter gir ikke scroll) */}
       <Kaffeflekk className="absolute bottom-0 -left-36 w-52 rotate-6 skjul-ved-print" />
       <header className="mb-8 skjul-ved-print">
-        <Link href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
+        <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
 
         <div className="mt-1 flex items-baseline gap-3">
           <h1 className="font-display text-4xl">{cookbookData.name}</h1>
@@ -358,7 +363,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                   </form>
                 </details>
 
-                <Link
+                <Link prefetch={true}
                   href={uuidHref`/kokebok/${cookbookId}/importer`}
                   className="mt-4 block border-2 border-dashed border-line px-3 py-2.5 text-center text-sm text-ink-soft hover:border-terra hover:text-terra"
                 >

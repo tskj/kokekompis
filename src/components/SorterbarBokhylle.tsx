@@ -94,7 +94,7 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
           data-bok-id={bok.id}
           className={`relative shrink-0 -ml-8 transition-transform first:ml-0 md:ml-0 ${drasId === bok.id ? 'pointer-events-none z-20 scale-105 opacity-80' : ''}`}
         >
-          <Link
+          <Link prefetch={true}
             href={uuidHref`/kokebok/${bok.id}`}
             className={`${bokFargeKlasse(bok.farge, bok.id)} relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2`}
             draggable={false}
