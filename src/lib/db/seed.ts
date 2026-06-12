@@ -539,7 +539,7 @@ async function seed() {
         farge: 'terra',
         headerBilde: 'striper',
         beskrivelse: 'Alt mormor aldri målte opp — samlet, prøvd og rettet.',
-        skisse: 'bolle',
+        skisse: 'croissant',
       })
       .returning();
 

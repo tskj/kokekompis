@@ -1,4 +1,4 @@
-import { auth, signIn, signOut } from '@/auth';
+import { auth, signIn } from '@/auth';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { cookbook, plans, recipeFavorites, users } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
@@ -7,7 +7,6 @@ import { nowDate } from '@/lib/clock';
 import { formaterDag, erTidligereDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { opprettBok, settHylleSortering } from '@/app/actions/bok';
-import { settSkrift } from '@/app/actions/skrift';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { SorterbarBokhylle } from '@/components/SorterbarBokhylle';
 import Link from 'next/link';
@@ -27,21 +26,6 @@ function SignIn() {
   );
 }
 
-function SignOut() {
-  return (
-    <form
-      action={async () => {
-        'use server';
-        await signOut();
-      }}
-    >
-      <button type="submit" className="text-sm underline underline-offset-2 text-ink-soft hover:text-terra">
-        Logg ut
-      </button>
-    </form>
-  );
-}
-
 // Hylla er personlig: innlogget ser du dine egne bøker — utlogget ser du utvalget av utstilte
 // bøker (Marens utstillingsvindu). Favorittene danner sin egen "bok" med det første hjertet.
 // Eieren velger selv om hylla står i egen rekkefølge eller etter sist åpnet.
@@ -49,7 +33,7 @@ async function getHylla(userId: string | null) {
   return withTransaction({ name: 'forside' }, async (tx) => {
     const bruker = userId
       ? await tx
-          .select({ hylleSortering: users.hylleSortering, tekstFont: users.tekstFont, oppskriftFont: users.oppskriftFont })
+          .select({ hylleSortering: users.hylleSortering })
           .from(users)
           .where(eq(users.id, userId))
           .maybeSingle('forside.bruker')
@@ -84,7 +68,7 @@ async function getHylla(userId: string | null) {
           .orderBy(asc(plans.dato), asc(plans.name))
       : [];
 
-    return { bøker, harFavoritter, planer, sortering, skrift: { tekstFont: bruker?.tekstFont ?? 'standard', oppskriftFont: bruker?.oppskriftFont ?? 'standard' } };
+    return { bøker, harFavoritter, planer, sortering };
   });
 }
 
@@ -92,7 +76,7 @@ export default async function Home() {
   const session = await auth();
 
   const userId = await getCurrentUserId();
-  const { bøker: cookbooks, harFavoritter, planer, sortering, skrift } = await getHylla(userId);
+  const { bøker: cookbooks, harFavoritter, planer, sortering } = await getHylla(userId);
 
   // pilene for egen sortering vises bare når de kan utrette noe
   const kanSortere = !!userId && sortering === 'egen' && cookbooks.length > 1;
@@ -103,8 +87,9 @@ export default async function Home() {
 
   return (
     <main className="relative mx-auto max-w-4xl px-6 py-12">
-      {/* dekor nederst/ytterst på siden — aldri over innholdet */}
+      {/* dekor i kantene — søl nede til venstre og oppe i høyre hjørne */}
       <Kaffeflekk className="absolute bottom-2 -left-32 w-52 rotate-12" />
+      <Kaffeflekk className="absolute -top-14 right-0 w-40 rotate-[150deg]" />
       {/* flex-wrap: på smale skjermer faller hilsen + logg ut ned under tittelen i stedet for å
           presse siden bredere enn telefonen */}
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
@@ -116,54 +101,18 @@ export default async function Home() {
         </div>
 
         <div className="pb-2">
-          {session?.user ? (
+          {userId ? (
             <div className="flex items-center gap-3 text-sm text-ink-soft">
-              <span>Hei, {session.user.name ?? 'du'}!</span>
-              <SignOut />
+              <span>Hei, {session?.user?.name ?? 'du'}!</span>
+              <Link prefetch={true} href="/innstillinger" className="underline underline-offset-2 hover:text-terra">
+                Innstillinger
+              </Link>
             </div>
           ) : (
             <SignIn />
           )}
         </div>
       </header>
-
-      {userId && (
-        <details className="mt-4 text-xs text-ink-soft">
-          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm hover:border-terra hover:text-terra">
-            <span aria-hidden>Aa</span> Skrift
-          </summary>
-
-          <form action={settSkrift} className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-line bg-card p-3">
-            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brødtekst på siden">
-              <span>Teksten på siden:</span>
-              {([['standard', 'Bokserif', 'var(--font-alegreya)'], ['montserrat', 'Montserrat', 'var(--font-montserrat)'], ['times', 'Times', "'Times New Roman', Times, serif"]] as const).map(([verdi, navn, font]) => (
-                <label key={verdi} className="cursor-pointer">
-                  <input type="radio" name="tekst" value={verdi} defaultChecked={skrift.tekstFont === verdi} className="peer sr-only" />
-                  <span style={{ fontFamily: font }} className="block rounded border border-line bg-paper px-2.5 py-1 text-sm peer-checked:ring-2 peer-checked:ring-ink/60">
-                    {navn}
-                  </span>
-                </label>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Skrift i oppskriftene">
-              <span>Selve oppskriftene:</span>
-              {([['standard', 'Bokserif', 'var(--font-alegreya)'], ['petit', 'Petit Formal', 'var(--font-petit)']] as const).map(([verdi, navn, font]) => (
-                <label key={verdi} className="cursor-pointer">
-                  <input type="radio" name="oppskrift" value={verdi} defaultChecked={skrift.oppskriftFont === verdi} className="peer sr-only" />
-                  <span style={{ fontFamily: font }} className="block rounded border border-line bg-paper px-2.5 py-1 text-sm peer-checked:ring-2 peer-checked:ring-ink/60">
-                    {navn}
-                  </span>
-                </label>
-              ))}
-            </div>
-
-            <button type="submit" className="self-start rounded-full border border-line px-3 py-1 hover:border-terra hover:text-terra">
-              Bruk skriften
-            </button>
-          </form>
-        </details>
-      )}
 
       <section className="relative mt-14" aria-label="Bokhylla">
         <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
@@ -202,12 +151,12 @@ export default async function Home() {
             {harFavoritter && (
               <Link prefetch={true}
                 href="/favoritter"
-                className="group relative flex h-56 w-40 shrink-0 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok transition-transform hover:-translate-y-2 -ml-8 first:ml-0 md:ml-0"
+                className="bokstoff group relative flex h-56 w-40 shrink-0 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok transition-transform hover:-translate-y-2 -ml-8 first:ml-0 md:ml-0"
               >
                 <span className="mt-5 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug shadow-sm">
                   ♥ Favoritter
                 </span>
-                <span className="text-center text-[10px] uppercase tracking-[0.25em] opacity-70">
+                <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">
                   Kokekompis
                 </span>
               </Link>

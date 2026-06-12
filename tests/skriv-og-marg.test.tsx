@@ -9,7 +9,11 @@ import "./rtl";
 import { render, screen } from "./rtl";
 
 const hoisted = vi.hoisted(() => ({ userId: "" }));
-vi.mock("@/auth", () => ({ auth: vi.fn(async () => (hoisted.userId ? { user: { id: hoisted.userId } } : null)) }));
+vi.mock("@/auth", () => ({
+  auth:    vi.fn(async () => (hoisted.userId ? { user: { id: hoisted.userId } } : null)),
+  signIn:  vi.fn(),
+  signOut: vi.fn(),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
   redirect:  vi.fn((url: string) => { throw new Error("NEXT_REDIRECT:" + url); }),
@@ -22,6 +26,7 @@ import { settSkrift } from "@/app/actions/skrift";
 import { opprettTomOppskrift } from "@/app/actions/rediger";
 import { skrivIMargen, slettMarginal } from "@/app/actions/marginalia";
 import RecipePage from "@/app/kokebok/[id]/@recipe/oppskrift/[recipeid]/page";
+import InnstillingerSide from "@/app/innstillinger/page";
 
 function sideProps(bokId: string, oppskriftId: string) {
   return {
@@ -56,6 +61,19 @@ describe("skriftvalg, skriv-selv-oppskrift og margskrift", () => {
     rad = await db.select().from(users).where(eq(users.id, user.id)).single("test.tull");
     expect(rad.tekstFont).toBe("standard");
     expect(rad.oppskriftFont).toBe("standard");
+  });
+
+  it("innstillingene viser hvem som er logget inn, veien ut, og skriftvalgene", async () => {
+    const { user } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    render(await InnstillingerSide());
+
+    expect(screen.getByText(user.name!)).toBeInTheDocument();
+    expect(screen.getByText(user.email)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Logg ut" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Brødtekst på siden" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Skrift i oppskriftene" })).toBeInTheDocument();
   });
 
   it("«skriv den selv» lager en blank oppskrift og sender deg rett i redigeringen", async () => {

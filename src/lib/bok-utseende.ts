@@ -73,10 +73,32 @@ export function lesBåndValg(verdi: string): BåndValg | null {
   return { mønster, farge: erBokFarge(farge) ? farge : STANDARD_FARGE[mønster] };
 }
 
-// Skissene på bokens forside — tegningene bor i src/components/skisser.tsx.
-export const skisseNavn = ['bolle', 'kake', 'gryte', 'kanne'] as const;
+// Skissene på bokens forside — akvarellene bor i src/components/skisser.tsx. De første
+// blyantskissene (bolle/kake/gryte/kanne) kan stå lagret i databasen; de leses som sin
+// nærmeste akvarell, og normaliseres til nytt navn neste gang forsiden lagres.
+export const skisseNavn = ['croissant', 'jordbaer', 'kaffe', 'blotkake'] as const;
 export type SkisseNavn = (typeof skisseNavn)[number];
 
-export function erSkisse(verdi: string): verdi is SkisseNavn {
+export const SKISSE_ETIKETTER: Record<SkisseNavn, string> = {
+  croissant: 'croissant',
+  jordbaer:  'jordbær',
+  kaffe:     'kaffe',
+  blotkake:  'bløtkake',
+};
+
+const GAMLE_SKISSER: Record<string, SkisseNavn> = {
+  bolle: 'croissant',
+  kake:  'blotkake',
+  gryte: 'kaffe',
+  kanne: 'kaffe',
+};
+
+function erSkisseNavn(verdi: string): verdi is SkisseNavn {
   return (skisseNavn as readonly string[]).includes(verdi);
+}
+
+export function lesSkisse(verdi: string): SkisseNavn | null {
+  if (erSkisseNavn(verdi)) return verdi;
+
+  return GAMLE_SKISSER[verdi] ?? null;
 }

@@ -32,23 +32,33 @@ describe("bokens forside og lukkede kapitler", () => {
     await resetDb();
   });
 
-  it("eieren velger skisse og noen ord — og forsiden viser dem", async () => {
+  it("eieren velger akvarell og noen ord — og forsiden viser dem", async () => {
     const { user, bok } = await makeKokebok();
     hoisted.userId = user.id;
 
     const skjema = new FormData();
     skjema.set("beskrivelse", "Alt mormor aldri målte opp.");
-    skjema.set("skisse", "bolle");
+    skjema.set("skisse", "croissant");
     await settBokForside(bok.id, skjema);
 
     const rad = await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.forside");
     expect(rad.beskrivelse).toBe("Alt mormor aldri målte opp.");
-    expect(rad.skisse).toBe("bolle");
+    expect(rad.skisse).toBe("croissant");
 
     const { container } = render(await DefaultRecipe(forsideProps(bok.id)));
     expect(screen.getByText("Alt mormor aldri målte opp.")).toBeInTheDocument();
     expect(container.querySelector("svg")).not.toBeNull();
     expect(screen.queryByText("Slå opp i boken")).not.toBeInTheDocument();
+  });
+
+  it("gamle blyantskisser i databasen leses som sin nærmeste akvarell", async () => {
+    const { user, bok } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    await db.update(cookbook).set({ skisse: "bolle" }).where(eq(cookbook.id, bok.id));
+
+    const { container } = render(await DefaultRecipe(forsideProps(bok.id)));
+    expect(container.querySelector("svg")).not.toBeNull();
   });
 
   it("uten forside står oppslagshintet — og tullete skisser lagres ikke", async () => {

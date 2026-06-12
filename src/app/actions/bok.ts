@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 import { cookbook, chapters, users, bokSynligheter, bokFarger, hylleSorteringer } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
-import { lesBåndValg, erSkisse } from '@/lib/bok-utseende';
+import { lesBåndValg, lesSkisse } from '@/lib/bok-utseende';
 import { lagreBilde, slettBilde } from '@/lib/lagring';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { log, Attr } from '@/lib/log';
@@ -245,7 +245,7 @@ export async function settBokForside(cookbookId: string, formData: FormData) {
 
   const beskrivelse = z.string().trim().min(1).max(500).nullable().catch(null).parse(formData.get('beskrivelse') || null);
   const skisseValg = String(formData.get('skisse') ?? 'ingen');
-  const skisse = erSkisse(skisseValg) ? skisseValg : null;
+  const skisse = lesSkisse(skisseValg);
 
   const endret = await db
     .update(cookbook)

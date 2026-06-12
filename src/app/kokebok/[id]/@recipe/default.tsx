@@ -5,7 +5,7 @@ import { cookbook } from '@/lib/db/schema';
 import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { getCurrentUserId } from '@/lib/current-user';
 import { kanSeBok } from '@/lib/bok-tilgang';
-import { erSkisse } from '@/lib/bok-utseende';
+import { lesSkisse } from '@/lib/bok-utseende';
 import { Skisse } from '@/components/skisser';
 
 interface DefaultRecipeProps {
@@ -25,7 +25,7 @@ export default async function DefaultRecipe({ params }: DefaultRecipeProps) {
     .maybeSingle('bok.forside');
   if (!bok || !kanSeBok(bok, userId)) notFound();
 
-  const skisse = bok.skisse && erSkisse(bok.skisse) ? bok.skisse : null;
+  const skisse = bok.skisse ? lesSkisse(bok.skisse) : null;
 
   return (
     <div className="flex min-h-96 items-center justify-center">

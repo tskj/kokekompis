@@ -10,7 +10,8 @@ import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { getCurrentUserId } from '@/lib/current-user';
 import { kanSeBok } from '@/lib/bok-tilgang';
-import { BOK_FARGE_KLASSER, BOK_FARGE_VAR, BÅND_KLASSER, båndMønstre, lesBåndValg, skisseNavn } from '@/lib/bok-utseende';
+import { BOK_FARGE_KLASSER, BOK_FARGE_VAR, BÅND_KLASSER, båndMønstre, lesBåndValg, skisseNavn, lesSkisse, SKISSE_ETIKETTER } from '@/lib/bok-utseende';
+import { LukkDetailsKnapp } from '@/components/LukkDetailsKnapp';
 import { bildeUrl } from '@/lib/lagring';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { Skisse } from '@/components/skisser';
@@ -141,9 +142,11 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
 
   return (
     <div className="relative mx-auto max-w-7xl p-6 md:p-10">
-      {/* dekor nederst/ytterst — aldri over innholdet (negative venstrekanter gir ikke scroll) */}
+      {/* dekor i kantene — aldri over innholdet: søl nede til venstre og oppe i høyre hjørne */}
       <Kaffeflekk className="absolute bottom-0 -left-36 w-52 rotate-6 skjul-ved-print" />
-      <header className="mb-8 skjul-ved-print">
+      <Kaffeflekk className="absolute -top-12 right-0 w-44 rotate-[130deg] skjul-ved-print" />
+      <Kaffeflekk className="absolute top-10 right-8 w-24 -rotate-12 skjul-ved-print" />
+      <header className="relative mb-8 skjul-ved-print">
         <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
 
         <div className="mt-1 flex items-baseline gap-3">
@@ -194,17 +197,23 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
         )}
 
         {erEier && (
-          <details className="mt-2.5 text-xs text-ink-soft">
+          <details className="mt-2.5 text-xs text-ink-soft md:absolute md:right-0 md:top-1 md:mt-0">
             <summary
-              className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm hover:border-terra hover:text-terra"
+              className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm hover:border-terra hover:text-terra md:float-right"
               title="Velg farge på ryggen og bånd under tittelen"
             >
               <span aria-hidden>🎨</span> Bokas utseende
             </summary>
 
-            <div className="mt-2 flex max-w-md flex-col gap-4 rounded-lg border border-line bg-card p-3">
-              {/* trykkene lagres i det de skjer — haken og ringen viser hva boken har nå */}
-              <p className="italic">Alt her lagres i det du trykker — ✓ viser valget som gjelder.</p>
+            <div className="mt-2 flex w-[26rem] max-w-[calc(100vw-3rem)] flex-col gap-4 rounded-lg border border-line bg-card p-3 shadow-bok md:absolute md:right-0 md:z-20 md:clear-both">
+              <div className="flex items-start justify-between gap-3">
+                {/* trykkene lagres i det de skjer — haken og ringen viser hva boken har nå */}
+                <p className="italic">Alt her lagres i det du trykker — ✓ viser valget som gjelder.</p>
+                <LukkDetailsKnapp
+                  merkelapp="Lukk utseende-panelet"
+                  className="-mt-1 size-7 shrink-0 rounded-full border border-line text-base leading-none text-ink-soft hover:border-terra hover:text-terra"
+                />
+              </div>
 
               <form action={settBokFarge.bind(null, cookbookId)} className="flex flex-wrap items-center gap-2">
                 <span>Farge på ryggen:</span>
@@ -273,18 +282,18 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
               <form action={settBokForside.bind(null, cookbookId)} className="flex flex-col gap-2 border-t border-line pt-3">
                 <span>Forsiden — det man møter før noe er slått opp:</span>
 
-                <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Skisse på forsiden">
+                <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Akvarell på forsiden">
                   {skisseNavn.map((navn) => (
                     <label key={navn} className="cursor-pointer">
-                      <input type="radio" name="skisse" value={navn} defaultChecked={cookbookData.skisse === navn} className="peer sr-only" />
-                      <span title={navn} className="block rounded border border-line bg-paper p-0.5 peer-checked:ring-2 peer-checked:ring-ink/60">
+                      <input type="radio" name="skisse" value={navn} defaultChecked={(cookbookData.skisse ? lesSkisse(cookbookData.skisse) : null) === navn} className="peer sr-only" />
+                      <span title={SKISSE_ETIKETTER[navn]} className="block rounded border border-line bg-paper p-0.5 peer-checked:ring-2 peer-checked:ring-ink/60">
                         <Skisse navn={navn} className="w-12" />
                       </span>
                     </label>
                   ))}
                   <label className="cursor-pointer">
                     <input type="radio" name="skisse" value="ingen" defaultChecked={!cookbookData.skisse} className="peer sr-only" />
-                    <span className="block rounded border border-line bg-paper px-2 py-1 peer-checked:ring-2 peer-checked:ring-ink/60">ingen skisse</span>
+                    <span className="block rounded border border-line bg-paper px-2 py-1 peer-checked:ring-2 peer-checked:ring-ink/60">ingen</span>
                   </label>
                 </div>
 

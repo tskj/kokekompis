@@ -87,7 +87,8 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
         </div>
       )}
 
-      <div className="flex items-end overflow-x-auto pt-5 border-b-8 border-ink/80 md:flex-wrap md:gap-6 md:overflow-visible">
+      {/* bøkene står på en mørk treplanke — flate med årringer øverst, tykk frontkant under */}
+      <div className="flex items-end overflow-x-auto px-3 pt-5 md:flex-wrap md:gap-6 md:overflow-visible">
       {sorterte.map((bok) => (
         <div
           key={bok.id}
@@ -96,19 +97,20 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
         >
           <Link prefetch={true}
             href={uuidHref`/kokebok/${bok.id}`}
-            className={`${bokFargeKlasse(bok.farge, bok.id)} relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2`}
+            className={`${bokFargeKlasse(bok.farge, bok.id)} bokstoff relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2`}
             draggable={false}
           >
-            {/* opphøyde ryggbånd — de tverrgående ribbene på en gammel innbinding */}
+            {/* opphøyde ryggbånd — med god luft ned til det pregede navnet */}
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-2 border-t-2 border-current opacity-25" />
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-3.5 border-t border-current opacity-25" />
-            <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-7 border-t border-current opacity-25" />
-            <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-[2.125rem] border-t-2 border-current opacity-25" />
+            <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-12 border-t border-current opacity-25" />
+            <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-[3.375rem] border-t-2 border-current opacity-25" />
 
             <span className="mt-6 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
               {bok.name}
             </span>
-            <span className="text-center text-[10px] uppercase tracking-[0.25em] opacity-70">
+            {/* trykt inn i stoffet: mørkere enn omslaget, med en anelse lys under pregekanten */}
+            <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">
               Kokekompis
             </span>
           </Link>
@@ -156,6 +158,9 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
 
         {hale}
       </div>
+
+      <div aria-hidden className="trehylle-flate h-3" />
+      <div aria-hidden className="trehylle-kant h-4" />
     </div>
   );
 }
