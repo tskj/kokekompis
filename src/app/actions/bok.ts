@@ -71,6 +71,35 @@ export async function settHylleSortering(formData: FormData) {
   revalidatePath('/', 'layout');
 }
 
+// Hele hyllas rekkefølge i ett jafs — fra trykk-og-dra. Bare dine egne bøker telles med;
+// fremmede ids hopper vi over, og egne bøker som mangler i listen legges bakerst slik
+// visningen alt sorterer dem.
+export async function lagreHylleRekkefølge(bokIds: unknown) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  // klientkall over nettet — parse, ikke stol
+  const ønskede = z.array(z.string()).safeParse(bokIds);
+  if (!ønskede.success) return;
+
+  await withTransaction({ name: 'bok.hylle-rekkefølge' }, async (tx) => {
+    const mine = await tx
+      .select({ id: cookbook.id })
+      .from(cookbook)
+      .where(eq(cookbook.userId, userId))
+      .orderBy(sql`${cookbook.rekkefølge} asc nulls last`, asc(cookbook.name));
+
+    const ønsket = ønskede.data.filter((id) => mine.some((bok) => bok.id === id));
+    const rest = mine.map((bok) => bok.id).filter((id) => !ønsket.includes(id));
+
+    for (const [plass, id] of [...ønsket, ...rest].entries()) {
+      await tx.update(cookbook).set({ rekkefølge: plass + 1 }).where(eq(cookbook.id, id));
+    }
+  });
+
+  revalidatePath('/', 'layout');
+}
+
 // Flytt en bok mot venstre eller høyre i din egen rekkefølge. Hele hylla normaliseres til
 // 1..n ved hvert bytte — bøker som aldri er sortert (null) står da bakerst i navnerekkefølge,
 // samme rekkefølge som visningen bruker, så pilene flytter alltid det øyet ser.

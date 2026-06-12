@@ -21,7 +21,7 @@ vi.mock("next/navigation", () => ({
   useParams: vi.fn(() => ({})),
 }));
 
-import { flyttBokPåHylla, settHylleSortering } from "@/app/actions/bok";
+import { flyttBokPåHylla, settHylleSortering, lagreHylleRekkefølge } from "@/app/actions/bok";
 import Home from "@/app/page";
 import CookbookLayout from "@/app/kokebok/[id]/layout";
 
@@ -69,6 +69,37 @@ describe("bokhylla kan sorteres — egen rekkefølge og sist åpnet", () => {
     cleanup();
     render(await Home());
     expect(await hylleRekkefølge()).toEqual(["Kaker", "Bakst", "Middag"]);
+  });
+
+  it("trykk-og-dra lagrer hele rekkefølgen i ett — fremmede ids preller av", async () => {
+    const { user, bakst, middag, kaker } = await lagHylle();
+    const fremmed = await makeKokebok();
+    hoisted.userId = user.id;
+
+    await lagreHylleRekkefølge([middag.id, fremmed.bok.id, kaker.id, bakst.id]);
+
+    render(await Home());
+    expect(await hylleRekkefølge()).toEqual(["Middag", "Kaker", "Bakst"]);
+
+    // den fremmede boken sto aldri på min hylle — og dens rekkefølge er urørt
+    const andres = await db.select().from(cookbook).where(eq(cookbook.id, fremmed.bok.id)).single("test.andres");
+    expect(andres.rekkefølge).toBeNull();
+  });
+
+  it("sortering bytter aldri farge på bøkene — fargen følger boken, ikke plassen", async () => {
+    const { user, bakst, kaker } = await lagHylle();
+    hoisted.userId = user.id;
+
+    render(await Home());
+    const hylle = screen.getByRole("region", { name: "Bokhylla" });
+    const førKlasse = within(hylle).getByRole("link", { name: /Bakst/ }).className;
+
+    cleanup();
+    await lagreHylleRekkefølge([kaker.id, bakst.id]);
+
+    render(await Home());
+    const etterHylle = screen.getByRole("region", { name: "Bokhylla" });
+    expect(within(etterHylle).getByRole("link", { name: /Bakst/ }).className).toBe(førKlasse);
   });
 
   it("en fremmed rokkerer ikke hylla di", async () => {

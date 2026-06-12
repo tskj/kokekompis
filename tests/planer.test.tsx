@@ -6,7 +6,7 @@ import { plans, planRecipes, recipes } from "@/lib/db/schema";
 import { encodeUuidToBase32 } from "@/lib/uuid/uuid-base32";
 import { makeKokebok, resetDb, testOppskrift } from "./db";
 import "./rtl";
-import { render, screen } from "./rtl";
+import { cleanup, render, screen } from "./rtl";
 
 const hoisted = vi.hoisted(() => ({ userId: "" }));
 vi.mock("@/auth", () => ({
@@ -20,8 +20,9 @@ vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }),
 }));
 
-import { opprettPlan, slettPlan, leggTilIPlan, fjernFraPlan } from "@/app/actions/planer";
+import { opprettPlan, slettPlan, leggTilIPlan, fjernFraPlan, evaluerPlan } from "@/app/actions/planer";
 import PlanSide from "@/app/planer/[id]/page";
+import PlanerSide from "@/app/planer/page";
 import RecipePage from "@/app/kokebok/[id]/@recipe/oppskrift/[recipeid]/page";
 import Home from "@/app/page";
 
@@ -41,10 +42,10 @@ function leggTilSkjema(planId: string, ganger?: number): FormData {
   return formData;
 }
 
-async function lagPlan(userId: string, navn = "17. mai-frokost", dato?: string) {
+async function lagPlan(userId: string, navn = "17. mai-frokost", dato?: string, felter?: { merke?: string; personer?: number; kom?: number; dagbok?: string }) {
   return db
     .insert(plans)
-    .values({ userId, name: navn, dato: dato ?? null })
+    .values({ userId, name: navn, dato: dato ?? null, ...felter })
     .returning()
     .single("test.plan");
 }
@@ -239,6 +240,91 @@ describe("planer (ekte actions, ekte database, ekte planside)", () => {
 
     hoisted.userId = "";
     await expect(PlanSide(sideProps(plan.id))).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("planen kan merkes med tradisjon og antall personer", async () => {
+    const { user } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    const skjema = planSkjema("17. mai-frokost 2027", "2027-05-17");
+    skjema.set("merke", "17. mai");
+    skjema.set("personer", "12");
+    await opprettPlan(skjema).catch(() => null);
+
+    const rad = await db.select().from(plans).where(eq(plans.userId, user.id)).single("test.merket");
+    expect(rad.merke).toBe("17. mai");
+    expect(rad.personer).toBe(12);
+  });
+
+  it("et tidligere arrangement spør pent — og etterordet vises etterpå", async () => {
+    const { user } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    const fest = await lagPlan(user.id, "17. mai-frokost 2020", "2020-05-17", { personer: 14 });
+
+    render(await PlanSide(sideProps(fest.id)));
+    expect(screen.getByText("Hvordan gikk det?")).toBeInTheDocument();
+    expect(screen.getByText(/Dere planla for 14/)).toBeInTheDocument();
+
+    const evalSkjema = new FormData();
+    evalSkjema.set("kom", "11");
+    evalSkjema.set("dagbok", "litt for lite mat — og alt for mange salater");
+    await evaluerPlan(fest.id, evalSkjema);
+
+    cleanup();
+    render(await PlanSide(sideProps(fest.id)));
+    expect(screen.queryByText("Hvordan gikk det?")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Etterord" })).toBeInTheDocument();
+    expect(screen.getByText(/11 kom — det var planlagt for 14/)).toBeInTheDocument();
+    // dagboken står på lappen og ligger klar i rettelsesskjemaet
+    expect(screen.getAllByText("litt for lite mat — og alt for mange salater")).toHaveLength(2);
+  });
+
+  it("fremmede skriver ikke etterord i dine planer", async () => {
+    const { user } = await makeKokebok();
+    const annen = await makeKokebok();
+    const fest = await lagPlan(user.id, "Julaften 2020", "2020-12-24");
+
+    hoisted.userId = annen.user.id;
+    const skjema = new FormData();
+    skjema.set("dagbok", "kuppet dagbok");
+    await evaluerPlan(fest.id, skjema);
+
+    const rad = await db.select().from(plans).where(eq(plans.id, fest.id)).single("test.urørt");
+    expect(rad.dagbok).toBeNull();
+  });
+
+  it("merket binder årene sammen — fjorårets meny og etterord står på årets plan", async () => {
+    const { user } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    await lagPlan(user.id, "17. mai-frokost 2025", "2025-05-17", { merke: "17. mai", personer: 10, kom: 13, dagbok: "for lite egg!" });
+    const iÅr = await lagPlan(user.id, "17. mai-frokost 2027", "2027-05-17", { merke: "17. mai" });
+    await lagPlan(user.id, "Julaften 2025", "2025-12-24", { merke: "julaften" });
+
+    render(await PlanSide(sideProps(iÅr.id)));
+    expect(screen.getByRole("heading", { name: "Tidligere 17. mai" })).toBeInTheDocument();
+    expect(screen.getByText(/13 kom av 10 planlagt/)).toBeInTheDocument();
+    expect(screen.getByText(/for lite egg!/)).toBeInTheDocument();
+    expect(screen.queryByText(/Julaften/)).not.toBeInTheDocument();
+  });
+
+  it("planoversikten skiller kommende fra tidligere arrangementer", async () => {
+    const { user } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    await lagPlan(user.id, "Sommerfest 2099", "2099-06-20");
+    await lagPlan(user.id, "Nyttår 2021", "2021-12-31", { kom: 8, dagbok: "perfekt mengde pinnekjøtt" });
+
+    render(await PlanerSide());
+    expect(screen.getByText("Tidligere arrangementer")).toBeInTheDocument();
+    expect(screen.getByText(/perfekt mengde pinnekjøtt/)).toBeInTheDocument();
+
+    // og forsiden legger bare kommende planer på skrivebordet
+    cleanup();
+    render(await Home());
+    expect(screen.getByText("Sommerfest 2099")).toBeInTheDocument();
+    expect(screen.queryByText("Nyttår 2021")).not.toBeInTheDocument();
   });
 
   it("river ut planen — oppskriftene den pekte på består", async () => {

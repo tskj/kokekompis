@@ -3,11 +3,12 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { cookbook, plans, recipeFavorites, users } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
-import { bokFargeKlasse } from '@/lib/bok-utseende';
-import { formaterDag } from '@/lib/dato';
+import { nowDate } from '@/lib/clock';
+import { formaterDag, erTidligereDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
-import { opprettBok, settHylleSortering, flyttBokPåHylla } from '@/app/actions/bok';
+import { opprettBok, settHylleSortering } from '@/app/actions/bok';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
+import { SorterbarBokhylle } from '@/components/SorterbarBokhylle';
 import Link from 'next/link';
 
 function SignIn() {
@@ -93,6 +94,10 @@ export default async function Home() {
   // pilene for egen sortering vises bare når de kan utrette noe
   const kanSortere = !!userId && sortering === 'egen' && cookbooks.length > 1;
 
+  // skrivebordet viser det som kommer — tidligere arrangementer bor under /planer
+  const iDag = nowDate().toISOString().slice(0, 10);
+  const kommendePlaner = planer.filter((plan) => !erTidligereDag(plan.dato, iDag));
+
   return (
     <main className="relative mx-auto max-w-4xl px-6 py-12">
       {/* dekor nederst/ytterst på siden — aldri over innholdet */}
@@ -149,55 +154,10 @@ export default async function Home() {
         </div>
 
         {/* På telefon ligger bøkene bortover med litt overlapp og scroller sidelengs — de brekker
-            aldri under hverandre. På store skjermer brer hylla seg utover med luft mellom. */}
-        <div className="flex items-end overflow-x-auto pt-5 border-b-8 border-ink/80 md:flex-wrap md:gap-6 md:overflow-visible">
-            {cookbooks.map((bok, index) => (
-              <div key={bok.id} className="relative shrink-0 -ml-8 first:ml-0 md:ml-0">
-                <Link
-                  href={uuidHref`/kokebok/${bok.id}`}
-                  className={`${bokFargeKlasse(bok.farge, index)} relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2`}
-                >
-                  {/* opphøyde ryggbånd — de tverrgående ribbene på en gammel innbinding */}
-                  <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-2 border-t-2 border-current opacity-25" />
-                  <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-3.5 border-t border-current opacity-25" />
-                  <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-7 border-t border-current opacity-25" />
-                  <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-[2.125rem] border-t-2 border-current opacity-25" />
-
-                  <span className="mt-6 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
-                    {bok.name}
-                  </span>
-                  <span className="text-center text-[10px] uppercase tracking-[0.25em] opacity-70">
-                    Kokekompis
-                  </span>
-                </Link>
-
-                {kanSortere && (
-                  <span className="absolute -top-3.5 left-1/2 z-10 flex -translate-x-1/2 gap-1">
-                    <form action={flyttBokPåHylla.bind(null, bok.id, 'venstre')}>
-                      <button
-                        type="submit"
-                        aria-label={`Flytt ${bok.name} mot venstre`}
-                        title="Flytt boken mot venstre"
-                        className="size-7 rounded-full border border-line bg-card text-xs shadow-sm hover:border-terra hover:text-terra"
-                      >
-                        ←
-                      </button>
-                    </form>
-                    <form action={flyttBokPåHylla.bind(null, bok.id, 'høyre')}>
-                      <button
-                        type="submit"
-                        aria-label={`Flytt ${bok.name} mot høyre`}
-                        title="Flytt boken mot høyre"
-                        className="size-7 rounded-full border border-line bg-card text-xs shadow-sm hover:border-terra hover:text-terra"
-                      >
-                        →
-                      </button>
-                    </form>
-                  </span>
-                )}
-              </div>
-            ))}
-
+            aldri under hverandre. På store skjermer brer hylla seg utover med luft mellom.
+            I "min rekkefølge"-modus kan bøkene trykkes-og-dras på plass. */}
+        <SorterbarBokhylle bøker={cookbooks} kanSortere={kanSortere} hale={
+          <>
             {harFavoritter && (
               <Link
                 href="/favoritter"
@@ -236,7 +196,8 @@ export default async function Home() {
                 </form>
               </details>
             )}
-          </div>
+          </>
+        } />
 
         {!userId && (
           cookbooks.length > 0 ? (
@@ -261,7 +222,7 @@ export default async function Home() {
           </p>
 
           <div className="flex flex-wrap items-stretch gap-5">
-            {planer.slice(0, 4).map((plan, index) => (
+            {kommendePlaner.slice(0, 4).map((plan, index) => (
               <Link
                 key={plan.id}
                 href={uuidHref`/planer/${plan.id}`}
@@ -272,7 +233,7 @@ export default async function Home() {
               </Link>
             ))}
 
-            {planer.length > 4 && (
+            {planer.length > kommendePlaner.slice(0, 4).length && (
               <Link href="/planer" className="self-center text-sm text-ink-soft underline underline-offset-2 hover:text-terra">
                 alle planene →
               </Link>

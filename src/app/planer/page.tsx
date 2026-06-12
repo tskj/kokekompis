@@ -3,19 +3,21 @@ import { asc, count, eq } from 'drizzle-orm';
 import { plans, planRecipes } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
-import { formaterDag } from '@/lib/dato';
+import { nowDate } from '@/lib/clock';
+import { formaterDag, erTidligereDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { opprettPlan } from '@/app/actions/planer';
 
 // Planene: nesten en kokebok, men for en anledning — 17. mai-frokosten, julebaksten, bursdagen.
-// Samle det du skal lage fra alle bøkene dine, og få én handleliste for hele bordet.
+// Kommende planer samler det som skal lages; tidligere arrangementer er hukommelsen — menyen,
+// hvor mange det ble laget til, og etterordet om hva som ble for mye og for lite.
 export default async function PlanerSide() {
   const userId = await getCurrentUserId();
 
   const planer = userId
     ? await withTransaction({ name: 'planer.liste' }, async (tx) => {
         const mine = await tx
-          .select({ id: plans.id, name: plans.name, dato: plans.dato })
+          .select({ id: plans.id, name: plans.name, dato: plans.dato, merke: plans.merke, personer: plans.personer, kom: plans.kom, dagbok: plans.dagbok })
           .from(plans)
           .where(eq(plans.userId, userId))
           .orderBy(asc(plans.dato), asc(plans.name));
@@ -32,6 +34,13 @@ export default async function PlanerSide() {
       })
     : [];
 
+  const iDag = nowDate().toISOString().slice(0, 10);
+
+  const kommende = planer.filter((plan) => !erTidligereDag(plan.dato, iDag));
+  const tidligere = planer
+    .filter((plan) => erTidligereDag(plan.dato, iDag))
+    .sort((a, b) => (b.dato ?? '').localeCompare(a.dato ?? ''));
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <header className="mb-10">
@@ -46,9 +55,9 @@ export default async function PlanerSide() {
         <p className="text-ink-soft">Logg inn for å legge planer.</p>
       ) : (
         <>
-          {planer.length > 0 && (
+          {kommende.length > 0 && (
             <ul className="mb-10 divide-y divide-line border-y border-line">
-              {planer.map((plan) => (
+              {kommende.map((plan) => (
                 <li key={plan.id}>
                   <Link
                     href={uuidHref`/planer/${plan.id}`}
@@ -58,6 +67,7 @@ export default async function PlanerSide() {
                       <span className="font-display text-2xl">{plan.name}</span>
                       <span className="block text-sm text-ink-soft">
                         {plan.dato && `${formaterDag(plan.dato)} · `}
+                        {plan.personer && `for ${plan.personer} · `}
                         {plan.antall === 1 ? '1 oppskrift' : `${plan.antall} oppskrifter`}
                       </span>
                     </span>
@@ -68,7 +78,7 @@ export default async function PlanerSide() {
             </ul>
           )}
 
-          <details className="group max-w-md" open={planer.length === 0}>
+          <details className="group max-w-md" open={kommende.length === 0}>
             <summary className="cursor-pointer list-none border-2 border-dashed border-line px-4 py-3 text-center text-sm text-ink-soft hover:border-terra hover:text-terra group-open:hidden">
               + Ny plan — «17. mai-frokost», «Julebakst»
             </summary>
@@ -80,16 +90,40 @@ export default async function PlanerSide() {
                   name="navn"
                   required
                   maxLength={100}
-                  placeholder="17. mai-frokost"
+                  placeholder="17. mai-frokost 2027"
                   className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2 font-display focus:border-terra focus:outline-none"
                 />
               </label>
 
+              <div className="flex gap-3">
+                <label className="block flex-1 text-sm">
+                  <span className="text-ink-soft">Når? (valgfritt)</span>
+                  <input
+                    type="date"
+                    name="dato"
+                    className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2 focus:border-terra focus:outline-none"
+                  />
+                </label>
+
+                <label className="block w-28 text-sm">
+                  <span className="text-ink-soft">For hvor mange?</span>
+                  <input
+                    type="number"
+                    name="personer"
+                    min={1}
+                    max={10000}
+                    placeholder="12"
+                    className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2 focus:border-terra focus:outline-none"
+                  />
+                </label>
+              </div>
+
               <label className="block text-sm">
-                <span className="text-ink-soft">Når skal det stå på bordet? (valgfritt)</span>
+                <span className="text-ink-soft">Merke (valgfritt) — binder årene sammen: «17. mai», «julaften»</span>
                 <input
-                  type="date"
-                  name="dato"
+                  name="merke"
+                  maxLength={100}
+                  placeholder="17. mai"
                   className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2 focus:border-terra focus:outline-none"
                 />
               </label>
@@ -99,6 +133,45 @@ export default async function PlanerSide() {
               </button>
             </form>
           </details>
+
+          {tidligere.length > 0 && (
+            <section aria-labelledby="tidligere" className="mt-14">
+              <h2 id="tidligere" className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-ink-soft">
+                Tidligere arrangementer
+              </h2>
+              <p className="mb-4 text-sm text-ink-soft">
+                Menyene, mengdene og etterordene — så neste år blir bedre enn i fjor.
+              </p>
+
+              <ul className="divide-y divide-line border-y border-line">
+                {tidligere.map((plan) => (
+                  <li key={plan.id}>
+                    <Link
+                      href={uuidHref`/planer/${plan.id}`}
+                      className="group flex items-baseline justify-between gap-4 py-4 hover:text-terra"
+                    >
+                      <span>
+                        <span className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="font-display text-2xl">{plan.name}</span>
+                          {plan.merke && (
+                            <span className="rounded-full border border-sage/50 bg-sage/10 px-2.5 py-0.5 text-xs">{plan.merke}</span>
+                          )}
+                        </span>
+                        <span className="block text-sm text-ink-soft">
+                          {plan.dato && `${formaterDag(plan.dato)} · `}
+                          {plan.kom !== null && `${plan.kom} kom${plan.personer ? ` av ${plan.personer} planlagt` : ''} · `}
+                          {plan.dagbok
+                            ? <span className="font-skrift text-base">«{plan.dagbok.length > 80 ? `${plan.dagbok.slice(0, 80)}…` : plan.dagbok}»</span>
+                            : <span className="italic">✎ etterordet er ikke skrevet ennå</span>}
+                        </span>
+                      </span>
+                      <span aria-hidden className="text-ink-soft group-hover:text-terra">→</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </>
       )}
     </main>

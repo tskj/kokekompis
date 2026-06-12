@@ -8,3 +8,9 @@ export function formaterDag(isoDag: string): string {
 
   return `${dag}. ${MÅNEDER[måned - 1]} ${år}`;
 }
+
+// En plan er et tidligere arrangement når dagen er passert — datoløse planer er alltid
+// kommende. ISO-dager sammenlignes leksikalsk; `iDag` kommer fra klokken (nowDate) hos kalleren.
+export function erTidligereDag(isoDag: string | null, iDag: string): boolean {
+  return isoDag !== null && isoDag < iDag;
+}

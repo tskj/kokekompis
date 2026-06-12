@@ -264,6 +264,8 @@ export const recipeShares = pgTable('recipe_shares', {
 // En plan ("17. mai-frokost", "julebakst") samler oppskrifter på tvers av bøkene dine — nesten
 // som en kokebok, men for en anledning. Personlig som lappene; oppskriftene bare refereres, så
 // planen verken eier eller flytter noe. Handlelisten regnes ut fra oppskriftene ved visning.
+// Når dagen er passert blir planen et tidligere arrangement: den får et etterord (kom/dagbok),
+// og merket binder årets utgave til fjorårets — menyen og mengdene som ble riktige og gale.
 
 export const plans = pgTable('plans', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
@@ -273,6 +275,14 @@ export const plans = pgTable('plans', {
   name: text('name').notNull(),
   // dagen det skal stå på bordet — valgfri ("julebakst" trenger ingen dato)
   dato: date('dato'),
+  // tradisjonen planen hører til ("17. mai", "julaften") — samler tidligere år på tvers
+  merke: text('merke'),
+  // hvor mange det planlegges mat til
+  personer: integer('personer'),
+  // etterordet, skrevet når arrangementet er over: hvor mange som faktisk kom, og dagboken —
+  // "litt for lite mat", "alt for mange salater" — så neste år blir bedre
+  kom: integer('kom'),
+  dagbok: text('dagbok'),
 });
 
 export const planRecipes = pgTable('plan_recipes', {

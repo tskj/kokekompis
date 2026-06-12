@@ -12,11 +12,17 @@ export const BOK_FARGE_KLASSER: Record<BokFarge, string> = {
   natt:   'bg-natt text-paper',
 };
 
-// Hylla veksler selv gjennom grunnpaletten for bøker uten valgt farge.
+// Bøker uten valgt farge får en stabil farge fra sin egen id — aldri fra plassen på hylla.
+// (Plassbasert rotasjon ommøblerte fargene hver gang hylla ble sortert.)
 const HYLLE_ROTASJON: BokFarge[] = ['terra', 'sage', 'ink', 'butter'];
 
-export function bokFargeKlasse(farge: BokFarge | null, index: number): string {
-  return BOK_FARGE_KLASSER[farge ?? HYLLE_ROTASJON[index % HYLLE_ROTASJON.length]];
+export function bokFargeKlasse(farge: BokFarge | null, bokId: string): string {
+  if (farge) return BOK_FARGE_KLASSER[farge];
+
+  let hash = 0;
+  for (const tegn of bokId) hash = (hash * 31 + tegn.charCodeAt(0)) % 997;
+
+  return BOK_FARGE_KLASSER[HYLLE_ROTASJON[hash % HYLLE_ROTASJON.length]];
 }
 
 // Bokbåndet (den smale stripen mellom tittel og innhold): enten et mønster vevd i en av

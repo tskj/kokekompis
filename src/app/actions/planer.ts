@@ -17,8 +17,10 @@ import { log, Attr } from '@/lib/log';
 // Planene: 17. mai-frokosten, julebaksten, bursdagen. En plan er personlig og samler oppskrifter
 // på tvers av bøkene — de refereres bare, så ingenting eies eller flyttes.
 
-const navnSchema = z.string().trim().min(1).max(100);
-const datoSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().catch(null);
+const navnSchema     = z.string().trim().min(1).max(100);
+const datoSchema     = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().catch(null);
+const merkeSchema    = z.string().trim().min(1).max(100).nullable().catch(null);
+const personerSchema = z.coerce.number().int().min(1).max(10000).nullable().catch(null);
 
 export async function opprettPlan(formData: FormData) {
   const userId = await getCurrentUserId();
@@ -27,17 +29,40 @@ export async function opprettPlan(formData: FormData) {
   const navn = navnSchema.safeParse(formData.get('navn'));
   if (!navn.success) return;
 
-  const dato = datoSchema.parse(formData.get('dato') || null);
+  const dato     = datoSchema.parse(formData.get('dato') || null);
+  const merke    = merkeSchema.parse(formData.get('merke') || null);
+  const personer = personerSchema.parse(formData.get('personer') || null);
 
   const plan = await db
     .insert(plans)
-    .values({ userId, name: navn.data, dato })
+    .values({ userId, name: navn.data, dato, merke, personer })
     .returning({ id: plans.id })
     .single('plan.opprett');
 
   log.info(plan.id, Attr.PLAN_CREATED, navn.data);
   revalidatePath('/', 'layout');
   redirect(uuidHref`/planer/${plan.id}`);
+}
+
+// Etterordet — skrives når arrangementet er over (og kan rettes senere): hvor mange som kom,
+// og dagboken med det man vil huske til neste år. Helt frivillig; planen ligger der uansett.
+export async function evaluerPlan(planId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const kom    = z.coerce.number().int().min(0).max(10000).nullable().catch(null).parse(formData.get('kom') || null);
+  const dagbok = z.string().trim().min(1).max(2000).nullable().catch(null).parse(formData.get('dagbok') || null);
+
+  const endret = await db
+    .update(plans)
+    .set({ kom, dagbok })
+    .where(and(eq(plans.id, planId), eq(plans.userId, userId)))
+    .returning({ id: plans.id })
+    .maybeSingle('plan.evaluer');
+  if (!endret) return;
+
+  log.info(planId, Attr.PLAN_EVALUATED, { kom, harDagbok: dagbok !== null });
+  revalidatePath('/', 'layout');
 }
 
 export async function slettPlan(planId: string, formData: FormData) {
