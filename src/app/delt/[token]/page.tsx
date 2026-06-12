@@ -9,6 +9,7 @@ import { uuidHref } from '@/lib/uuid/uuid-links';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { Oppskrift, lesGanger } from '@/components/oppskrift/Oppskrift';
 import { RettBilder } from '@/components/oppskrift/RettBilder';
+import { DelLenke } from '@/components/DelLenke';
 import { leggDeltOppskriftIBok } from '@/app/actions/deling';
 import { bildeUrl } from '@/lib/lagring';
 
@@ -39,6 +40,7 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
         description: recipes.description,
         content: recipes.content,
         eierNavn: users.name,
+        eierId: recipes.userId,
       })
       .from(recipes)
       .innerJoin(users, eq(recipes.userId, users.id))
@@ -72,8 +74,16 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
         <Link href="/" className="text-sm text-ink-soft hover:text-terra">Kokekompis</Link>
       </header>
 
-      {/* lettvint tilgang til venners oppskrifter: kopien blir din egen, opprinnelsen følger med */}
-      {delt.mineBøker.length > 0 && (
+      {/* eieren får deleverktøyet; alle andre lettvint tilgang — kopien blir deres egen */}
+      {userId === delt.eierId ? (
+        <div className="mb-8 flex flex-wrap items-center gap-2 rounded-xl border-2 border-dashed border-line bg-card px-4 py-3 skjul-ved-print">
+          <span className="text-sm">Dette er delingslenken din — send den til en venn:</span>
+          <DelLenke
+            emne={`${delt.title} — en oppskrift til deg`}
+            hilsen={`Hei! Jeg deler oppskriften «${delt.title}» med deg — åpne lenken, så kan du lese den og legge den i din egen bok:`}
+          />
+        </div>
+      ) : delt.mineBøker.length > 0 ? (
         <form action={leggDeltOppskriftIBok.bind(null, token)} className="mb-8 flex flex-wrap items-center gap-2 rounded-xl border-2 border-dashed border-line bg-card px-4 py-3 skjul-ved-print">
           <span className="text-sm">Vil du ha den? Legg den i en av bøkene dine:</span>
           <select name="bok" aria-label="Bok" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
@@ -85,7 +95,7 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
             Legg den i boken
           </button>
         </form>
-      )}
+      ) : null}
 
       <Oppskrift
         tittel={delt.title}

@@ -196,6 +196,11 @@ export const recipeChapters = pgTable('recipe_chapters', {
 export const notatFarger = ['terrakotta', 'rav', 'salvie', 'sand'] as const;
 export type NotatFarge = (typeof notatFarger)[number];
 
+// Lappen festes oppe (på høyresiden av oppskriften, med et makstall for estetikken) eller
+// nede på tavla — og kan flyttes mellom dem.
+export const notatPlasser = ['oppe', 'nede'] as const;
+export type NotatPlass = (typeof notatPlasser)[number];
+
 export const recipeNotes = pgTable('recipe_notes', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
   recipeId: uuid('recipeId')
@@ -206,6 +211,7 @@ export const recipeNotes = pgTable('recipe_notes', {
     .references(() => users.id, { onDelete: 'cascade' }),
   tekst: text('tekst').notNull(),
   farge: text('farge').$type<NotatFarge>().notNull().default('terrakotta'),
+  plass: text('plass').$type<NotatPlass>().notNull().default('nede'),
   createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -342,6 +348,20 @@ export const planRecipes = pgTable('plan_recipes', {
   unique().on(planRecipes.planId, planRecipes.order),
   check('plan_order_starts_at_one', sql`"order" >= 1`),
 ]);
+
+
+// ========= Oppslagsboka =========
+// Oppslagsverket på hylla: alt man ellers googler — omregning, eggetider, borddekking. De
+// innebygde oppslagene bor i koden (src/lib/oppslag.ts); dette er brukerens egne tillegg.
+export const oppslag = pgTable('oppslag', {
+  id: uuid('id').defaultRandom().notNull().primaryKey(),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tittel: text('tittel').notNull(),
+  tekst: text('tekst').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
+});
 
 
 // ========= OAuth =========

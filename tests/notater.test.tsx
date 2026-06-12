@@ -73,7 +73,7 @@ describe("postit-lapper (ekte UI-klikk, ekte server actions, ekte database)", ()
       .values({ recipeId: oppskrift.id, userId: annen.user.id, tekst: "andres lapp", farge: "sand" })
       .returning();
 
-    render(<NotatTavle recipeId={oppskrift.id} notater={[{ id: minLapp.id, tekst: minLapp.tekst, farge: "rav" }]} />);
+    render(<NotatTavle recipeId={oppskrift.id} notater={[{ id: minLapp.id, tekst: minLapp.tekst, farge: "rav", plass: "nede" }]} />);
     const bruker = userEvent.setup();
 
     expect(screen.getByText("min lapp")).toBeInTheDocument();

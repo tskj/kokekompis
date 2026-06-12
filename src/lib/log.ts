@@ -88,6 +88,10 @@ export const Attr = {
   CHAPTER_RENAMED:     ":cookbook/chapter-renamed", // value: new name
   CHAPTER_MOVED:       ":cookbook/chapter-moved",   // value: { kapittelId, til } — asserted on the OLD book
 
+  // === oppslagsboka — asserted on the ENTRY's id ===
+  OPPSLAG_CREATED: ":oppslag/created", // value: tittel
+  OPPSLAG_DELETED: ":oppslag/deleted", // value: true
+
   // === planer — asserted on the PLAN's id ===
   PLAN_CREATED:      ":plan/created",      // value: name
   PLAN_DELETED:      ":plan/deleted",      // value: true

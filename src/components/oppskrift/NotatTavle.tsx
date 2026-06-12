@@ -1,8 +1,11 @@
-import type { NotatFarge } from '@/lib/db/schema';
-import { leggTilNotat, slettNotat } from '@/app/actions/notater';
+import type { NotatFarge, NotatPlass } from '@/lib/db/schema';
+import { leggTilNotat, settNotatPlass, slettNotat } from '@/app/actions/notater';
 import { LukkbarDetails } from '@/components/LukkbarDetails';
 
-export type Notat = { id: string; tekst: string; farge: NotatFarge };
+export type Notat = { id: string; tekst: string; farge: NotatFarge; plass: NotatPlass };
+
+// Maks antall lapper festet oppe på høyresiden — flere ville klusset til layouten.
+export const MAKS_LAPPER_OPPE = 4;
 
 // Teipfargen er det som lagres som "farge" — lappen selv er alltid en avrevet bit linjert
 // notatbokpapir (.notatlapp i globals.css), holdt fast av en bit dekorteip (.teipbit).
@@ -41,6 +44,19 @@ export function NotatKort({ notat, index }: { notat: Notat; index: number }) {
           className="size-6 rounded-full text-ink/40 hover:text-ink hover:bg-ink/10 leading-none"
         >
           ×
+        </button>
+      </form>
+
+      {/* flytt lappen mellom høyresiden (oppe) og tavla (nede) — bare synlig på brede skjermer,
+          der det finnes en høyreside å feste den på */}
+      <form action={settNotatPlass.bind(null, notat.id)} className="absolute bottom-0.5 right-0.5 hidden md:block">
+        <button
+          type="submit"
+          aria-label={notat.plass === 'oppe' ? 'Flytt lappen ned på tavla' : 'Fest lappen oppe på sida'}
+          title={notat.plass === 'oppe' ? 'Flytt den ned på tavla' : 'Fest den oppe på sida'}
+          className="size-6 rounded-full text-ink/40 leading-none hover:bg-ink/10 hover:text-ink"
+        >
+          {notat.plass === 'oppe' ? '↓' : '↑'}
         </button>
       </form>
     </div>
@@ -92,6 +108,17 @@ export function NotatTavle({ recipeId, notater, antallStrødd = 0 }: { recipeId:
                 aria-label="Notat"
                 className="w-full resize-none bg-transparent font-skrift text-xl leading-6 placeholder:text-ink/40 focus:outline-none"
               />
+
+              <div className="flex items-center gap-2 text-xs text-ink-soft" role="radiogroup" aria-label="Hvor skal lappen henge?">
+                <label className="cursor-pointer">
+                  <input type="radio" name="plass" value="nede" defaultChecked className="peer sr-only" />
+                  <span className="rounded-full border border-line px-2 py-0.5 peer-checked:bg-ink/10 peer-checked:font-medium">nede</span>
+                </label>
+                <label className="cursor-pointer">
+                  <input type="radio" name="plass" value="oppe" className="peer sr-only" />
+                  <span className="rounded-full border border-line px-2 py-0.5 peer-checked:bg-ink/10 peer-checked:font-medium">oppe på sida</span>
+                </label>
+              </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex gap-1.5" role="radiogroup" aria-label="Teipfarge">

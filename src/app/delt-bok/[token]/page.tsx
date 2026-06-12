@@ -8,6 +8,7 @@ import { lesSkisse } from '@/lib/bok-utseende';
 import { getUuidParam } from '@/lib/uuid/server-uuid-params';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { Skisse } from '@/components/skisser';
+import { DelLenke } from '@/components/DelLenke';
 import { leggDeltBokPåHylla } from '@/app/actions/deling';
 
 interface DeltBokSideProps {
@@ -29,7 +30,7 @@ export default async function DeltBokSide({ params }: DeltBokSideProps) {
     if (!share) return null;
 
     const bok = await tx
-      .select({ name: cookbook.name, beskrivelse: cookbook.beskrivelse, skisse: cookbook.skisse, eierNavn: users.name })
+      .select({ name: cookbook.name, beskrivelse: cookbook.beskrivelse, skisse: cookbook.skisse, eierNavn: users.name, eierId: cookbook.userId })
       .from(cookbook)
       .innerJoin(users, eq(cookbook.userId, users.id))
       .where(eq(cookbook.id, share.cookbookId))
@@ -85,7 +86,16 @@ export default async function DeltBokSide({ params }: DeltBokSideProps) {
         )}
       </div>
 
-      {userId && (
+      {/* eieren får deleverktøyet — alle andre får kopiknappen (ingen skal kopiere sin egen bok) */}
+      {userId === delt.bok.eierId ? (
+        <div className="mb-10 flex flex-wrap items-center justify-center gap-3 rounded-xl border-2 border-dashed border-line bg-card px-4 py-3">
+          <span className="text-sm">Dette er delingslenken din — send den til en venn:</span>
+          <DelLenke
+            emne={`${delt.bok.name} — en kokebok til deg`}
+            hilsen={`Hei! Jeg deler kokeboken «${delt.bok.name}» med deg — åpne lenken, så kan du lese den og legge den på din egen hylle:`}
+          />
+        </div>
+      ) : userId ? (
         <form action={leggDeltBokPåHylla.bind(null, token)} className="mb-10 flex flex-wrap items-center justify-center gap-3 rounded-xl border-2 border-dashed border-line bg-card px-4 py-3">
           <span className="text-sm">Vil du ha hele boken?</span>
           <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
@@ -93,7 +103,7 @@ export default async function DeltBokSide({ params }: DeltBokSideProps) {
           </button>
           <span className="text-xs text-ink-soft">Kopien blir din egen, og er privat.</span>
         </form>
-      )}
+      ) : null}
 
       <div className="flex flex-col gap-8">
         {delt.kapitler.map((kapittel) => {

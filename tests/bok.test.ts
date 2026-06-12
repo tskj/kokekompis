@@ -69,6 +69,17 @@ describe("bok-stell (ekte actions, ekte database)", () => {
     expect(andres.map((k) => k.name)).toEqual(["Gjærbakst"]);
   });
 
+  it("en bok uten navn døpes etter plassen på hylla", async () => {
+    const { user } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    const feil = await opprettBok(new FormData()).then(() => null, (e: Error) => e);
+    expect(feil?.message).toMatch(/^NEXT_REDIRECT:/);
+
+    const bøker = await db.select().from(cookbook).where(eq(cookbook.userId, user.id));
+    expect(bøker.map((bok) => bok.name)).toContain("Kokebok #2");
+  });
+
   it("avviser tomme navn", async () => {
     const { user, bok } = await makeKokebok();
     hoisted.userId = user.id;

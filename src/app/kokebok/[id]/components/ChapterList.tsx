@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { endreKapittelNavn, flyttKapittel, flyttKapittelTilBok, flyttOppskriftIKapittel, type Retning } from '@/app/actions/kapittel';
+import { flyttOppskrift } from '@/app/actions/organisering';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { useRecipeId } from '@/hooks/useUuidParams';
@@ -40,6 +41,38 @@ function OppskriftPil({ chapterId, recipe, retning }: { chapterId: string; recip
         {retning === 'opp' ? '↑' : '↓'}
       </button>
     </form>
+  );
+}
+
+// Flytting mellom kapitler bor her, hos kapitlene — ikke i oppskriftens handlingsrad.
+function FlyttTilKapittel({ recipe, gjeldendeKapittelId, kapitler }: { recipe: Recipe; gjeldendeKapittelId: string | null; kapitler: Chapter[] }) {
+  return (
+    <LukkbarDetails className="relative">
+      <summary
+        className="cursor-pointer list-none px-1 py-1 text-xs text-ink/25 hover:text-terra"
+        title={`Flytt ${recipe.title} til et annet kapittel`}
+        aria-label={`Flytt ${recipe.title} til et annet kapittel`}
+      >
+        ⇄
+      </summary>
+
+      <form action={flyttOppskrift.bind(null, recipe.id)} className="absolute right-0 z-10 mt-1 flex w-52 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
+        <select
+          name="kapittel"
+          defaultValue={gjeldendeKapittelId ? encodeUuidToBase32(gjeldendeKapittelId) : 'ingen'}
+          aria-label={`Kapittel for ${recipe.title}`}
+          className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm"
+        >
+          {kapitler.map((kapittel) => (
+            <option key={kapittel.id} value={encodeUuidToBase32(kapittel.id)}>{kapittel.name}</option>
+          ))}
+          <option value="ingen">Ukategorisert</option>
+        </select>
+        <button type="submit" className="self-start rounded-full bg-terra px-3 py-1 text-sm font-medium text-paper hover:bg-terra-deep">
+          Flytt
+        </button>
+      </form>
+    </LukkbarDetails>
   );
 }
 
@@ -96,6 +129,7 @@ function KapittelStell({ chapter, andreBøker }: { chapter: Chapter; andreBøker
 
 interface ChapterComponentProps {
   chapter: Chapter;
+  alleKapitler: Chapter[];
   cookbookId: string;
   currentRecipeId?: string;
   erEier: boolean;
@@ -104,7 +138,7 @@ interface ChapterComponentProps {
 
 // Kapitlene står lukket når boken åpnes — bare kapittelet til oppskriften man leser slår seg
 // opp av seg selv. (Åpen/lukket ble før husket i databasen; Maren ville ha en lukket bok.)
-function Chapter({ chapter, cookbookId, currentRecipeId, erEier, andreBøker }: ChapterComponentProps) {
+function Chapter({ chapter, alleKapitler, cookbookId, currentRecipeId, erEier, andreBøker }: ChapterComponentProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const isActiveChapter = chapter.recipes.some(recipe => recipe.id === currentRecipeId);
@@ -144,9 +178,10 @@ function Chapter({ chapter, cookbookId, currentRecipeId, erEier, andreBøker }: 
                 </Link>
 
                 {erEier && (
-                  <span className="flex shrink-0">
+                  <span className="flex shrink-0 items-center">
                     <OppskriftPil chapterId={chapter.id} recipe={recipe} retning="opp" />
                     <OppskriftPil chapterId={chapter.id} recipe={recipe} retning="ned" />
+                    <FlyttTilKapittel recipe={recipe} gjeldendeKapittelId={chapter.id} kapitler={alleKapitler} />
                   </span>
                 )}
               </li>
@@ -175,6 +210,7 @@ export function ChapterList({ cookbookId, chapters, ukategorisert, erEier, andre
         <Chapter
           key={chapter.id}
           chapter={chapter}
+          alleKapitler={chapters}
           cookbookId={cookbookId}
           currentRecipeId={currentRecipeId}
           erEier={erEier}
@@ -188,10 +224,10 @@ export function ChapterList({ cookbookId, chapters, ukategorisert, erEier, andre
 
           <ul className="pb-3 pt-1">
             {ukategorisert.map((recipe) => (
-              <li key={recipe.id}>
+              <li key={recipe.id} className="flex items-center">
                 <Link prefetch={true}
                   href={uuidHref`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
-                  className={`block border-l-2 py-1.5 pl-3 text-sm leading-snug transition-colors ${
+                  className={`block flex-1 border-l-2 py-1.5 pl-3 text-sm leading-snug transition-colors ${
                     currentRecipeId === recipe.id
                       ? 'border-terra font-medium text-terra'
                       : 'border-transparent text-ink hover:border-line hover:text-terra'
@@ -199,6 +235,10 @@ export function ChapterList({ cookbookId, chapters, ukategorisert, erEier, andre
                 >
                   {recipe.title}
                 </Link>
+
+                {erEier && chapters.length > 0 && (
+                  <FlyttTilKapittel recipe={recipe} gjeldendeKapittelId={null} kapitler={chapters} />
+                )}
               </li>
             ))}
           </ul>

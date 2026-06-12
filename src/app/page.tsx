@@ -166,6 +166,22 @@ export default async function Home() {
               </div>
             )}
 
+            {/* oppslagsverket — ikke en kokebok, men den står på samme hylle */}
+            <div className="relative shrink-0 -ml-8 pb-4 first:ml-0 md:ml-0">
+              <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
+              <Link prefetch={true}
+                href="/oppslag"
+                className="bokstoff group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 bg-natt p-4 text-paper shadow-bok transition-transform hover:-translate-y-2"
+              >
+                <span className="mt-5 block overflow-hidden break-words [hyphens:auto] bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
+                  Oppslagsboka
+                </span>
+                <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">
+                  Kokekompis
+                </span>
+              </Link>
+            </div>
+
             {userId && (
               <div className="relative shrink-0 -ml-8 pb-4 first:ml-0 md:ml-0">
                 <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />

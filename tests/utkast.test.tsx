@@ -69,7 +69,7 @@ describe("utkast (eksperimentkopier) og marg-kommentarer", () => {
     await lagUtkastOgFinnId(oppskrift.id);
 
     render(await CookbookLayout({ recipe: null, params: Promise.resolve({ id: encodeUuidToBase32(bok.id) }) }));
-    expect(screen.queryByText("Ukategorisert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Ukategorisert" })).not.toBeInTheDocument();
 
     cleanup();
     render(await RecipePage(sideProps(bok.id, oppskrift.id)));

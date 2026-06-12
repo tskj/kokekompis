@@ -120,7 +120,8 @@ describe("bokens forside og lukkede kapitler", () => {
 
     render(await CookbookLayout({ recipe: null, params: Promise.resolve({ id: encodeUuidToBase32(bok.id) }) }));
 
-    const kapittel = screen.getByText("Gjærbakst").closest("details");
+    const summary = screen.getAllByText("Gjærbakst").find((el) => el.tagName === "SUMMARY");
+    const kapittel = summary?.closest("details");
     expect(kapittel).not.toBeNull();
     expect(kapittel).not.toHaveAttribute("open");
   });

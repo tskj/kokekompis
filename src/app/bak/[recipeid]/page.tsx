@@ -100,7 +100,7 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
 
     const notater = userId
       ? await tx
-          .select({ id: recipeNotes.id, tekst: recipeNotes.tekst, farge: recipeNotes.farge })
+          .select({ id: recipeNotes.id, tekst: recipeNotes.tekst, farge: recipeNotes.farge, plass: recipeNotes.plass })
           .from(recipeNotes)
           .where(and(eq(recipeNotes.recipeId, recipeId), eq(recipeNotes.userId, userId)))
           .orderBy(asc(recipeNotes.createdAt))

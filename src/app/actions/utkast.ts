@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { recipes } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
+import { parseUuidParam } from '@/lib/uuid/uuid-base32';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { log, Attr } from '@/lib/log';
 
@@ -51,6 +52,15 @@ export async function lagUtkast(recipeId: string, formData: FormData) {
   log.info(recipeId, Attr.RECIPE_DRAFTED, utkast.id);
   revalidatePath('/', 'layout');
   redirect(uuidHref`/kokebok/${utkast.cookbookId}/oppskrift/${utkast.id}`);
+}
+
+// Fra "Ny oppskrift"-siden: velg en av bokens oppskrifter i en nedtrekksliste og få et utkast
+// av den — samme dans som lagUtkast, bare med oppskriften fra skjemaet.
+export async function lagUtkastFraSkjema(formData: FormData) {
+  const recipeId = parseUuidParam(String(formData.get('oppskrift') ?? ''));
+  if (!recipeId) return;
+
+  return lagUtkast(recipeId, formData);
 }
 
 // Ta utkastet i bruk: skriv tittel, beskrivelse og innhold over originalen, og rydd utkastet

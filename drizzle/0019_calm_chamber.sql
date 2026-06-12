@@ -1,0 +1,1 @@
+ALTER TABLE "recipe_notes" ADD COLUMN "plass" text DEFAULT 'nede' NOT NULL;

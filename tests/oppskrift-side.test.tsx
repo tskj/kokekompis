@@ -18,6 +18,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import RecipePage from "@/app/kokebok/[id]/@recipe/oppskrift/[recipeid]/page";
+import { flyttOppskrift } from "@/app/actions/organisering";
 
 function sideProps(bokId: string, oppskriftId: string, søk: Record<string, string> = {}) {
   return {
@@ -140,47 +141,46 @@ describe("oppskriftssiden (ekte side rendret mot ekte database)", () => {
       .returning()
       .single("test.desserter");
 
-    render(await RecipePage(sideProps(bok.id, oppskrift.id)));
-    const bruker = userEvent.setup();
+    // flyttingen bor hos kapitlene i innholdslista — actionen er den samme
+    const skjema = new FormData();
+    skjema.set("kapittel", encodeUuidToBase32(desserter.id));
+    await flyttOppskrift(oppskrift.id, skjema);
 
-    await bruker.selectOptions(screen.getByLabelText("Kapittel"), "Desserter");
-    await bruker.click(screen.getByRole("button", { name: "Flytt" }));
-
-    await waitFor(async () => {
-      const rader = await db.select().from(recipeChapters).where(eq(recipeChapters.recipeId, oppskrift.id));
-      expect(rader).toHaveLength(1);
-      expect(rader[0].chapterId).toBe(desserter.id);
-    });
+    let rader = await db.select().from(recipeChapters).where(eq(recipeChapters.recipeId, oppskrift.id));
+    expect(rader).toHaveLength(1);
+    expect(rader[0].chapterId).toBe(desserter.id);
 
     // og så helt ut av kapitlene
-    cleanup();
-    render(await RecipePage(sideProps(bok.id, oppskrift.id)));
-    await bruker.selectOptions(screen.getByLabelText("Kapittel"), "Ukategorisert");
-    await bruker.click(screen.getByRole("button", { name: "Flytt" }));
+    skjema.set("kapittel", "ingen");
+    await flyttOppskrift(oppskrift.id, skjema);
 
-    await waitFor(async () => {
-      const rader = await db.select().from(recipeChapters).where(eq(recipeChapters.recipeId, oppskrift.id));
-      expect(rader).toHaveLength(0);
-    });
+    rader = await db.select().from(recipeChapters).where(eq(recipeChapters.recipeId, oppskrift.id));
+    expect(rader).toHaveLength(0);
 
     // ukategorisert er fortsatt fullt tilgjengelig på sin side i boken
-    cleanup();
     render(await RecipePage(sideProps(bok.id, oppskrift.id)));
     expect(screen.getByRole("heading", { name: "Testboller" })).toBeInTheDocument();
 
     void kapittel;
   });
 
-  it("lappene strøs i margen på brede skjermer — og ligger på tavla på små", async () => {
+  it("en lapp festet oppe vises i høyrestolpen — en på tavla bare der", async () => {
     const { user, bok, oppskrift } = await makeKokebok();
     hoisted.userId = user.id;
 
-    await db.insert(recipeNotes).values({ recipeId: oppskrift.id, userId: user.id, tekst: "husk jordbær til pynt", farge: "rav" });
+    await db.insert(recipeNotes).values([
+      { recipeId: oppskrift.id, userId: user.id, tekst: "husk jordbær til pynt", farge: "rav", plass: "oppe" },
+      { recipeId: oppskrift.id, userId: user.id, tekst: "denne var ikke god!", farge: "sand", plass: "nede" },
+    ]);
 
     render(await RecipePage(sideProps(bok.id, oppskrift.id)));
 
-    // samme lapp rendres to steder — margen (md+) og tavla (under md); CSS viser én av gangen
+    // oppe-lappen rendres to steder — høyrestolpen (md+) og tavla (under md); CSS viser én
     expect(screen.getAllByText("husk jordbær til pynt")).toHaveLength(2);
+    // nede-lappen bor bare på tavla
+    expect(screen.getAllByText("denne var ikke god!")).toHaveLength(1);
+    // og kan festes oppe med pilknappen
+    expect(screen.getAllByRole("button", { name: "Fest lappen oppe på sida" }).length).toBeGreaterThan(0);
   });
 
   it("?handleliste=1 bretter ut en avkryssbar handleliste — ellers bare lenken", async () => {

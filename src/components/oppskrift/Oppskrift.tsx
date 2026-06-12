@@ -56,11 +56,11 @@ export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, 
   };
 
   return (
-    <article className="oppskrift-tekst relative max-w-4xl">
-      {/* margskriften: stabelen flyter selv, og de plasserte skriftene ligger fritt over flaten */}
+    <article className={`oppskrift-tekst relative max-w-4xl ${marg ? 'md:pr-52' : ''}`}>
+      {/* høyrestolpen (margskrift + lapper festet oppe) er absolutt — artikkelen reserverer
+          plassen med padding, så stolpen aldri dytter på innholdet */}
       {marg}
 
-      {/* lapper i margen: flyter ved tittelen, og resten av sida legger seg rundt dem */}
       {notaterStrødd && <div className="float-right ml-8 mb-6 skjul-ved-print">{notaterStrødd}</div>}
 
       <header className="mb-6">

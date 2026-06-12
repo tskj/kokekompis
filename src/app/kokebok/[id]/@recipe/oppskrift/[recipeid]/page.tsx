@@ -10,7 +10,7 @@ import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { Oppskrift, lesGanger } from '@/components/oppskrift/Oppskrift';
-import { NotatTavle, StrøddeNotater } from '@/components/oppskrift/NotatTavle';
+import { NotatTavle, StrøddeNotater, MAKS_LAPPER_OPPE } from '@/components/oppskrift/NotatTavle';
 import { RettBilder } from '@/components/oppskrift/RettBilder';
 import { Relasjoner } from '@/app/kokebok/[id]/components/Relasjoner';
 import { bildeUrl } from '@/lib/lagring';
@@ -18,9 +18,8 @@ import { PrintKnapp } from '@/components/PrintKnapp';
 import { LukkbarDetails } from '@/components/LukkbarDetails';
 import { delOppskrift } from '@/app/actions/deling';
 import { toggleFavoritt } from '@/app/actions/favoritter';
-import { flyttOppskrift } from '@/app/actions/organisering';
 import { leggTilIPlan, fjernFraPlan } from '@/app/actions/planer';
-import { lagUtkast, taIBrukUtkast, forkastUtkast } from '@/app/actions/utkast';
+import { taIBrukUtkast, forkastUtkast } from '@/app/actions/utkast';
 import { Handleliste } from '@/components/oppskrift/Handleliste';
 import { StegKommentarer } from '@/components/oppskrift/StegKommentarer';
 import { MargSkrift } from '@/components/oppskrift/MargSkrift';
@@ -90,7 +89,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
 
     const notater = userId
       ? await tx
-          .select({ id: recipeNotes.id, tekst: recipeNotes.tekst, farge: recipeNotes.farge })
+          .select({ id: recipeNotes.id, tekst: recipeNotes.tekst, farge: recipeNotes.farge, plass: recipeNotes.plass })
           .from(recipeNotes)
           .where(and(eq(recipeNotes.recipeId, recipeId), eq(recipeNotes.userId, userId)))
           .orderBy(asc(recipeNotes.createdAt))
@@ -184,8 +183,10 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   const stiBase = uuidHref`/kokebok/${cookbookId}/oppskrift/${recipeId}`;
   const tilbakeSti = tilbake && tilbake.startsWith('/') ? tilbake : null;
 
-  // de første lappene strøs i margen ved tittelen på brede skjermer — resten samles på tavla
-  const antallStrødd = Math.min(side.notater.length, 3);
+  // lapper merket "oppe" festes på høyresiden (maks fire for estetikken) — resten på tavla.
+  // Tavla viser alle, og skjuler oppe-lappene kun på md+ (samme lapp vises én gang per bredde).
+  const oppeLapper = side.notater.filter((notat) => notat.plass === 'oppe').slice(0, MAKS_LAPPER_OPPE);
+  const tavleNotater = [...oppeLapper, ...side.notater.filter((notat) => !oppeLapper.includes(notat))];
 
   // handlelisten er URL-state som alt annet: ?handleliste=1 bretter den ut, lenken bevarer valgene
   const visHandleliste = handlelisteParam === '1';
@@ -287,6 +288,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               Sett i gang — bakeview →
             </Link>
 
+            {/* hjertet fargelegges når den er favoritt — bare et ikon, raden skal være rolig */}
             {userId && !erUtkast && (
               <form action={toggleFavoritt.bind(null, recipeId)}>
                 <button
@@ -294,9 +296,9 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                   aria-pressed={side.erFavoritt}
                   aria-label={side.erFavoritt ? 'Fjern fra favoritter' : 'Merk som favoritt'}
                   title={side.erFavoritt ? 'Fjern fra favoritter' : 'Merk som favoritt'}
-                  className={`rounded-full border px-4 py-2 text-sm ${side.erFavoritt ? 'border-terra text-terra' : 'border-line hover:border-terra hover:text-terra'}`}
+                  className={`flex size-9 items-center justify-center rounded-full border text-lg leading-none ${side.erFavoritt ? 'border-terra bg-terra/10 text-terra' : 'border-line text-ink-soft hover:border-terra hover:text-terra'}`}
                 >
-                  {side.erFavoritt ? '♥ Favoritt' : '♡ Favoritt'}
+                  {side.erFavoritt ? '♥' : '♡'}
                 </button>
               </form>
             )}
@@ -318,39 +320,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               </Link>
             )}
 
-            {side.erEier && !erUtkast && (
-              <form action={lagUtkast.bind(null, recipeId)}>
-                <button
-                  type="submit"
-                  title="En kopi å eksperimentere i — originalen står urørt"
-                  className="rounded-full border border-dashed border-line px-4 py-2 text-sm hover:border-terra hover:text-terra"
-                >
-                  Lag et utkast
-                </button>
-              </form>
-            )}
-
             <PrintKnapp />
-
-            {side.erEier && !erUtkast && (
-              <LukkbarDetails className="relative">
-                <summary className="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
-                  Flytt …
-                </summary>
-
-                <form action={flyttOppskrift.bind(null, recipeId)} className="absolute z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
-                  <select name="kapittel" defaultValue={side.kapittelId ? encodeUuidToBase32(side.kapittelId) : 'ingen'} aria-label="Kapittel" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
-                    {side.kapitlerIBoken.map((kapittel) => (
-                      <option key={kapittel.id} value={encodeUuidToBase32(kapittel.id)}>{kapittel.name}</option>
-                    ))}
-                    <option value="ingen">Ukategorisert</option>
-                  </select>
-                  <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
-                    Flytt
-                  </button>
-                </form>
-              </LukkbarDetails>
-            )}
 
             {userId && !erUtkast && (valgbarePlaner.length > 0 || side.minePlaner.length === 0) && (
               <LukkbarDetails className="relative">
@@ -436,9 +406,14 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             </Link>
           )
         }
-        marg={userId ? <MargSkrift recipeId={recipeId} marginalia={side.marginalia} /> : null}
-        notater={userId ? <NotatTavle recipeId={recipeId} notater={side.notater} antallStrødd={antallStrødd} /> : null}
-        notaterStrødd={userId && antallStrødd > 0 ? <StrøddeNotater notater={side.notater.slice(0, antallStrødd)} /> : null}
+        marg={userId ? (
+          <MargSkrift
+            recipeId={recipeId}
+            marginalia={side.marginalia}
+            hale={oppeLapper.length > 0 ? <StrøddeNotater notater={oppeLapper} /> : null}
+          />
+        ) : null}
+        notater={userId ? <NotatTavle recipeId={recipeId} notater={tavleNotater} antallStrødd={oppeLapper.length} /> : null}
       />
     </>
   );

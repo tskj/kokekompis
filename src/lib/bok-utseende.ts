@@ -74,19 +74,23 @@ export function lesBåndValg(verdi: string): BåndValg | null {
 }
 
 // Skissene på bokens forside — tegningene bor i src/components/skisser.tsx. To familier:
-// akvarellene og de første blyantskissene — begge er gyldige valg.
-export const skisseNavn = ['croissant', 'jordbaer', 'kaffe', 'blotkake', 'bolle', 'kake', 'gryte', 'kanne'] as const;
+// akvarellene og blyantskissene — med jul og middag/salat i begge.
+export const skisseNavn = ['croissant', 'jordbaer', 'kaffe', 'blotkake', 'kakao', 'salat', 'bolle', 'kake', 'gryte', 'kanne', 'pepperkake', 'middag'] as const;
 export type SkisseNavn = (typeof skisseNavn)[number];
 
 export const SKISSE_ETIKETTER: Record<SkisseNavn, string> = {
-  croissant: 'croissant (akvarell)',
-  jordbaer:  'jordbær (akvarell)',
-  kaffe:     'kaffe (akvarell)',
-  blotkake:  'bløtkake (akvarell)',
-  bolle:     'bolle (blyant)',
-  kake:      'kake (blyant)',
-  gryte:     'gryte (blyant)',
-  kanne:     'kanne (blyant)',
+  croissant:  'croissant (akvarell)',
+  jordbaer:   'jordbær (akvarell)',
+  kaffe:      'kaffe (akvarell)',
+  blotkake:   'bløtkake (akvarell)',
+  kakao:      'kakao med krem (akvarell, jul)',
+  salat:      'salatbolle (akvarell)',
+  bolle:      'bolle (blyant)',
+  kake:       'kake (blyant)',
+  gryte:      'gryte (blyant)',
+  kanne:      'kanne (blyant)',
+  pepperkake: 'pepperkake (blyant, jul)',
+  middag:     'middag (blyant)',
 };
 
 export function lesSkisse(verdi: string): SkisseNavn | null {

@@ -94,7 +94,7 @@ function MargSkjema({ recipeId }: { recipeId: string }) {
 // rundt på oppskriftsflaten — rett ved steget den gjelder, eller ringen rundt akkurat det
 // ordet; uten plassering står den i margen øverst til høyre. På små skjermer er alt en enkel
 // stabel (ingen plassering med tommel på smal skjerm).
-export function MargSkrift({ recipeId, marginalia }: { recipeId: string; marginalia: Marginal[] }) {
+export function MargSkrift({ recipeId, marginalia, hale }: { recipeId: string; marginalia: Marginal[]; hale?: React.ReactNode }) {
   const [, startTransition] = useTransition();
   const flateRef = useRef<HTMLDivElement>(null);
 
@@ -156,8 +156,10 @@ export function MargSkrift({ recipeId, marginalia }: { recipeId: string; margina
 
   return (
     <>
-      {/* margen (md+): det uplasserte + skjemaet, flytende ved tittelen */}
-      <div className="float-right mb-6 ml-8 hidden w-44 flex-col gap-5 md:flex skjul-ved-print">
+      {/* høyrestolpen (md+): festet til høyresiden av oppskriften — flyter ALDRI inn i
+          innholdet (artikkelen reserverer plassen med padding), så mange lapper ikke kluss
+          til layouten. Margstabel + skjema øverst, så halen (lappene festet oppe). */}
+      <div className="absolute right-0 top-0 hidden w-44 flex-col gap-5 md:flex skjul-ved-print">
         {iMargen.map((marginal, index) => (
           <div key={marginal.id} className={`${ROTASJONER[index % ROTASJONER.length]} relative cursor-grab touch-none select-none pr-6 active:cursor-grabbing`}
             onPointerDown={(e) => {
@@ -171,6 +173,8 @@ export function MargSkrift({ recipeId, marginalia }: { recipeId: string; margina
         ))}
 
         <MargSkjema recipeId={recipeId} />
+
+        {hale}
       </div>
 
       {/* små skjermer: alt som en enkel stabel */}

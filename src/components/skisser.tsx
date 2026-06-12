@@ -91,6 +91,44 @@ const TEGNINGER: Record<SkisseNavn, React.ReactNode> = {
     </>
   ),
 
+  // julekakaoen: vinrødt krus, kremtopp som bølger over kanten, marshmallows og damp
+  kakao: (
+    <>
+      <ellipse cx="60" cy="72" rx="42" ry="24" fill="#b98c5a" opacity="0.20" transform="translate(2 6)" />
+      <ellipse cx="58" cy="94" rx="30" ry="6" fill="#b98c5a" opacity="0.30" />
+
+      <path d="M34 52 C34 78 42 92 58 92 C74 92 82 78 82 52 z" fill="#9e3b3b" opacity="0.65" />
+      <path d="M36 58 C37 76 44 88 58 88 C63 88 68 86 71 82 C62 88 47 85 42 72 z" fill="#6f2727" opacity="0.40" />
+      <path d="M82 56 C93 54 96 66 85 71" fill="none" stroke="#9e3b3b" strokeWidth="4.5" strokeLinecap="round" opacity="0.60" />
+
+      <path d="M32 52 c2 -9 10 -13 16 -8 c2 -9 13 -11 17 -3 c9 -6 17 1 15 9 l2 2 z" fill="#fdf8ec" opacity="0.92" />
+      <rect x="44" y="40" width="9" height="6.5" rx="1.5" fill="#f2c8c2" opacity="0.9" transform="rotate(-8 48 43)" />
+      <rect x="61" y="38" width="9" height="6.5" rx="1.5" fill="#f2c8c2" opacity="0.9" transform="rotate(12 65 41)" />
+
+      <path d="M50 30 C47 24 53 20 51 12" fill="none" stroke="#b98c5a" strokeWidth="4.5" strokeLinecap="round" opacity="0.30" />
+      <path d="M66 28 C63 22 69 18 67 10" fill="none" stroke="#b98c5a" strokeWidth="4.5" strokeLinecap="round" opacity="0.25" />
+    </>
+  ),
+
+  // salatbollen: blader som bobler over kanten, tomater og en rødløkring
+  salat: (
+    <>
+      <ellipse cx="60" cy="74" rx="44" ry="22" fill="#9aa67e" opacity="0.22" transform="translate(-2 6)" />
+
+      <path d="M24 62 C24 82 38 94 60 94 C82 94 96 82 96 62 z" fill="#d8c8a4" opacity="0.65" />
+      <path d="M28 66 C30 80 42 90 60 90 C66 90 71 89 76 86 C63 90 41 86 33 70 z" fill="#a98f5f" opacity="0.35" />
+
+      <ellipse cx="42" cy="56" rx="13" ry="9"  fill="#76814e" opacity="0.55" transform="rotate(-18 42 56)" />
+      <ellipse cx="62" cy="50" rx="14" ry="10" fill="#8a9a5b" opacity="0.55" transform="rotate(8 62 50)" />
+      <ellipse cx="80" cy="57" rx="12" ry="8"  fill="#76814e" opacity="0.50" transform="rotate(20 80 57)" />
+      <ellipse cx="52" cy="45" rx="9"  ry="6"  fill="#a4b072" opacity="0.60" transform="rotate(-12 52 45)" />
+
+      <circle cx="71" cy="43" r="5" fill="#c23b2e" opacity="0.75" />
+      <circle cx="39" cy="47" r="4" fill="#c23b2e" opacity="0.65" />
+      <ellipse cx="57" cy="58" rx="7" ry="4.5" fill="none" stroke="#9e5a7a" strokeWidth="2" opacity="0.60" />
+    </>
+  ),
+
   // — blyantskissene fra første runde —
 
   bolle: (
@@ -136,6 +174,35 @@ const TEGNINGER: Record<SkisseNavn, React.ReactNode> = {
       <path d="M55 34 a4 3 0 0 1 7 0" />
       <path d="M52 24 q4 -7 0 -13" stroke="#b04e28" />
       <path d="M66 24 q4 -7 0 -13" stroke="#b04e28" />
+    </Blyant>
+  ),
+
+  // pepperkakemannen: melisøyne, glasur-sikksakk på armene og terrakotta-knapper
+  pepperkake: (
+    <Blyant>
+      <circle cx="60" cy="30" r="12" />
+      <path d="M52 40 l-17 10 q-5 4 -1 8 q4 4 9 0 l11 -7 l-2 19 l-8 14 q-2 5 3 6 q5 1 7 -4 l6 -10 6 10 q2 5 7 4 q5 -1 3 -6 l-8 -14 l-2 -19 l11 7 q5 4 9 0 q4 -4 -1 -8 l-17 -10 z" />
+      <circle cx="55.5" cy="28" r="1.5" fill="#74634c" stroke="none" />
+      <circle cx="64.5" cy="28" r="1.5" fill="#74634c" stroke="none" />
+      <path d="M55 34 q5 4 10 0" />
+      <circle cx="60" cy="54" r="1.6" fill="#b04e28" stroke="none" />
+      <circle cx="60" cy="62" r="1.6" fill="#b04e28" stroke="none" />
+      <path d="M42 50 l3 -3 3 3" stroke="#b04e28" />
+      <path d="M72 50 l3 -3 3 3" stroke="#b04e28" />
+    </Blyant>
+  ),
+
+  // middagen: dampende tallerken med gaffel og kniv
+  middag: (
+    <Blyant>
+      <ellipse cx="60" cy="72" rx="32" ry="11" />
+      <ellipse cx="60" cy="70" rx="21" ry="6.5" />
+      <path d="M53 56 q4 -7 0 -13" stroke="#b04e28" />
+      <path d="M66 54 q4 -7 0 -13" stroke="#b04e28" />
+      <path d="M17 52 v36" />
+      <path d="M13 52 v10 M21 52 v10" />
+      <path d="M103 52 v36" />
+      <path d="M103 52 c-6 3 -6 13 0 15" />
     </Blyant>
   ),
 };

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { cookbook, recipes, recipeNotes, notatFarger } from '@/lib/db/schema';
+import { cookbook, recipes, recipeNotes, notatFarger, notatPlasser } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { kanSeBok } from '@/lib/bok-tilgang';
@@ -16,13 +16,14 @@ import { log, Attr } from '@/lib/log';
 const notatSchema = z.object({
   tekst: z.string().trim().min(1).max(500),
   farge: z.enum(notatFarger).catch('terrakotta'),
+  plass: z.enum(notatPlasser).catch('nede'),
 });
 
 export async function leggTilNotat(recipeId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) return;
 
-  const parsed = notatSchema.safeParse({ tekst: formData.get('tekst'), farge: formData.get('farge') });
+  const parsed = notatSchema.safeParse({ tekst: formData.get('tekst'), farge: formData.get('farge'), plass: formData.get('plass') });
   if (!parsed.success) return;
 
   const lagtTil = await withTransaction({ name: 'notat.legg-til' }, async (tx) => {
@@ -40,6 +41,7 @@ export async function leggTilNotat(recipeId: string, formData: FormData) {
       userId,
       tekst: parsed.data.tekst,
       farge: parsed.data.farge,
+      plass: parsed.data.plass,
     });
 
     return true;
@@ -47,6 +49,30 @@ export async function leggTilNotat(recipeId: string, formData: FormData) {
   if (!lagtTil) return;
 
   log.info(recipeId, Attr.RECIPE_NOTE_ADDED, { farge: parsed.data.farge });
+  revalidatePath('/', 'layout');
+}
+
+// Flytt lappen mellom oppe (festet på høyresiden) og nede (tavla nederst).
+export async function settNotatPlass(notatId: string, formData: FormData) {
+  void formData;
+
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  await withTransaction({ name: 'notat.plass' }, async (tx) => {
+    const notat = await tx
+      .select({ plass: recipeNotes.plass })
+      .from(recipeNotes)
+      .where(and(eq(recipeNotes.id, notatId), eq(recipeNotes.userId, userId)))
+      .maybeSingle('notat.plass');
+    if (!notat) return;
+
+    await tx
+      .update(recipeNotes)
+      .set({ plass: notat.plass === 'oppe' ? 'nede' : 'oppe' })
+      .where(eq(recipeNotes.id, notatId));
+  });
+
   revalidatePath('/', 'layout');
 }
 
