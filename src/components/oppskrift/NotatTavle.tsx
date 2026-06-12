@@ -1,5 +1,6 @@
 import type { NotatFarge } from '@/lib/db/schema';
 import { leggTilNotat, slettNotat } from '@/app/actions/notater';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 export type Notat = { id: string; tekst: string; farge: NotatFarge };
 
@@ -73,7 +74,7 @@ export function NotatTavle({ recipeId, notater, antallStrødd = 0 }: { recipeId:
           </div>
         ))}
 
-        <details className="group w-44">
+        <LukkbarDetails className="group w-44">
           <summary className="flex min-h-36 cursor-pointer list-none flex-col items-center justify-center gap-1 border-2 border-dashed border-line text-ink-soft hover:border-terra hover:text-terra group-open:hidden">
             <span className="text-3xl leading-none">+</span>
             <span className="font-skrift text-xl">ny lapp</span>
@@ -111,7 +112,7 @@ export function NotatTavle({ recipeId, notater, antallStrødd = 0 }: { recipeId:
               </div>
             </div>
           </form>
-        </details>
+        </LukkbarDetails>
       </div>
     </section>
   );

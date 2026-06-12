@@ -16,6 +16,7 @@ import { Handleliste } from '@/components/oppskrift/Handleliste';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { PrintKnapp } from '@/components/PrintKnapp';
 import { arkiverPlan, gjenåpnePlan, evaluerPlan, fjernFraPlan, settPlanGanger, lastOppPlanBilde, slettPlanBilde } from '@/app/actions/planer';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 interface PlanSideProps {
   params: Promise<{ id: string }>;
@@ -193,7 +194,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
             </div>
           )}
 
-          <details className="mt-3 text-sm text-ink-soft skjul-ved-print">
+          <LukkbarDetails className="mt-3 text-sm text-ink-soft skjul-ved-print">
             <summary className="cursor-pointer list-none underline underline-offset-2 hover:text-terra">✎ rett på etterordet</summary>
             <form action={evaluerPlan.bind(null, planId)} className="mt-2 flex max-w-xl flex-col gap-2">
               <input
@@ -217,7 +218,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
                 Lagre
               </button>
             </form>
-          </details>
+          </LukkbarDetails>
         </section>
       )}
 

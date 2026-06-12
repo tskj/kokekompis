@@ -6,9 +6,9 @@ import { cookbook } from "@/lib/db/schema";
 import { encodeUuidToBase32 } from "@/lib/uuid/uuid-base32";
 import { makeKokebok, resetDb } from "./db";
 import "./rtl";
-import { render, screen } from "./rtl";
+import { fireEvent, render, screen } from "./rtl";
 
-const hoisted = vi.hoisted(() => ({ userId: "" }));
+const hoisted = vi.hoisted(() => ({ userId: "", push: vi.fn() }));
 vi.mock("@/auth", () => ({ auth: vi.fn(async () => (hoisted.userId ? { user: { id: hoisted.userId } } : null)) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -16,6 +16,7 @@ vi.mock("next/navigation", () => ({
   notFound:  vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }),
   useParams: vi.fn(() => ({})),
   usePathname: vi.fn(() => "/"),
+  useRouter: vi.fn(() => ({ push: hoisted.push, prefetch: vi.fn(), back: vi.fn() })),
 }));
 
 import { settBokForside } from "@/app/actions/bok";
@@ -51,11 +52,14 @@ describe("bokens forside og lukkede kapitler", () => {
     expect(screen.queryByText("Slå opp i boken")).not.toBeInTheDocument();
   });
 
-  it("gamle blyantskisser i databasen leses som sin nærmeste akvarell", async () => {
+  it("blyantskissene fra første runde er fortsatt gyldige valg", async () => {
     const { user, bok } = await makeKokebok();
     hoisted.userId = user.id;
 
-    await db.update(cookbook).set({ skisse: "bolle" }).where(eq(cookbook.id, bok.id));
+    const skjema = new FormData();
+    skjema.set("skisse", "bolle");
+    await settBokForside(bok.id, skjema);
+    expect((await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.blyant")).skisse).toBe("bolle");
 
     const { container } = render(await DefaultRecipe(forsideProps(bok.id)));
     expect(container.querySelector("svg")).not.toBeNull();
@@ -87,6 +91,27 @@ describe("bokens forside og lukkede kapitler", () => {
 
     const rad = await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.urørt");
     expect(rad.beskrivelse).toBeNull();
+  });
+
+  it("et sveip over oppslaget blar inn i boken — vertikal scrolling blar ikke", async () => {
+    const { user, bok, oppskrift } = await makeKokebok();
+    hoisted.userId = user.id;
+    hoisted.push.mockClear();
+
+    const { container } = render(await CookbookLayout({ recipe: null, params: Promise.resolve({ id: encodeUuidToBase32(bok.id) }) }));
+    const flate = container.querySelector(".bla-om")!.parentElement!;
+
+    // et tydelig sveip mot venstre: fra forsiden inn på første oppskrift
+    fireEvent.touchStart(flate, { touches: [{ clientX: 300, clientY: 200 }] });
+    fireEvent.touchEnd(flate,  { changedTouches: [{ clientX: 180, clientY: 210 }] });
+    expect(hoisted.push).toHaveBeenCalledTimes(1);
+    expect(hoisted.push.mock.calls[0][0]).toContain(encodeUuidToBase32(oppskrift.id));
+
+    // mest vertikal bevegelse er scrolling, ikke blaing
+    hoisted.push.mockClear();
+    fireEvent.touchStart(flate, { touches: [{ clientX: 300, clientY: 100 }] });
+    fireEvent.touchEnd(flate,  { changedTouches: [{ clientX: 220, clientY: 400 }] });
+    expect(hoisted.push).not.toHaveBeenCalled();
   });
 
   it("kapitlene står lukket når boken åpnes", async () => {

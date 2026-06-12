@@ -1,4 +1,5 @@
 import { leggTilKommentar, slettKommentar } from '@/app/actions/kommentarer';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 export type Kommentar = { id: string; tekst: string };
 
@@ -24,7 +25,7 @@ export function StegKommentarer({ recipeId, stegId, kommentarer }: { recipeId: s
         </div>
       ))}
 
-      <details>
+      <LukkbarDetails>
         <summary className="cursor-pointer list-none text-xs text-ink-soft/80 hover:text-terra">+ kommentar</summary>
         <form action={leggTilKommentar.bind(null, recipeId, stegId)} className="mt-1 flex max-w-md items-center gap-2">
           <input
@@ -39,7 +40,7 @@ export function StegKommentarer({ recipeId, stegId, kommentarer }: { recipeId: s
             Heng på
           </button>
         </form>
-      </details>
+      </LukkbarDetails>
     </div>
   );
 }

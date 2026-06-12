@@ -10,6 +10,7 @@ import { opprettBok, settHylleSortering } from '@/app/actions/bok';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { SorterbarBokhylle } from '@/components/SorterbarBokhylle';
 import Link from 'next/link';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 function SignIn() {
   return (
@@ -87,9 +88,9 @@ export default async function Home() {
 
   return (
     <main className="relative mx-auto max-w-4xl px-6 py-12">
-      {/* dekor i kantene — søl nede til venstre og oppe i høyre hjørne */}
+      {/* dekor i kantene — søl nede til venstre, og én stor delvis utenfor høyre kant */}
       <Kaffeflekk className="absolute bottom-2 -left-32 w-52 rotate-12" />
-      <Kaffeflekk className="absolute -top-14 right-0 w-40 rotate-[150deg]" />
+      <Kaffeflekk className="absolute -top-16 -right-24 w-60 rotate-[150deg]" />
       {/* flex-wrap: på smale skjermer faller hilsen + logg ut ned under tittelen i stedet for å
           presse siden bredere enn telefonen */}
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
@@ -149,21 +150,26 @@ export default async function Home() {
         <SorterbarBokhylle bøker={cookbooks} kanSortere={kanSortere} hale={
           <>
             {harFavoritter && (
-              <Link prefetch={true}
-                href="/favoritter"
-                className="bokstoff group relative flex h-56 w-40 shrink-0 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok transition-transform hover:-translate-y-2 -ml-8 first:ml-0 md:ml-0"
-              >
-                <span className="mt-5 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug shadow-sm">
-                  ♥ Favoritter
-                </span>
-                <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">
-                  Kokekompis
-                </span>
-              </Link>
+              <div className="relative shrink-0 -ml-8 pb-4 first:ml-0 md:ml-0">
+                <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
+                <Link prefetch={true}
+                  href="/favoritter"
+                  className="bokstoff group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok transition-transform hover:-translate-y-2"
+                >
+                  <span className="mt-5 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug shadow-sm">
+                    ♥ Favoritter
+                  </span>
+                  <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">
+                    Kokekompis
+                  </span>
+                </Link>
+              </div>
             )}
 
             {userId && (
-              <details className="group h-64 w-44 shrink-0 -ml-8 first:ml-0 md:ml-0">
+              <div className="relative shrink-0 -ml-8 pb-4 first:ml-0 md:ml-0">
+                <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
+                <LukkbarDetails className="group block h-64 w-44">
                 <summary className="flex h-full cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-r-md rounded-l-sm border-2 border-dashed border-line text-ink-soft hover:border-terra hover:text-terra group-open:hidden">
                   <span className="text-3xl leading-none">+</span>
                   <span className="font-display text-lg">ny bok</span>
@@ -184,7 +190,8 @@ export default async function Home() {
                     Sett på hylla
                   </button>
                 </form>
-              </details>
+                </LukkbarDetails>
+              </div>
             )}
           </>
         } />

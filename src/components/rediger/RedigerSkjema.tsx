@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { RecipeContent, Enhet, Ingrediens, Steg, Opprinnelse } from '@/lib/db/schema';
 import { enheter } from '@/lib/db/schema';
 import { oppdaterOppskrift, slettOppskrift } from '@/app/actions/rediger';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 // Redigeringsskjemaet — den ene skikkelig interaktive flaten i appen (rader som kommer og går
 // trenger klient-state). Tall holdes som strenger i utkastet og tolkes ved lagring, så halvskrevne
@@ -404,7 +405,7 @@ export function RedigerSkjema({ recipeId, tittel: startTittel, beskrivelse: star
           Avbryt
         </Link>
 
-        <details className="ml-auto">
+        <LukkbarDetails className="ml-auto">
           <summary className="cursor-pointer list-none text-sm text-ink-soft underline underline-offset-2 hover:text-terra">
             Slett oppskriften …
           </summary>
@@ -415,7 +416,7 @@ export function RedigerSkjema({ recipeId, tittel: startTittel, beskrivelse: star
           >
             Ja, riv den ut av boken
           </button>
-        </details>
+        </LukkbarDetails>
       </div>
     </div>
   );

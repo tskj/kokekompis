@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { lenkOppskrifter, fjernLenke } from '@/app/actions/lenker';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 export type LenketOppskrift = { linkId: string; recipeId: string; tittel: string };
 export type LenkeKandidat = { id: string; tittel: string };
@@ -52,7 +53,7 @@ export function Relasjoner({ cookbookId, recipeId, stiBase, utgående, innkommen
         ))}
 
         {kanRedigere && kandidater.length > 0 && (
-          <details className="group">
+          <LukkbarDetails className="group">
             <summary className="cursor-pointer list-none rounded-full border-2 border-dashed border-line px-4 py-1 text-sm text-ink-soft hover:border-terra hover:text-terra">
               + lenk til en oppskrift
             </summary>
@@ -67,7 +68,7 @@ export function Relasjoner({ cookbookId, recipeId, stiBase, utgående, innkommen
                 Lenk
               </button>
             </form>
-          </details>
+          </LukkbarDetails>
         )}
       </div>
 

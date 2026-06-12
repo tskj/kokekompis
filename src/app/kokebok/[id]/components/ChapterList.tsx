@@ -6,6 +6,7 @@ import { uuidHref } from '@/lib/uuid/uuid-links';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { useRecipeId } from '@/hooks/useUuidParams';
 import Link from 'next/link';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 interface Recipe {
   id: string;
@@ -57,7 +58,7 @@ function KapittelStell({ chapter, andreBøker }: { chapter: Chapter; andreBøker
         </button>
       </form>
 
-      <details className="relative">
+      <LukkbarDetails className="relative">
         <summary className="cursor-pointer list-none hover:text-terra">✎ endre navn</summary>
         <form action={endreKapittelNavn.bind(null, chapter.id)} className="absolute z-10 mt-1 flex items-center gap-1 rounded-lg border border-line bg-card p-2 shadow-bok">
           <input
@@ -72,10 +73,10 @@ function KapittelStell({ chapter, andreBøker }: { chapter: Chapter; andreBøker
             Lagre
           </button>
         </form>
-      </details>
+      </LukkbarDetails>
 
       {andreBøker.length > 0 && (
-        <details className="relative">
+        <LukkbarDetails className="relative">
           <summary className="cursor-pointer list-none hover:text-terra">flytt til bok …</summary>
           <form action={flyttKapittelTilBok.bind(null, chapter.id)} className="absolute z-10 mt-1 flex items-center gap-1 rounded-lg border border-line bg-card p-2 shadow-bok">
             <select name="bok" required aria-label="Bok å flytte kapittelet til" className="max-w-40 rounded border border-line bg-paper px-2 py-1">
@@ -87,7 +88,7 @@ function KapittelStell({ chapter, andreBøker }: { chapter: Chapter; andreBøker
               Flytt
             </button>
           </form>
-        </details>
+        </LukkbarDetails>
       )}
     </div>
   );

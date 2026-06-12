@@ -16,7 +16,9 @@ import { bildeUrl } from '@/lib/lagring';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { Skisse } from '@/components/skisser';
 import { BlaOm } from '@/components/BlaOm';
+import { BlaMedSvipe } from '@/components/BlaMedSvipe';
 import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBånd, lastOppBokBånd, settBokForside } from '@/app/actions/bok';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 interface CookbookLayoutProps {
   recipe: React.ReactNode;
@@ -132,6 +134,12 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
     await db.update(cookbook).set({ sistÅpnet: nowDate() }).where(eq(cookbook.id, cookbookId));
   }
 
+  // lesefølgen for sveip-blaing: kapitlene i rekkefølge, så de ukategoriserte
+  const leseRekkefølge = [
+    ...cookbookData.chapters.flatMap((kapittel) => kapittel.recipes.map((oppskrift) => oppskrift.id)),
+    ...cookbookData.ukategorisert.map((oppskrift) => oppskrift.id),
+  ].map((id) => ({ id, href: uuidHref`/kokebok/${cookbookId}/oppskrift/${id}` }));
+
   // Bokbåndet — den smale stripen mellom tittel og innhold: et mønster i en bokfarge, eller et
   // opplastet bilde (nøkler starter med bok/). Ukjente verdier viser ingenting fremfor å feile.
   const headerBilde = cookbookData.headerBilde;
@@ -142,10 +150,10 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
 
   return (
     <div className="relative mx-auto max-w-7xl p-6 md:p-10">
-      {/* dekor i kantene — aldri over innholdet: søl nede til venstre og oppe i høyre hjørne */}
+      {/* dekor i kantene — aldri over innholdet: søl nede til venstre, og én stor delvis
+          utenfor høyre kant (body klipper overhenget uten scroll) */}
       <Kaffeflekk className="absolute bottom-0 -left-36 w-52 rotate-6 skjul-ved-print" />
-      <Kaffeflekk className="absolute -top-12 right-0 w-44 rotate-[130deg] skjul-ved-print" />
-      <Kaffeflekk className="absolute top-10 right-8 w-24 -rotate-12 skjul-ved-print" />
+      <Kaffeflekk className="absolute -top-16 -right-24 w-64 rotate-[130deg] skjul-ved-print" />
       <header className="relative mb-8 skjul-ved-print">
         <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
 
@@ -153,7 +161,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
           <h1 className="font-display text-4xl">{cookbookData.name}</h1>
 
           {erEier && (
-            <details className="group">
+            <LukkbarDetails className="group">
               <summary
                 className="cursor-pointer list-none text-sm text-ink-soft opacity-60 hover:text-terra hover:opacity-100 group-open:hidden"
                 title="Endre navn på boken"
@@ -174,7 +182,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                   Døp om
                 </button>
               </form>
-            </details>
+            </LukkbarDetails>
           )}
         </div>
 
@@ -197,7 +205,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
         )}
 
         {erEier && (
-          <details className="mt-2.5 text-xs text-ink-soft md:absolute md:right-0 md:top-1 md:mt-0">
+          <LukkbarDetails lukkVedInnsending={false} className="mt-2.5 text-xs text-ink-soft md:absolute md:right-0 md:top-1 md:mt-0">
             <summary
               className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm hover:border-terra hover:text-terra md:float-right"
               title="Velg farge på ryggen og bånd under tittelen"
@@ -312,7 +320,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                 </button>
               </form>
             </div>
-          </details>
+          </LukkbarDetails>
         )}
 
         {/* dobbeltstrek under tittelfeltet — den gamle kokebokens linjespill */}
@@ -353,7 +361,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
 
             {erEier && (
               <>
-                <details className="mt-4">
+                <LukkbarDetails className="mt-4">
                   <summary className="cursor-pointer list-none py-1 text-sm text-ink-soft hover:text-terra">
                     + nytt kapittel
                   </summary>
@@ -370,7 +378,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                       Lag
                     </button>
                   </form>
-                </details>
+                </LukkbarDetails>
 
                 <Link prefetch={true}
                   href={uuidHref`/kokebok/${cookbookId}/importer`}
@@ -383,9 +391,12 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
           </div>
         </div>
 
-        {/* Oppskriften — bokens høyreside, med bla-om-følelsen ved hvert oppslag */}
+        {/* Oppskriften — bokens høyreside: bla-om-følelse ved hvert oppslag, og sveip på
+            touch blar til neste/forrige oppskrift i lesefølgen */}
         <div className="lg:col-span-3">
-          <BlaOm>{recipe}</BlaOm>
+          <BlaMedSvipe oppskrifter={leseRekkefølge}>
+            <BlaOm>{recipe}</BlaOm>
+          </BlaMedSvipe>
         </div>
       </div>
     </div>

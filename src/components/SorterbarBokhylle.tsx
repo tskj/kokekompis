@@ -87,14 +87,16 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
         </div>
       )}
 
-      {/* bøkene står på en mørk treplanke — flate med årringer øverst, tykk frontkant under */}
-      <div className="flex items-end overflow-x-auto px-3 pt-5 md:flex-wrap md:gap-6 md:overflow-visible">
+      {/* hver bok bærer sin egen bit av treplanken (pb-4 + .hylle-bit) — radene får dermed
+          hver sin hylle uansett hvor flexen bryter */}
+      <div className="flex items-end overflow-x-auto px-3 pt-5 pb-3 md:flex-wrap md:gap-x-6 md:gap-y-8 md:overflow-visible">
       {sorterte.map((bok) => (
         <div
           key={bok.id}
           data-bok-id={bok.id}
-          className={`relative shrink-0 -ml-8 transition-transform first:ml-0 md:ml-0 ${drasId === bok.id ? 'pointer-events-none z-20 scale-105 opacity-80' : ''}`}
+          className={`relative shrink-0 -ml-8 pb-4 transition-transform first:ml-0 md:ml-0 ${drasId === bok.id ? 'pointer-events-none z-20 scale-105 opacity-80' : ''}`}
         >
+          <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
           <Link prefetch={true}
             href={uuidHref`/kokebok/${bok.id}`}
             className={`${bokFargeKlasse(bok.farge, bok.id)} bokstoff relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2`}
@@ -158,9 +160,6 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
 
         {hale}
       </div>
-
-      <div aria-hidden className="trehylle-flate h-3" />
-      <div aria-hidden className="trehylle-kant h-4" />
     </div>
   );
 }

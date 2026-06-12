@@ -16,6 +16,7 @@ vi.mock("next/navigation", () => ({
   notFound:  vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }),
   useParams: vi.fn(() => ({})),
   usePathname: vi.fn(() => "/"),
+  useRouter: vi.fn(() => ({ push: vi.fn(), prefetch: vi.fn(), back: vi.fn() })),
 }));
 
 import { lagUtkast, taIBrukUtkast, forkastUtkast } from "@/app/actions/utkast";

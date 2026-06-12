@@ -8,6 +8,7 @@ import { formaterDag, erTidligereDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { opprettPlan, gjenåpnePlan, slettPlan } from '@/app/actions/planer';
 import { BekreftKnapp } from '@/components/BekreftKnapp';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 // Planene: nesten en kokebok, men for en anledning — 17. mai-frokosten, julebaksten, bursdagen.
 // Kommende planer samler det som skal lages; tidligere arrangementer er hukommelsen — menyen,
@@ -82,7 +83,7 @@ export default async function PlanerSide() {
             </ul>
           )}
 
-          <details className="group max-w-md" open={kommende.length === 0}>
+          <LukkbarDetails className="group max-w-md" startÅpen={kommende.length === 0}>
             <summary className="cursor-pointer list-none border-2 border-dashed border-line px-4 py-3 text-center text-sm text-ink-soft hover:border-terra hover:text-terra group-open:hidden">
               + Ny plan — «17. mai-frokost», «Julebakst»
             </summary>
@@ -99,7 +100,9 @@ export default async function PlanerSide() {
                 />
               </label>
 
-              <div className="flex gap-3">
+              {/* items-end: feltene bunnjusteres så inputene står på linje selv om en
+                  ledetekst skulle brekke */}
+              <div className="flex items-end gap-3">
                 <label className="block flex-1 text-sm">
                   <span className="text-ink-soft">Når? (valgfritt)</span>
                   <input
@@ -109,8 +112,8 @@ export default async function PlanerSide() {
                   />
                 </label>
 
-                <label className="block w-28 text-sm">
-                  <span className="text-ink-soft">For hvor mange?</span>
+                <label className="block w-32 text-sm">
+                  <span className="whitespace-nowrap text-ink-soft">Hvor mange?</span>
                   <input
                     type="number"
                     name="personer"
@@ -136,7 +139,7 @@ export default async function PlanerSide() {
                 Legg planen
               </button>
             </form>
-          </details>
+          </LukkbarDetails>
 
           {tidligere.length > 0 && (
             <section aria-labelledby="tidligere" className="mt-14">

@@ -1,5 +1,6 @@
 import { krusseduller, type Krussedull } from '@/lib/db/schema';
 import { skrivIMargen, slettMarginal } from '@/app/actions/marginalia';
+import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 export type Marginal = { id: string; tekst: string; krussedull: Krussedull | null };
 
@@ -46,7 +47,7 @@ export function MargSkrift({ recipeId, marginalia }: { recipeId: string; margina
         </div>
       ))}
 
-      <details>
+      <LukkbarDetails>
         <summary className="cursor-pointer list-none font-skrift text-lg text-ink-soft hover:text-terra">
           ✎ skriv i margen
         </summary>
@@ -80,7 +81,7 @@ export function MargSkrift({ recipeId, marginalia }: { recipeId: string; margina
             Skriv
           </button>
         </form>
-      </details>
+      </LukkbarDetails>
     </div>
   );
 }
