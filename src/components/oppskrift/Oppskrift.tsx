@@ -54,7 +54,7 @@ export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, 
   };
 
   return (
-    <article className="max-w-4xl">
+    <article className="oppskrift-tekst max-w-4xl">
       {/* lapper i margen: flyter ved tittelen, og resten av sida legger seg rundt dem */}
       {notaterStrødd && <div className="float-right ml-8 mb-6 skjul-ved-print">{notaterStrødd}</div>}
 

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { eq, and, asc, ne, isNull, inArray, notInArray } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeComments, plans, planRecipes, recipeContentSchema } from '@/lib/db/schema';
+import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeComments, recipeMarginalia, plans, planRecipes, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { kanSeBok } from '@/lib/bok-tilgang';
 import { lagHandleliste } from '@/lib/handleliste';
@@ -23,6 +23,7 @@ import { leggTilIPlan, fjernFraPlan } from '@/app/actions/planer';
 import { lagUtkast, taIBrukUtkast, forkastUtkast } from '@/app/actions/utkast';
 import { Handleliste } from '@/components/oppskrift/Handleliste';
 import { StegKommentarer } from '@/components/oppskrift/StegKommentarer';
+import { MargSkrift } from '@/components/oppskrift/MargSkrift';
 
 interface RecipePageProps {
   params: Promise<{ id: string; recipeid: string }>;
@@ -95,6 +96,15 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(recipeNotes.createdAt))
       : [];
 
+    // margskriften — håndskrevne påminnelser i margen, personlige som lappene
+    const marginalia = userId
+      ? await tx
+          .select({ id: recipeMarginalia.id, tekst: recipeMarginalia.tekst, krussedull: recipeMarginalia.krussedull })
+          .from(recipeMarginalia)
+          .where(and(eq(recipeMarginalia.recipeId, recipeId), eq(recipeMarginalia.userId, userId)))
+          .orderBy(asc(recipeMarginalia.createdAt))
+      : [];
+
     // marg-kommentarene — personlige som lappene, hengt på hvert sitt steg
     const kommentarer = userId
       ? await tx
@@ -155,7 +165,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(plans.name))
       : [];
 
-    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner, iPlaner };
+    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, marginalia, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner, iPlaner };
   });
 }
 
@@ -426,8 +436,18 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             </Link>
           )
         }
-        notater={userId ? <NotatTavle recipeId={recipeId} notater={side.notater} antallStrødd={antallStrødd} /> : null}
-        notaterStrødd={userId && antallStrødd > 0 ? <StrøddeNotater notater={side.notater.slice(0, antallStrødd)} /> : null}
+        notater={userId ? (
+          <>
+            <div className="mb-6 md:hidden"><MargSkrift recipeId={recipeId} marginalia={side.marginalia} /></div>
+            <NotatTavle recipeId={recipeId} notater={side.notater} antallStrødd={antallStrødd} />
+          </>
+        ) : null}
+        notaterStrødd={userId ? (
+          <div className="hidden flex-col items-end gap-7 md:flex">
+            <MargSkrift recipeId={recipeId} marginalia={side.marginalia} />
+            {antallStrødd > 0 && <StrøddeNotater notater={side.notater.slice(0, antallStrødd)} />}
+          </div>
+        ) : null}
       />
     </>
   );

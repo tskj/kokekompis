@@ -14,6 +14,7 @@ import { BOK_FARGE_KLASSER, BOK_FARGE_VAR, BÅND_KLASSER, båndMønstre, lesBån
 import { bildeUrl } from '@/lib/lagring';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { Skisse } from '@/components/skisser';
+import { BlaOm } from '@/components/BlaOm';
 import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBånd, lastOppBokBånd, settBokForside } from '@/app/actions/bok';
 
 interface CookbookLayoutProps {
@@ -197,6 +198,9 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
             </summary>
 
             <div className="mt-2 flex max-w-md flex-col gap-4 rounded-lg border border-line bg-card p-3">
+              {/* trykkene lagres i det de skjer — haken og ringen viser hva boken har nå */}
+              <p className="italic">Alt her lagres i det du trykker — ✓ viser valget som gjelder.</p>
+
               <form action={settBokFarge.bind(null, cookbookId)} className="flex flex-wrap items-center gap-2">
                 <span>Farge på ryggen:</span>
                 {bokFarger.map((farge) => (
@@ -207,8 +211,11 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                     value={farge}
                     title={farge}
                     aria-label={`Gi boken fargen ${farge}`}
-                    className={`${BOK_FARGE_KLASSER[farge]} size-6 rounded-full border border-ink/20 ${cookbookData.farge === farge ? 'ring-2 ring-ink/60' : ''}`}
-                  />
+                    aria-pressed={cookbookData.farge === farge}
+                    className={`${BOK_FARGE_KLASSER[farge]} size-7 rounded-full border border-ink/20 text-sm leading-none ${cookbookData.farge === farge ? 'ring-2 ring-offset-1 ring-ink/70' : ''}`}
+                  >
+                    {cookbookData.farge === farge ? '✓' : ''}
+                  </button>
                 ))}
               </form>
 
@@ -224,9 +231,16 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                         value={`${mønster}:${farge}`}
                         title={`${mønster} i ${farge}`}
                         aria-label={`Båndet ${mønster} i ${farge}`}
-                        className={`${BÅND_KLASSER[mønster]} h-8 w-full rounded border ${headerBilde === `${mønster}:${farge}` ? 'border-ink/50 ring-2 ring-ink/60' : 'border-line'}`}
+                        aria-pressed={headerBilde === `${mønster}:${farge}`}
+                        className={`${BÅND_KLASSER[mønster]} relative h-8 w-full rounded border ${headerBilde === `${mønster}:${farge}` ? 'border-ink/60 ring-2 ring-offset-1 ring-ink/70' : 'border-line'}`}
                         style={{ '--baand-farge': BOK_FARGE_VAR[farge] } as React.CSSProperties}
-                      />
+                      >
+                        {headerBilde === `${mønster}:${farge}` && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="rounded-full bg-card px-1 text-sm leading-tight shadow-sm">✓</span>
+                          </span>
+                        )}
+                      </button>
                     )),
                   )}
                 </div>
@@ -355,9 +369,9 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
           </div>
         </div>
 
-        {/* Oppskriften — bokens høyreside */}
+        {/* Oppskriften — bokens høyreside, med bla-om-følelsen ved hvert oppslag */}
         <div className="lg:col-span-3">
-          {recipe}
+          <BlaOm>{recipe}</BlaOm>
         </div>
       </div>
     </div>

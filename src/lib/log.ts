@@ -59,6 +59,7 @@ export const Attr = {
   AUTH_SIGN_IN: ":auth/sign-in", // value: provider name ("google")
 
   // === oppskrifter — asserted on the RECIPE's id, so a recipe's history reads as one timeline ===
+  RECIPE_CREATED:      ":recipe/created",      // value: { tittel } — manuelt opprettet (tom)
   RECIPE_NOTE_ADDED:   ":recipe/note-added",   // value: { farge }
   RECIPE_NOTE_DELETED: ":recipe/note-deleted", // value: note id
   RECIPE_SHARED:       ":recipe/shared",       // value: share id
@@ -72,6 +73,8 @@ export const Attr = {
   RECIPE_DRAFT_DISCARDED: ":recipe/draft-discarded", // value: draft id — asserted on the ORIGINAL
   RECIPE_COMMENT_ADDED:   ":recipe/comment-added",   // value: { stegId }
   RECIPE_COMMENT_DELETED: ":recipe/comment-deleted", // value: comment id
+  RECIPE_MARGINALIA_ADDED:   ":recipe/marginalia-added",   // value: { krussedull }
+  RECIPE_MARGINALIA_DELETED: ":recipe/marginalia-deleted", // value: marginal id
 
   // === bøker — asserted on the COOKBOOK's id ===
   COOKBOOK_CREATED:    ":cookbook/created",    // value: name

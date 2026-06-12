@@ -53,6 +53,16 @@ body {
   color: var(--color-ink);
 }
 
+/* Marens fontprøving: klassene settes på body fra brukerens valg («Aa skrift» på forsiden).
+   Brødtekstvalgene bytter --font-tekst for hele siden; skrift-petit setter selve oppskriften
+   (.oppskrift-tekst i Oppskrift-komponenten) i Petit Formal Script. */
+.tekst-montserrat { --font-tekst: var(--font-montserrat), system-ui, sans-serif; font-weight: 300; }
+.tekst-times      { --font-tekst: 'Times New Roman', Times, serif; }
+
+.skrift-petit .oppskrift-tekst {
+  font-family: var(--font-petit), cursive;
+}
+
 /* Notatlapp: avrevet linjert notatbokpapir — varm papirtone, skrivelinjer i falmet blekk som
    håndskriften (font-skrift, leading 24px) hviler på, og en ujevn rivekant nederst. */
 .notatlapp {
@@ -106,6 +116,30 @@ body {
   background-color: var(--color-card);
   background-image: radial-gradient(color-mix(in srgb, var(--baand-farge, var(--color-butter)) 62%, transparent) 4px, transparent 4.5px);
   background-size: 26px 26px;
+}
+
+/* Bla-i-boka: oppslaget glir inn fra ryggen (venstre) med litt perspektiv — som et ark som
+   legger seg. Bare transform/opacity, så bildeskiftet koster ingenting. */
+@keyframes bla-om {
+  from {
+    opacity: 0.25;
+    transform: perspective(1400px) rotateY(-8deg) translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bla-om {
+  animation: bla-om 240ms ease-out;
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bla-om {
+    animation: none;
+  }
 }
 
 @media print {

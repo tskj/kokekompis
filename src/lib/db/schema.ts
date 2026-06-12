@@ -225,6 +225,24 @@ export const recipeComments = pgTable('recipe_comments', {
   createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
 });
 
+// Margskrift — håndskrevne påminnelser rett i margen på oppskriften: "MÅ heve over natten!",
+// gjerne med en krussedull (understrek, pil, stjerne …). Personlige som lappene.
+export const krusseduller = ['strek', 'pil', 'stjerne', 'utrop', 'ring'] as const;
+export type Krussedull = (typeof krusseduller)[number];
+
+export const recipeMarginalia = pgTable('recipe_marginalia', {
+  id: uuid('id').defaultRandom().notNull().primaryKey(),
+  recipeId: uuid('recipeId')
+    .notNull()
+    .references(() => recipes.id, { onDelete: 'cascade' }),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tekst: text('tekst').notNull(),
+  krussedull: text('krussedull').$type<Krussedull>(),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).notNull().defaultNow(),
+});
+
 // Favoritter — hjertemerkede oppskrifter. Samlingen er sin egen "bok" på hylla (/favoritter).
 export const recipeFavorites = pgTable('recipe_favorites', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
@@ -311,6 +329,14 @@ export const planRecipes = pgTable('plan_recipes', {
 // ========= OAuth =========
 
 
+// Skriftvalgene — Marens fontprøving: brødteksten kan byttes til Montserrat light eller en
+// Times-aktig serif, og selve oppskriftene kan settes i Petit Formal Script.
+export const tekstFonter = ['standard', 'montserrat', 'times'] as const;
+export type TekstFont = (typeof tekstFonter)[number];
+
+export const oppskriftFonter = ['standard', 'petit'] as const;
+export type OppskriftFont = (typeof oppskriftFonter)[number];
+
 export const users = pgTable('user', {
   id: text('id').notNull().primaryKey(),
   name: text('name'),
@@ -319,6 +345,8 @@ export const users = pgTable('user', {
   image: text('image'),
   // hvordan hylla på forsiden sorteres — brukerens eget valg, husket mellom besøk
   hylleSortering: text('hylleSortering').$type<HylleSortering>().notNull().default('egen'),
+  tekstFont: text('tekstFont').$type<TekstFont>().notNull().default('standard'),
+  oppskriftFont: text('oppskriftFont').$type<OppskriftFont>().notNull().default('standard'),
 });
 
 export const accounts = pgTable('account', {

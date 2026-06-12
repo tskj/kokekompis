@@ -5,7 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { recipes, recipeContentSchema } from '@/lib/db/schema';
+import { cookbook, recipes, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
@@ -45,6 +45,46 @@ export async function oppdaterOppskrift(recipeId: string, utkast: unknown): Prom
   log.info(recipeId, Attr.RECIPE_UPDATED, { tittel: parsed.data.tittel });
   revalidatePath('/', 'layout');
   redirect(uuidHref`/kokebok/${oppdatert.cookbookId}/oppskrift/${recipeId}`);
+}
+
+// En blank side å skrive selv på — oppskriften som bare finnes i hodet. Lager et tomt skall og
+// sender deg rett inn i redigeringen.
+export async function opprettTomOppskrift(cookbookId: string, formData: FormData) {
+  void formData;
+
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const minBok = await db
+    .select({ id: cookbook.id })
+    .from(cookbook)
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .exists();
+  if (!minBok) return;
+
+  const tomt = recipeContentSchema.parse({
+    info: {
+      porsjoner: { antall: 4, benevnelse: 'porsjoner' },
+      kanSkaleres: true,
+      aktivTidMinutter: null,
+      totalTidMinutter: null,
+      stekeinfo: null,
+    },
+    opprinnelse: null,
+    ingredienser: [],
+    steg: [],
+    ferdigprodukt: { bilder: [], tekst: null },
+  });
+
+  const oppskrift = await db
+    .insert(recipes)
+    .values({ userId, cookbookId, title: 'Ny oppskrift', description: null, content: tomt })
+    .returning({ id: recipes.id })
+    .single('oppskrift.opprett-tom');
+
+  log.info(oppskrift.id, Attr.RECIPE_CREATED, { tittel: 'Ny oppskrift' });
+  revalidatePath('/', 'layout');
+  redirect(uuidHref`/kokebok/${cookbookId}/oppskrift/${oppskrift.id}/rediger`);
 }
 
 export async function slettOppskrift(recipeId: string) {

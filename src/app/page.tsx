@@ -7,6 +7,7 @@ import { nowDate } from '@/lib/clock';
 import { formaterDag, erTidligereDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { opprettBok, settHylleSortering } from '@/app/actions/bok';
+import { settSkrift } from '@/app/actions/skrift';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { SorterbarBokhylle } from '@/components/SorterbarBokhylle';
 import Link from 'next/link';
@@ -46,13 +47,15 @@ function SignOut() {
 // Eieren velger selv om hylla står i egen rekkefølge eller etter sist åpnet.
 async function getHylla(userId: string | null) {
   return withTransaction({ name: 'forside' }, async (tx) => {
-    const sortering = userId
-      ? (await tx
-          .select({ hylleSortering: users.hylleSortering })
+    const bruker = userId
+      ? await tx
+          .select({ hylleSortering: users.hylleSortering, tekstFont: users.tekstFont, oppskriftFont: users.oppskriftFont })
           .from(users)
           .where(eq(users.id, userId))
-          .maybeSingle('forside.sortering'))?.hylleSortering ?? 'egen'
-      : 'egen';
+          .maybeSingle('forside.bruker')
+      : null;
+
+    const sortering = bruker?.hylleSortering ?? 'egen';
 
     const bøker = await tx
       .select({ id: cookbook.id, name: cookbook.name, farge: cookbook.farge })
@@ -81,7 +84,7 @@ async function getHylla(userId: string | null) {
           .orderBy(asc(plans.dato), asc(plans.name))
       : [];
 
-    return { bøker, harFavoritter, planer, sortering };
+    return { bøker, harFavoritter, planer, sortering, skrift: { tekstFont: bruker?.tekstFont ?? 'standard', oppskriftFont: bruker?.oppskriftFont ?? 'standard' } };
   });
 }
 
@@ -89,7 +92,7 @@ export default async function Home() {
   const session = await auth();
 
   const userId = await getCurrentUserId();
-  const { bøker: cookbooks, harFavoritter, planer, sortering } = await getHylla(userId);
+  const { bøker: cookbooks, harFavoritter, planer, sortering, skrift } = await getHylla(userId);
 
   // pilene for egen sortering vises bare når de kan utrette noe
   const kanSortere = !!userId && sortering === 'egen' && cookbooks.length > 1;
@@ -123,6 +126,44 @@ export default async function Home() {
           )}
         </div>
       </header>
+
+      {userId && (
+        <details className="mt-4 text-xs text-ink-soft">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm hover:border-terra hover:text-terra">
+            <span aria-hidden>Aa</span> Skrift
+          </summary>
+
+          <form action={settSkrift} className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-line bg-card p-3">
+            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brødtekst på siden">
+              <span>Teksten på siden:</span>
+              {([['standard', 'Bokserif', 'var(--font-alegreya)'], ['montserrat', 'Montserrat', 'var(--font-montserrat)'], ['times', 'Times', "'Times New Roman', Times, serif"]] as const).map(([verdi, navn, font]) => (
+                <label key={verdi} className="cursor-pointer">
+                  <input type="radio" name="tekst" value={verdi} defaultChecked={skrift.tekstFont === verdi} className="peer sr-only" />
+                  <span style={{ fontFamily: font }} className="block rounded border border-line bg-paper px-2.5 py-1 text-sm peer-checked:ring-2 peer-checked:ring-ink/60">
+                    {navn}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Skrift i oppskriftene">
+              <span>Selve oppskriftene:</span>
+              {([['standard', 'Bokserif', 'var(--font-alegreya)'], ['petit', 'Petit Formal', 'var(--font-petit)']] as const).map(([verdi, navn, font]) => (
+                <label key={verdi} className="cursor-pointer">
+                  <input type="radio" name="oppskrift" value={verdi} defaultChecked={skrift.oppskriftFont === verdi} className="peer sr-only" />
+                  <span style={{ fontFamily: font }} className="block rounded border border-line bg-paper px-2.5 py-1 text-sm peer-checked:ring-2 peer-checked:ring-ink/60">
+                    {navn}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <button type="submit" className="self-start rounded-full border border-line px-3 py-1 hover:border-terra hover:text-terra">
+              Bruk skriften
+            </button>
+          </form>
+        </details>
+      )}
 
       <section className="relative mt-14" aria-label="Bokhylla">
         <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">

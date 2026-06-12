@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { and, asc, eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { chapters, cookbook } from '@/lib/db/schema';
@@ -5,7 +6,9 @@ import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
+import { uuidHref } from '@/lib/uuid/uuid-links';
 import { importerFraBilde, importerFraUrl } from '@/app/actions/importer';
+import { opprettTomOppskrift } from '@/app/actions/rediger';
 import { SendeKnapp } from '@/components/SendeKnapp';
 
 interface ImporterPageProps {
@@ -60,11 +63,21 @@ export default async function ImporterPage({ params, searchParams }: ImporterPag
 
   return (
     <div className="max-w-2xl">
-      <header className="mb-8">
+      <header className="relative mb-8">
+        {/* veien ut — kom man hit ved et uhell, er bokens forside ett trykk unna */}
+        <Link
+          href={uuidHref`/kokebok/${cookbookId}`}
+          aria-label="Lukk — tilbake til boken"
+          title="Tilbake til boken"
+          className="absolute -top-1 right-0 flex size-8 items-center justify-center rounded-full border border-line text-ink-soft hover:border-terra hover:text-terra"
+        >
+          ×
+        </Link>
+
         <h1 className="font-display text-4xl">Ny oppskrift</h1>
         <p className="mt-2 text-ink-soft max-w-prose">
-          Lim inn en lenke eller ta et bilde — kokekompisen leser oppskriften og fører den inn i
-          boken med mengder, steg og opprinnelse. Det tar gjerne et halvt minutts tid.
+          Skriv den selv, lim inn en lenke, eller ta et bilde — kokekompisen leser og fører den
+          inn i boken med mengder, steg og opprinnelse.
         </p>
       </header>
 
@@ -118,6 +131,17 @@ export default async function ImporterPage({ params, searchParams }: ImporterPag
           <KapittelVelger kapitler={kapitler} />
 
           <SendeKnapp barn="Skann oppskriften" venteTekst="Leser bildet — et halvt minutts tid …" />
+        </form>
+
+        <form action={opprettTomOppskrift.bind(null, cookbookId)} className="space-y-4 rounded-xl border-2 border-dashed border-line bg-card/60 p-5 md:col-span-2">
+          <h2 className="font-display text-2xl">Skriv den selv</h2>
+          <p className="text-sm text-ink-soft">
+            En blank side rett inn i redigeringen — for oppskriften som bare finnes i hodet ditt.
+          </p>
+
+          <button type="submit" className="rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
+            Begynn å skrive
+          </button>
         </form>
       </div>
     </div>

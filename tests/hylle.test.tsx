@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({
   redirect:  vi.fn((url: string) => { throw new Error("NEXT_REDIRECT:" + url); }),
   notFound:  vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }),
   useParams: vi.fn(() => ({})),
+  usePathname: vi.fn(() => "/"),
 }));
 
 import { flyttBokPåHylla, settHylleSortering, lagreHylleRekkefølge } from "@/app/actions/bok";
