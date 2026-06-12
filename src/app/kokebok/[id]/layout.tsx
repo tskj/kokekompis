@@ -8,7 +8,7 @@ import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { getCurrentUserId } from '@/lib/current-user';
 import { kanSeBok } from '@/lib/bok-tilgang';
-import { BOK_FARGE_KLASSER, BÅND_KLASSER, båndMønstre, erBåndMønster } from '@/lib/bok-utseende';
+import { BOK_FARGE_KLASSER, BOK_FARGE_VAR, BÅND_KLASSER, båndMønstre, lesBåndValg } from '@/lib/bok-utseende';
 import { bildeUrl } from '@/lib/lagring';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBånd, lastOppBokBånd } from '@/app/actions/bok';
@@ -139,11 +139,13 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
   // Gjester (utstilt bok) får lese, aldri stelle: alt som endrer boken rendres kun for eieren.
   const erEier = cookbookData.userId === userId;
 
-  // Bokbåndet — den smale stripen mellom tittel og innhold: et mønster eller et opplastet bilde.
+  // Bokbåndet — den smale stripen mellom tittel og innhold: et mønster i en bokfarge, eller et
+  // opplastet bilde (nøkler starter med bok/). Ukjente verdier viser ingenting fremfor å feile.
   const headerBilde = cookbookData.headerBilde;
-  const bånd = headerBilde === null ? null
-             : erBåndMønster(headerBilde) ? { mønster: headerBilde }
-             :                              { bilde: await bildeUrl(headerBilde) };
+  const båndValg = headerBilde ? lesBåndValg(headerBilde) : null;
+  const bånd = båndValg                       ? { mønster: båndValg }
+             : headerBilde?.startsWith('bok/') ? { bilde: await bildeUrl(headerBilde) }
+             :                                   null;
 
   return (
     <div className="mx-auto max-w-7xl p-6 md:p-10">
@@ -198,10 +200,15 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
         )}
 
         {erEier && (
-          <details className="mt-1.5 text-xs text-ink-soft">
-            <summary className="cursor-pointer list-none hover:text-terra">bokas utseende …</summary>
+          <details className="mt-2.5 text-xs text-ink-soft">
+            <summary
+              className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm hover:border-terra hover:text-terra"
+              title="Velg farge på ryggen og bånd under tittelen"
+            >
+              <span aria-hidden>🎨</span> Bokas utseende
+            </summary>
 
-            <div className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-line bg-card p-3">
+            <div className="mt-2 flex max-w-md flex-col gap-4 rounded-lg border border-line bg-card p-3">
               <form action={settBokFarge.bind(null, cookbookId)} className="flex flex-wrap items-center gap-2">
                 <span>Farge på ryggen:</span>
                 {bokFarger.map((farge) => (
@@ -217,21 +224,26 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                 ))}
               </form>
 
-              <form action={settBokBånd.bind(null, cookbookId)} className="flex flex-wrap items-center gap-2">
-                <span>Bånd under tittelen:</span>
-                {båndMønstre.map((mønster) => (
-                  <button
-                    key={mønster}
-                    type="submit"
-                    name="valg"
-                    value={mønster}
-                    title={mønster}
-                    aria-label={`Båndmønsteret ${mønster}`}
-                    className={`${BÅND_KLASSER[mønster]} h-8 w-14 rounded border border-line ${headerBilde === mønster ? 'ring-2 ring-ink/60' : ''}`}
-                  />
-                ))}
+              <form action={settBokBånd.bind(null, cookbookId)} className="flex flex-col gap-1.5">
+                <span>Bånd under tittelen — hvert mønster i alle bokfargene:</span>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {båndMønstre.flatMap((mønster) =>
+                    bokFarger.map((farge) => (
+                      <button
+                        key={`${mønster}:${farge}`}
+                        type="submit"
+                        name="valg"
+                        value={`${mønster}:${farge}`}
+                        title={`${mønster} i ${farge}`}
+                        aria-label={`Båndet ${mønster} i ${farge}`}
+                        className={`${BÅND_KLASSER[mønster]} h-8 w-full rounded border ${headerBilde === `${mønster}:${farge}` ? 'border-ink/50 ring-2 ring-ink/60' : 'border-line'}`}
+                        style={{ '--baand-farge': BOK_FARGE_VAR[farge] } as React.CSSProperties}
+                      />
+                    )),
+                  )}
+                </div>
                 {headerBilde && (
-                  <button type="submit" name="valg" value="fjern" className="underline underline-offset-2 hover:text-terra">
+                  <button type="submit" name="valg" value="fjern" className="self-start underline underline-offset-2 hover:text-terra">
                     fjern båndet
                   </button>
                 )}
@@ -263,7 +275,10 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
               // eslint-disable-next-line @next/next/no-img-element
               <img src={bånd.bilde} alt="" className="h-full w-full object-cover" />
             ) : (
-              <div className={`h-full w-full ${BÅND_KLASSER[bånd.mønster]}`} />
+              <div
+                className={`h-full w-full ${BÅND_KLASSER[bånd.mønster.mønster]}`}
+                style={{ '--baand-farge': BOK_FARGE_VAR[bånd.mønster.farge] } as React.CSSProperties}
+              />
             )}
           </div>
         )}
@@ -273,7 +288,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
         {/* Innholdslista — bokens venstreside */}
         <div className="lg:col-span-1 skjul-ved-print">
           <div className="sticky top-6">
-            <Kaffeflekk className="absolute -top-4 -left-6 w-24 -rotate-6" />
+            <Kaffeflekk className="absolute -top-14 -left-16 w-44 -rotate-12" />
             <h2 className="mb-3 text-[11px] uppercase tracking-[0.2em] text-ink-soft">Innhold</h2>
 
             {cookbookData.chapters.length === 0 ? (

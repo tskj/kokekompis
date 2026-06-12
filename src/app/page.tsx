@@ -1,9 +1,10 @@
 import { auth, signIn, signOut } from '@/auth';
 import { asc, eq } from 'drizzle-orm';
-import { cookbook, recipeFavorites } from '@/lib/db/schema';
+import { cookbook, plans, recipeFavorites } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { bokFargeKlasse } from '@/lib/bok-utseende';
+import { formaterDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { opprettBok } from '@/app/actions/bok';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
@@ -57,7 +58,16 @@ async function getHylla(userId: string | null) {
           .exists()
       : false;
 
-    return { bøker, harFavoritter };
+    // planene ligger som lapper på skrivebordet under hylla — de nærmeste først
+    const planer = userId
+      ? await tx
+          .select({ id: plans.id, name: plans.name, dato: plans.dato })
+          .from(plans)
+          .where(eq(plans.userId, userId))
+          .orderBy(asc(plans.dato), asc(plans.name))
+      : [];
+
+    return { bøker, harFavoritter, planer };
   });
 }
 
@@ -65,7 +75,7 @@ export default async function Home() {
   const session = await auth();
 
   const userId = await getCurrentUserId();
-  const { bøker: cookbooks, harFavoritter } = await getHylla(userId);
+  const { bøker: cookbooks, harFavoritter, planer } = await getHylla(userId);
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
@@ -92,7 +102,7 @@ export default async function Home() {
       </header>
 
       <section className="relative mt-14" aria-label="Bokhylla">
-        <Kaffeflekk className="absolute -top-12 right-2 w-28 rotate-12" />
+        <Kaffeflekk className="absolute -top-24 right-0 w-48 rotate-12 md:w-56" />
         <h2 className="text-[11px] uppercase tracking-[0.2em] text-ink-soft mb-6">Bokhylla</h2>
 
         {/* På telefon ligger bøkene bortover med litt overlapp og scroller sidelengs — de brekker
@@ -159,17 +169,6 @@ export default async function Home() {
             )}
           </div>
 
-        {userId && (
-          <p className="mt-10">
-            <Link
-              href="/planer"
-              className="inline-block border-2 border-dashed border-line px-4 py-3 text-sm text-ink-soft hover:border-terra hover:text-terra"
-            >
-              Planlegging → samle det du skal lage til 17. mai, julaften eller bursdagen — med én handleliste
-            </Link>
-          </p>
-        )}
-
         {!userId && (
           cookbooks.length > 0 ? (
             <p className="mt-6 text-ink-soft">
@@ -182,6 +181,44 @@ export default async function Home() {
           )
         )}
       </section>
+
+      {/* Skrivebordet under hylla: planene ligger som håndskrevne lapper — det man SKAL lage,
+          før det havner i en bok. Lappestilen sier hva en plan er bedre enn noen forklaring. */}
+      {userId && (
+        <section className="mt-16" aria-label="På planen">
+          <h2 className="text-[11px] uppercase tracking-[0.2em] text-ink-soft mb-1.5">På planen</h2>
+          <p className="mb-5 text-sm text-ink-soft">
+            17. mai-frokosten, julebaksten, bursdagen — samle det du skal lage, og få én handleliste for hele bordet.
+          </p>
+
+          <div className="flex flex-wrap items-stretch gap-5">
+            {planer.slice(0, 4).map((plan, index) => (
+              <Link
+                key={plan.id}
+                href={uuidHref`/planer/${plan.id}`}
+                className={`${['-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2'][index % 4]} notatlapp w-44 px-4 pb-6 pt-[18px] drop-shadow-md transition-transform hover:-translate-y-1`}
+              >
+                <span className="block font-skrift text-xl leading-6 break-words">{plan.name}</span>
+                {plan.dato && <span className="block font-skrift text-lg leading-6 text-ink-soft">{formaterDag(plan.dato)}</span>}
+              </Link>
+            ))}
+
+            {planer.length > 4 && (
+              <Link href="/planer" className="self-center text-sm text-ink-soft underline underline-offset-2 hover:text-terra">
+                alle planene →
+              </Link>
+            )}
+
+            <Link
+              href="/planer"
+              className="flex min-h-24 w-44 flex-col items-center justify-center gap-1 border-2 border-dashed border-line text-ink-soft hover:border-terra hover:text-terra"
+            >
+              <span className="text-3xl leading-none">+</span>
+              <span className="font-skrift text-xl">planlegg noe</span>
+            </Link>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

@@ -84,26 +84,27 @@ body {
 }
 
 /* Bokbånd-mønstre: den smale stoffstripen mellom bokens tittel og innholdet — som
-   forsatspapiret i en gammel kokebok. Velges i bokas utseende-panel (src/lib/bok-utseende.ts). */
+   forsatspapiret i en gammel kokebok. Veves i valgfri bokfarge via --baand-farge; velges i
+   bokas utseende-panel (src/lib/bok-utseende.ts setter variabelen og standardfargene). */
 .bokbaand-striper {
   background-color: var(--color-paper-warm);
   background-image: repeating-linear-gradient(
     90deg,
-    var(--color-terra) 0 7px,  transparent 7px 24px,
-    var(--color-terra) 24px 27px, transparent 27px 44px
+    var(--baand-farge, var(--color-terra)) 0 7px,  transparent 7px 24px,
+    var(--baand-farge, var(--color-terra)) 24px 27px, transparent 27px 44px
   );
 }
 
 .bokbaand-ruter {
   background-color: var(--color-card);
   background-image:
-    repeating-linear-gradient(0deg,  rgb(118 129 78 / 0.35) 0 12px, transparent 12px 26px),
-    repeating-linear-gradient(90deg, rgb(118 129 78 / 0.35) 0 12px, transparent 12px 26px);
+    repeating-linear-gradient(0deg,  color-mix(in srgb, var(--baand-farge, var(--color-sage)) 38%, transparent) 0 12px, transparent 12px 26px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--baand-farge, var(--color-sage)) 38%, transparent) 0 12px, transparent 12px 26px);
 }
 
 .bokbaand-prikker {
   background-color: var(--color-card);
-  background-image: radial-gradient(rgb(233 185 73 / 0.6) 4px, transparent 4.5px);
+  background-image: radial-gradient(color-mix(in srgb, var(--baand-farge, var(--color-butter)) 62%, transparent) 4px, transparent 4.5px);
   background-size: 26px 26px;
 }
 

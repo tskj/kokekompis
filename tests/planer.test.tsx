@@ -9,7 +9,11 @@ import "./rtl";
 import { render, screen } from "./rtl";
 
 const hoisted = vi.hoisted(() => ({ userId: "" }));
-vi.mock("@/auth", () => ({ auth: vi.fn(async () => (hoisted.userId ? { user: { id: hoisted.userId } } : null)) }));
+vi.mock("@/auth", () => ({
+  auth:    vi.fn(async () => (hoisted.userId ? { user: { id: hoisted.userId } } : null)),
+  signIn:  vi.fn(),
+  signOut: vi.fn(),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((url: string) => { throw new Error("NEXT_REDIRECT:" + url); }),
@@ -18,6 +22,8 @@ vi.mock("next/navigation", () => ({
 
 import { opprettPlan, slettPlan, leggTilIPlan, fjernFraPlan } from "@/app/actions/planer";
 import PlanSide from "@/app/planer/[id]/page";
+import RecipePage from "@/app/kokebok/[id]/@recipe/oppskrift/[recipeid]/page";
+import Home from "@/app/page";
 
 function planSkjema(navn: string, dato?: string): FormData {
   const formData = new FormData();
@@ -152,6 +158,35 @@ describe("planer (ekte actions, ekte database, ekte planside)", () => {
     // to testoppskrifter à 9 dl hvetemel og 2 ss kanel → én linje av hver, summert
     expect(screen.getByText("18 dl")).toBeInTheDocument();
     expect(screen.getByText("4 ss")).toBeInTheDocument();
+  });
+
+  it("oppskriftssiden viser hvilke planer den ligger i — og tilbyr bare resten", async () => {
+    const { user, bok, oppskrift } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    const frokost = await lagPlan(user.id, "17. mai-frokost");
+    await leggTilIPlan(oppskrift.id, leggTilSkjema(frokost.id));
+
+    // én plan, og oppskriften ligger i den: merket vises, "Til plan …" har ingenting å tilby
+    render(await RecipePage({
+      params: Promise.resolve({ id: encodeUuidToBase32(bok.id), recipeid: encodeUuidToBase32(oppskrift.id) }),
+      searchParams: Promise.resolve({}),
+    }));
+    expect(screen.getByText("På planen: 17. mai-frokost")).toBeInTheDocument();
+    expect(screen.queryByText("Til plan …")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ta oppskriften ut av 17. mai-frokost" })).toBeInTheDocument();
+  });
+
+  it("forsiden legger planene som lapper på skrivebordet", async () => {
+    const { user } = await makeKokebok();
+    hoisted.userId = user.id;
+
+    await lagPlan(user.id, "Julebakst", "2026-12-24");
+
+    render(await Home());
+    expect(screen.getByText("Julebakst")).toBeInTheDocument();
+    expect(screen.getByText("24. desember 2026")).toBeInTheDocument();
+    expect(screen.getByText("planlegg noe")).toBeInTheDocument();
   });
 
   it("plansiden er din egen — fremmede og utloggede får 404", async () => {

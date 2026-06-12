@@ -67,7 +67,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
 
   return (
     <main className="relative mx-auto max-w-3xl px-6 py-12">
-      <Kaffeflekk className="absolute top-6 right-8 w-24 rotate-45" />
+      <Kaffeflekk className="absolute -top-8 right-0 w-44 rotate-45" />
 
       <header className="mb-8 skjul-ved-print">
         <Link href="/planer" className="text-sm text-ink-soft hover:text-terra">← Planer</Link>

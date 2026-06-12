@@ -1,4 +1,4 @@
-import type { BokFarge } from '@/lib/db/schema';
+import { bokFarger, type BokFarge } from '@/lib/db/schema';
 
 // Bokens utseende, delt mellom forsiden (bokryggen på hylla) og bokens eget utseende-panel.
 // Ren modul uten server-avhengigheter — brukes også fra klientkomponenter.
@@ -19,10 +19,13 @@ export function bokFargeKlasse(farge: BokFarge | null, index: number): string {
   return BOK_FARGE_KLASSER[farge ?? HYLLE_ROTASJON[index % HYLLE_ROTASJON.length]];
 }
 
-// Bokbåndet (den smale stripen mellom tittel og innhold): enten et av disse mønstrene — CSS-
-// klassene bor i globals.css — eller nøkkelen til et opplastet bilde (bok/<id>/…webp).
+// Bokbåndet (den smale stripen mellom tittel og innhold): enten et mønster vevd i en av
+// bokfargene — CSS-klassene bor i globals.css og farges via --baand-farge — eller nøkkelen til
+// et opplastet bilde (bok/<id>/…webp). Lagret form: "mønster:farge" (eldre rader: bare mønster).
 export const båndMønstre = ['striper', 'ruter', 'prikker'] as const;
 export type BåndMønster = (typeof båndMønstre)[number];
+
+export type BåndValg = { mønster: BåndMønster; farge: BokFarge };
 
 export const BÅND_KLASSER: Record<BåndMønster, string> = {
   striper: 'bokbaand-striper',
@@ -30,6 +33,36 @@ export const BÅND_KLASSER: Record<BåndMønster, string> = {
   prikker: 'bokbaand-prikker',
 };
 
-export function erBåndMønster(verdi: string): verdi is BåndMønster {
+// CSS-variabelen mønsteret veves med — peker på temafargene, så paletten bor ett sted (CSS).
+export const BOK_FARGE_VAR: Record<BokFarge, string> = {
+  terra:  'var(--color-terra)',
+  sage:   'var(--color-sage)',
+  ink:    'var(--color-ink)',
+  butter: 'var(--color-butter)',
+  vin:    'var(--color-vin)',
+  natt:   'var(--color-natt)',
+};
+
+// drakten mønstrene ble født i — eldre rader uten farge skal se ut som før
+const STANDARD_FARGE: Record<BåndMønster, BokFarge> = {
+  striper: 'terra',
+  ruter:   'sage',
+  prikker: 'butter',
+};
+
+function erBåndMønster(verdi: string): verdi is BåndMønster {
   return (båndMønstre as readonly string[]).includes(verdi);
+}
+
+function erBokFarge(verdi: string | undefined): verdi is BokFarge {
+  return verdi !== undefined && (bokFarger as readonly string[]).includes(verdi);
+}
+
+// "ruter:vin" → { mønster, farge }; "striper" (eldre rad) → mønsterets standardfarge.
+// null = ikke et mønstervalg (f.eks. en opplastingsnøkkel).
+export function lesBåndValg(verdi: string): BåndValg | null {
+  const [mønster, farge] = verdi.split(':');
+  if (!erBåndMønster(mønster)) return null;
+
+  return { mønster, farge: erBokFarge(farge) ? farge : STANDARD_FARGE[mønster] };
 }

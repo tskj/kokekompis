@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 import { cookbook, chapters, bokSynligheter, bokFarger } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
-import { erBåndMønster } from '@/lib/bok-utseende';
+import { lesBåndValg } from '@/lib/bok-utseende';
 import { lagreBilde, slettBilde } from '@/lib/lagring';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { log, Attr } from '@/lib/log';
@@ -76,14 +76,16 @@ export async function settBokFarge(cookbookId: string, formData: FormData) {
   revalidatePath('/', 'layout');
 }
 
-// Bytter bokbåndet (stripen mellom tittel og innhold) til et mønster — eller fjerner det.
-// Lå det et opplastet bilde der fra før, ryddes filen bort etterpå.
+// Bytter bokbåndet (stripen mellom tittel og innhold) til et mønster i valgt bokfarge — eller
+// fjerner det. Lagres normalisert som "mønster:farge". Lå det et opplastet bilde der fra før,
+// ryddes filen bort etterpå.
 export async function settBokBånd(cookbookId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) return;
 
   const valg = String(formData.get('valg') ?? '');
-  if (valg !== 'fjern' && !erBåndMønster(valg)) return;
+  const båndValg = lesBåndValg(valg);
+  if (valg !== 'fjern' && !båndValg) return;
 
   const gammelt = await withTransaction({ name: 'bok.bånd' }, async (tx) => {
     const bok = await tx
@@ -95,7 +97,7 @@ export async function settBokBånd(cookbookId: string, formData: FormData) {
 
     await tx
       .update(cookbook)
-      .set({ headerBilde: valg === 'fjern' ? null : valg })
+      .set({ headerBilde: båndValg ? `${båndValg.mønster}:${båndValg.farge}` : null })
       .where(eq(cookbook.id, cookbookId));
 
     return { headerBilde: bok.headerBilde };

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { eq, and, asc, ne, isNull, inArray, notInArray } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeComments, plans, recipeContentSchema } from '@/lib/db/schema';
+import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeComments, plans, planRecipes, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { kanSeBok } from '@/lib/bok-tilgang';
 import { lagHandleliste } from '@/lib/handleliste';
@@ -20,7 +20,7 @@ import { LukkbarDetails } from '@/components/LukkbarDetails';
 import { delOppskrift } from '@/app/actions/deling';
 import { toggleFavoritt } from '@/app/actions/favoritter';
 import { flyttOppskrift } from '@/app/actions/organisering';
-import { leggTilIPlan } from '@/app/actions/planer';
+import { leggTilIPlan, fjernFraPlan } from '@/app/actions/planer';
 import { lagUtkast, taIBrukUtkast, forkastUtkast } from '@/app/actions/utkast';
 import { Handleliste } from '@/components/oppskrift/Handleliste';
 import { StegKommentarer } from '@/components/oppskrift/StegKommentarer';
@@ -137,7 +137,8 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .exists()
       : false;
 
-    // dine planer — målene for "Til plan …"
+    // dine planer — målene for "Til plan …" — og hvilke av dem oppskriften alt ligger i,
+    // så siden kan vise det i stedet for å la deg gjette
     const minePlaner = userId
       ? await tx
           .select({ id: plans.id, name: plans.name })
@@ -146,7 +147,16 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(plans.name))
       : [];
 
-    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner };
+    const iPlaner = userId
+      ? await tx
+          .select({ id: plans.id, name: plans.name })
+          .from(planRecipes)
+          .innerJoin(plans, eq(planRecipes.planId, plans.id))
+          .where(and(eq(planRecipes.recipeId, recipeId), eq(plans.userId, userId)))
+          .orderBy(asc(plans.name))
+      : [];
+
+    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner, iPlaner };
   });
 }
 
@@ -192,6 +202,9 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   }
 
   const erUtkast = side.utkastAv !== null;
+
+  // "Til plan …" tilbyr bare planene oppskriften ikke alt ligger i — resten vises som merker
+  const valgbarePlaner = side.minePlaner.filter((plan) => !side.iPlaner.some((i) => i.id === plan.id));
 
   return (
     <>
@@ -332,16 +345,16 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               </LukkbarDetails>
             )}
 
-            {userId && !erUtkast && (
+            {userId && !erUtkast && (valgbarePlaner.length > 0 || side.minePlaner.length === 0) && (
               <LukkbarDetails className="relative">
                 <summary className="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
                   Til plan …
                 </summary>
 
-                {side.minePlaner.length > 0 ? (
+                {valgbarePlaner.length > 0 ? (
                   <form action={leggTilIPlan.bind(null, recipeId)} className="absolute z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
                     <select name="plan" aria-label="Plan" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
-                      {side.minePlaner.map((plan) => (
+                      {valgbarePlaner.map((plan) => (
                         <option key={plan.id} value={encodeUuidToBase32(plan.id)}>{plan.name}</option>
                       ))}
                     </select>
@@ -357,6 +370,25 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                 )}
               </LukkbarDetails>
             )}
+
+            {/* så man ser det herfra: merkene viser hvilke planer oppskriften alt ligger i */}
+            {!erUtkast && side.iPlaner.map((plan) => (
+              <span key={plan.id} className="flex items-center gap-0.5 rounded-full border border-sage/50 bg-sage/10 py-1 pl-3 pr-1 text-sm">
+                <Link href={uuidHref`/planer/${plan.id}`} className="hover:text-terra" title="Åpne planen">
+                  På planen: {plan.name}
+                </Link>
+                <form action={fjernFraPlan.bind(null, plan.id, recipeId)}>
+                  <button
+                    type="submit"
+                    aria-label={`Ta oppskriften ut av ${plan.name}`}
+                    title="Ta den ut av planen"
+                    className="size-6 rounded-full text-ink/30 hover:bg-ink/10 hover:text-ink"
+                  >
+                    ×
+                  </button>
+                </form>
+              </span>
+            ))}
           </>
         }
         kommentarFelt={userId ? (stegId) => (

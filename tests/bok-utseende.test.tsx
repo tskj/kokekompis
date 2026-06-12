@@ -21,6 +21,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { settBokFarge, settBokBånd, lastOppBokBånd } from "@/app/actions/bok";
+import { lesBåndValg } from "@/lib/bok-utseende";
 import CookbookLayout from "@/app/kokebok/[id]/layout";
 import { encodeUuidToBase32 } from "@/lib/uuid/uuid-base32";
 
@@ -66,18 +67,35 @@ describe("bokas utseende (farge, bånd og opplastet båndbilde)", () => {
     expect((await bokRad(bok.id)).farge).toBe("vin");
   });
 
-  it("mønsterbånd settes og fjernes — og vises mellom tittel og innhold", async () => {
+  it("mønsterbånd settes i valgt bokfarge og fjernes — og vises mellom tittel og innhold", async () => {
     const { user, bok } = await makeKokebok();
     hoisted.userId = user.id;
 
+    // uten farge normaliseres til mønsterets standarddrakt; med farge lagres valget
     await settBokBånd(bok.id, skjema("valg", "ruter"));
-    expect((await bokRad(bok.id)).headerBilde).toBe("ruter");
+    expect((await bokRad(bok.id)).headerBilde).toBe("ruter:sage");
+
+    await settBokBånd(bok.id, skjema("valg", "ruter:vin"));
+    expect((await bokRad(bok.id)).headerBilde).toBe("ruter:vin");
+
+    // ukjent farge faller tilbake til standarddrakten; ukjent mønster preller av
+    await settBokBånd(bok.id, skjema("valg", "ruter:rosa-glitter"));
+    expect((await bokRad(bok.id)).headerBilde).toBe("ruter:sage");
+
+    await settBokBånd(bok.id, skjema("valg", "paljetter:vin"));
+    expect((await bokRad(bok.id)).headerBilde).toBe("ruter:sage");
 
     render(await CookbookLayout({ recipe: null, params: Promise.resolve({ id: encodeUuidToBase32(bok.id) }) }));
     expect(screen.getByTestId("bokbaand")).toBeInTheDocument();
 
     await settBokBånd(bok.id, skjema("valg", "fjern"));
     expect((await bokRad(bok.id)).headerBilde).toBeNull();
+  });
+
+  it("eldre rader med bare mønsternavn leses fortsatt — i mønsterets standarddrakt", () => {
+    expect(lesBåndValg("striper")).toEqual({ mønster: "striper", farge: "terra" });
+    expect(lesBåndValg("prikker:natt")).toEqual({ mønster: "prikker", farge: "natt" });
+    expect(lesBåndValg("bok/abc/baand-x.webp")).toBeNull();
   });
 
   it("eget båndbilde lastes opp som webp i bokens mappe — og ryddes når mønster tar over", async () => {
@@ -98,7 +116,7 @@ describe("bokas utseende (farge, bånd og opplastet båndbilde)", () => {
 
     // mønsteret tar over og filen ryddes bort
     await settBokBånd(bok.id, skjema("valg", "striper"));
-    expect((await bokRad(bok.id)).headerBilde).toBe("striper");
+    expect((await bokRad(bok.id)).headerBilde).toBe("striper:terra");
     await expect(sharp(path.join(process.env.LOKAL_LAGRING_DIR!, key!)).metadata()).rejects.toThrow();
   });
 
