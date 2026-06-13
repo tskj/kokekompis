@@ -83,6 +83,9 @@ export const Attr = {
   COOKBOOK_VISIBILITY: ":cookbook/visibility", // value: "privat" | "utstilt"
   COOKBOOK_STYLED:     ":cookbook/styled",     // value: { farge } | { bånd }
   COOKBOOK_SHARED:     ":cookbook/shared",     // value: share id
+  COOKBOOK_ARCHIVED:   ":cookbook/archived",   // value: true
+  COOKBOOK_RESTORED:   ":cookbook/restored",   // value: true
+  COOKBOOK_DELETED:    ":cookbook/deleted",    // value: true
   COOKBOOK_COPIED_FROM_SHARE: ":cookbook/copied-from-share", // value: share token — asserted on the COPY
   CHAPTER_CREATED:     ":cookbook/chapter-created", // value: chapter name
   CHAPTER_RENAMED:     ":cookbook/chapter-renamed", // value: new name

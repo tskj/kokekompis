@@ -177,18 +177,24 @@ const TEGNINGER: Record<SkisseNavn, React.ReactNode> = {
     </Blyant>
   ),
 
-  // pepperkakemannen: melisøyne, glasur-sikksakk på armene og terrakotta-knapper
+  // pepperkakemannen: én sammenhengende pepperkakeform-silhuett — hodet glir rett over i
+  // skuldrene som på en kakeform, runde armer og bein. Melisøyne, glasur og terrakotta-knapper.
   pepperkake: (
     <Blyant>
-      <circle cx="60" cy="30" r="12" />
-      <path d="M52 40 l-17 10 q-5 4 -1 8 q4 4 9 0 l11 -7 l-2 19 l-8 14 q-2 5 3 6 q5 1 7 -4 l6 -10 6 10 q2 5 7 4 q5 -1 3 -6 l-8 -14 l-2 -19 l11 7 q5 4 9 0 q4 -4 -1 -8 l-17 -10 z" />
-      <circle cx="55.5" cy="28" r="1.5" fill="#74634c" stroke="none" />
-      <circle cx="64.5" cy="28" r="1.5" fill="#74634c" stroke="none" />
-      <path d="M55 34 q5 4 10 0" />
-      <circle cx="60" cy="54" r="1.6" fill="#b04e28" stroke="none" />
-      <circle cx="60" cy="62" r="1.6" fill="#b04e28" stroke="none" />
-      <path d="M42 50 l3 -3 3 3" stroke="#b04e28" />
-      <path d="M72 50 l3 -3 3 3" stroke="#b04e28" />
+      <path d="M49 37
+               C44 41 38 44 33 48 C27 52 23 53 24 58 C25 64 31 65 36 62 C41 59 45 60 48 61
+               C47 67 46 72 45 78 C44 86 44 92 46 96 C49 102 56 101 57 94 C58 89 58 86 58 83
+               Q60 79 62 83 C62 86 62 89 63 94 C64 101 71 102 74 96 C76 92 76 86 75 78
+               C74 72 73 67 72 61 C75 60 79 59 84 62 C89 65 95 64 96 58 C97 53 93 52 87 48
+               C82 44 76 41 71 37
+               C79 33 80 22 73 17 C66 11 52 11 46 18 C40 24 43 33 49 37 z" />
+      <circle cx="55" cy="26" r="1.6" fill="#74634c" stroke="none" />
+      <circle cx="65" cy="26" r="1.6" fill="#74634c" stroke="none" />
+      <path d="M54 31 q6 5 12 0" />
+      <circle cx="60" cy="55" r="1.6" fill="#b04e28" stroke="none" />
+      <circle cx="60" cy="64" r="1.6" fill="#b04e28" stroke="none" />
+      <path d="M30 56 l3 -3 3 3" stroke="#b04e28" />
+      <path d="M84 56 l3 -3 3 3" stroke="#b04e28" />
     </Blyant>
   ),
 

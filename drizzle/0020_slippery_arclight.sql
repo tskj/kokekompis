@@ -1,0 +1,1 @@
+ALTER TABLE "cookbook" ADD COLUMN "arkivert" timestamp with time zone;

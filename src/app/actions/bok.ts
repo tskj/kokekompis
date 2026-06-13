@@ -7,7 +7,8 @@ import { and, asc, eq, max, sql } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { cookbook, chapters, users, bokSynligheter, bokFarger, hylleSorteringer } from '@/lib/db/schema';
+import { cookbook, chapters, recipes, users, bokSynligheter, bokFarger, hylleSorteringer, recipeContentSchema } from '@/lib/db/schema';
+import { nowDate } from '@/lib/clock';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { lesBåndValg, lesSkisse } from '@/lib/bok-utseende';
@@ -143,6 +144,84 @@ export async function flyttBokPåHylla(cookbookId: string, retning: 'venstre' | 
   revalidatePath('/', 'layout');
 }
 
+// Bøker rives ikke ut — de legges i arkivet, og kan alltid hentes frem igjen fra hylla.
+export async function arkiverBok(cookbookId: string, formData: FormData) {
+  void formData;
+
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const arkivert = await db
+    .update(cookbook)
+    .set({ arkivert: nowDate() })
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .returning({ id: cookbook.id })
+    .maybeSingle('bok.arkiver');
+  if (!arkivert) return;
+
+  log.info(cookbookId, Attr.COOKBOOK_ARCHIVED, true);
+  revalidatePath('/', 'layout');
+  redirect('/');
+}
+
+export async function gjenåpneBok(cookbookId: string, formData: FormData) {
+  void formData;
+
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const frem = await db
+    .update(cookbook)
+    .set({ arkivert: null })
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .returning({ id: cookbook.id })
+    .maybeSingle('bok.gjenåpne');
+  if (!frem) return;
+
+  log.info(cookbookId, Attr.COOKBOOK_RESTORED, true);
+  revalidatePath('/', 'layout');
+}
+
+// Sletting for godt finnes bare i arkivet, bak en er-du-sikker — og alt boken eier i
+// objektlagringen (rettbilder og opplastet bokbånd) følger med ut.
+export async function slettBok(cookbookId: string, formData: FormData) {
+  void formData;
+
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const slettet = await withTransaction({ name: 'bok.slett' }, async (tx) => {
+    const bok = await tx
+      .select({ headerBilde: cookbook.headerBilde })
+      .from(cookbook)
+      .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+      .maybeSingle('bok.slett');
+    if (!bok) return null;
+
+    const bokensOppskrifter = await tx
+      .select({ content: recipes.content })
+      .from(recipes)
+      .where(eq(recipes.cookbookId, cookbookId));
+
+    const keys = bokensOppskrifter.flatMap((rad) => {
+      const content = recipeContentSchema.safeParse(rad.content);
+      return content.success ? content.data.ferdigprodukt.bilder : [];
+    });
+    if (bok.headerBilde?.startsWith('bok/')) keys.push(bok.headerBilde);
+
+    await tx.delete(cookbook).where(eq(cookbook.id, cookbookId));
+
+    return { keys };
+  });
+  if (!slettet) return;
+
+  for (const key of slettet.keys) await slettBilde(key);
+
+  log.info(cookbookId, Attr.COOKBOOK_DELETED, true);
+  revalidatePath('/', 'layout');
+  redirect('/');
+}
+
 export async function settBokFarge(cookbookId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) return;
@@ -248,25 +327,41 @@ export async function lastOppBokBånd(cookbookId: string, formData: FormData) {
   revalidatePath('/', 'layout');
 }
 
-// Bokens forside: noen ord om boken og en valgfri tegnet skisse — det man møter når ingen
-// oppskrift er slått opp.
-export async function settBokForside(cookbookId: string, formData: FormData) {
+// Bokens forside, i sanntid som resten av utseendet: skissen lagres i det man trykker på en
+// tegning; teksten har sin egen lagre-knapp (den må jo skrives først).
+export async function settBokSkisse(cookbookId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  const skisse = lesSkisse(String(formData.get('skisse') ?? ''));
+
+  const endret = await db
+    .update(cookbook)
+    .set({ skisse })
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .returning({ id: cookbook.id })
+    .maybeSingle('bok.skisse');
+  if (!endret) return;
+
+  log.info(cookbookId, Attr.COOKBOOK_STYLED, { skisse });
+  revalidatePath('/', 'layout');
+}
+
+export async function settBokBeskrivelse(cookbookId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) return;
 
   const beskrivelse = z.string().trim().min(1).max(500).nullable().catch(null).parse(formData.get('beskrivelse') || null);
-  const skisseValg = String(formData.get('skisse') ?? 'ingen');
-  const skisse = lesSkisse(skisseValg);
 
   const endret = await db
     .update(cookbook)
-    .set({ beskrivelse, skisse })
+    .set({ beskrivelse })
     .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
     .returning({ id: cookbook.id })
-    .maybeSingle('bok.forside');
+    .maybeSingle('bok.beskrivelse');
   if (!endret) return;
 
-  log.info(cookbookId, Attr.COOKBOOK_STYLED, { skisse, harBeskrivelse: beskrivelse !== null });
+  log.info(cookbookId, Attr.COOKBOOK_STYLED, { harBeskrivelse: beskrivelse !== null });
   revalidatePath('/', 'layout');
 }
 

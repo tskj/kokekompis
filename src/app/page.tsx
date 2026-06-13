@@ -1,12 +1,14 @@
 import { auth, signIn } from '@/auth';
-import { and, asc, eq, isNull, sql } from 'drizzle-orm';
-import { cookbook, plans, recipeFavorites, users } from '@/lib/db/schema';
+import { and, asc, eq, isNull, isNotNull, sql } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { cookbook, plans, users } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { nowDate } from '@/lib/clock';
 import { formaterDag, erTidligereDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
-import { opprettBok, settHylleSortering } from '@/app/actions/bok';
+import { opprettBok, settHylleSortering, gjenåpneBok, slettBok } from '@/app/actions/bok';
+import { BekreftKnapp } from '@/components/BekreftKnapp';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { SorterbarBokhylle } from '@/components/SorterbarBokhylle';
 import Link from 'next/link';
@@ -45,20 +47,23 @@ async function getHylla(userId: string | null) {
     const bøker = await tx
       .select({ id: cookbook.id, name: cookbook.name, farge: cookbook.farge })
       .from(cookbook)
-      .where(userId ? eq(cookbook.userId, userId) : eq(cookbook.synlighet, 'utstilt'))
+      .where(userId
+        ? and(eq(cookbook.userId, userId), isNull(cookbook.arkivert))
+        : and(eq(cookbook.synlighet, 'utstilt'), isNull(cookbook.arkivert)))
       .orderBy(...(
         !userId                     ? [asc(cookbook.name)]
         : sortering === 'sist-åpnet' ? [sql`${cookbook.sistÅpnet} desc nulls last`, asc(cookbook.name)]
         :                              [sql`${cookbook.rekkefølge} asc nulls last`, asc(cookbook.name)]
       ));
 
-    const harFavoritter = userId
+    // bortlagte bøker — hentes frem eller slettes for godt fra arkivet under hylla
+    const arkiverte = userId
       ? await tx
-          .select({ id: recipeFavorites.id })
-          .from(recipeFavorites)
-          .where(eq(recipeFavorites.userId, userId))
-          .exists()
-      : false;
+          .select({ id: cookbook.id, name: cookbook.name })
+          .from(cookbook)
+          .where(and(eq(cookbook.userId, userId), isNotNull(cookbook.arkivert)))
+          .orderBy(asc(cookbook.name))
+      : [];
 
     // planene ligger som lapper på skrivebordet under hylla — de nærmeste først, arkivet ligger bort
     const planer = userId
@@ -69,7 +74,7 @@ async function getHylla(userId: string | null) {
           .orderBy(asc(plans.dato), asc(plans.name))
       : [];
 
-    return { bøker, harFavoritter, planer, sortering };
+    return { bøker, arkiverte, planer, sortering };
   });
 }
 
@@ -77,7 +82,18 @@ export default async function Home() {
   const session = await auth();
 
   const userId = await getCurrentUserId();
-  const { bøker: cookbooks, harFavoritter, planer, sortering } = await getHylla(userId);
+
+  // førstegangsopplevelsen: hylla skal aldri møte deg tom — en bok står klar til å fylles
+  if (userId) {
+    const harBok = await db
+      .select({ id: cookbook.id })
+      .from(cookbook)
+      .where(eq(cookbook.userId, userId))
+      .exists();
+    if (!harBok) await db.insert(cookbook).values({ userId, name: 'Min første kokebok' });
+  }
+
+  const { bøker: cookbooks, arkiverte, planer, sortering } = await getHylla(userId);
 
   // pilene for egen sortering vises bare når de kan utrette noe
   const kanSortere = !!userId && sortering === 'egen' && cookbooks.length > 1;
@@ -149,13 +165,19 @@ export default async function Home() {
             I "min rekkefølge"-modus kan bøkene trykkes-og-dras på plass. */}
         <SorterbarBokhylle bøker={cookbooks} kanSortere={kanSortere} hale={
           <>
-            {harFavoritter && (
+            {userId && (
               <div className="relative shrink-0 -ml-8 pb-4 first:ml-0 md:ml-0">
                 <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
                 <Link prefetch={true}
                   href="/favoritter"
-                  className="bokstoff group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok transition-transform hover:-translate-y-2"
+                  className="bokstoff bok-3d group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok"
                 >
+                  <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-3.5" />
+                  {/* hjertene er forsiden — strødd som på et godt brukt omslag */}
+                  <span aria-hidden className="pointer-events-none absolute left-3 top-5 rotate-[-14deg] text-lg text-terra/50">♥</span>
+                  <span aria-hidden className="pointer-events-none absolute right-4 top-3 rotate-[10deg] text-sm text-terra/40">♥</span>
+                  <span aria-hidden className="pointer-events-none absolute bottom-14 left-5 rotate-[8deg] text-xl text-terra/45">♥</span>
+                  <span aria-hidden className="pointer-events-none absolute bottom-20 right-5 rotate-[-8deg] text-base text-terra/35">♥</span>
                   <span className="mt-5 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug shadow-sm">
                     ♥ Favoritter
                   </span>
@@ -171,8 +193,9 @@ export default async function Home() {
               <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
               <Link prefetch={true}
                 href="/oppslag"
-                className="bokstoff group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 bg-natt p-4 text-paper shadow-bok transition-transform hover:-translate-y-2"
+                className="bokstoff bok-3d group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 bg-natt p-4 text-paper shadow-bok"
               >
+                <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-3.5" />
                 <span className="mt-5 block overflow-hidden break-words [hyphens:auto] bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
                   Oppslagsboka
                 </span>
@@ -210,6 +233,36 @@ export default async function Home() {
             )}
           </>
         } />
+
+        {arkiverte.length > 0 && (
+          <details className="mt-5 text-sm text-ink-soft">
+            <summary className="cursor-pointer list-none underline underline-offset-2 hover:text-terra">
+              Arkivet ({arkiverte.length})
+            </summary>
+
+            <ul className="mt-2 divide-y divide-line border-y border-line">
+              {arkiverte.map((bok) => (
+                <li key={bok.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5">
+                  <span className="font-display text-lg text-ink">{bok.name}</span>
+
+                  <span className="flex items-center gap-3">
+                    <form action={gjenåpneBok.bind(null, bok.id)}>
+                      <button type="submit" className="underline underline-offset-2 hover:text-terra">sett tilbake på hylla</button>
+                    </form>
+                    <form action={slettBok.bind(null, bok.id)}>
+                      <BekreftKnapp
+                        spørsmål={`Slette «${bok.name}» for godt? Det kan ikke angres — alle oppskriftene, kapitlene og bildene følger med.`}
+                        className="text-ink/50 underline underline-offset-2 hover:text-terra"
+                      >
+                        slett for godt
+                      </BekreftKnapp>
+                    </form>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
 
         {!userId && (
           cookbooks.length > 0 ? (

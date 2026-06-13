@@ -141,6 +141,13 @@
       "when": 1781295283888,
       "tag": "0019_calm_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1781302378829,
+      "tag": "0020_slippery_arclight",
+      "breakpoints": true
     }
   ]
 }

@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({ push: hoisted.push, prefetch: vi.fn(), back: vi.fn() })),
 }));
 
-import { settBokForside } from "@/app/actions/bok";
+import { settBokBeskrivelse, settBokSkisse } from "@/app/actions/bok";
 import DefaultRecipe from "@/app/kokebok/[id]/@recipe/default";
 import CookbookLayout from "@/app/kokebok/[id]/layout";
 
@@ -37,10 +37,13 @@ describe("bokens forside og lukkede kapitler", () => {
     const { user, bok } = await makeKokebok();
     hoisted.userId = user.id;
 
-    const skjema = new FormData();
-    skjema.set("beskrivelse", "Alt mormor aldri målte opp.");
-    skjema.set("skisse", "croissant");
-    await settBokForside(bok.id, skjema);
+    const ord = new FormData();
+    ord.set("beskrivelse", "Alt mormor aldri målte opp.");
+    await settBokBeskrivelse(bok.id, ord);
+
+    const tegning = new FormData();
+    tegning.set("skisse", "croissant");
+    await settBokSkisse(bok.id, tegning);
 
     const rad = await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.forside");
     expect(rad.beskrivelse).toBe("Alt mormor aldri målte opp.");
@@ -58,7 +61,7 @@ describe("bokens forside og lukkede kapitler", () => {
 
     const skjema = new FormData();
     skjema.set("skisse", "bolle");
-    await settBokForside(bok.id, skjema);
+    await settBokSkisse(bok.id, skjema);
     expect((await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.blyant")).skisse).toBe("bolle");
 
     const { container } = render(await DefaultRecipe(forsideProps(bok.id)));
@@ -71,7 +74,7 @@ describe("bokens forside og lukkede kapitler", () => {
 
     const skjema = new FormData();
     skjema.set("skisse", "traktor");
-    await settBokForside(bok.id, skjema);
+    await settBokSkisse(bok.id, skjema);
 
     const rad = await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.tull");
     expect(rad.skisse).toBeNull();
@@ -87,7 +90,7 @@ describe("bokens forside og lukkede kapitler", () => {
 
     const skjema = new FormData();
     skjema.set("beskrivelse", "kuppet forside");
-    await settBokForside(bok.id, skjema);
+    await settBokBeskrivelse(bok.id, skjema);
 
     const rad = await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.urørt");
     expect(rad.beskrivelse).toBeNull();

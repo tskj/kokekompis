@@ -99,17 +99,21 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
           <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
           <Link prefetch={true}
             href={uuidHref`/kokebok/${bok.id}`}
-            className={`${bokFargeKlasse(bok.farge, bok.id)} bokstoff relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok transition-transform hover:-translate-y-2`}
+            className={`${bokFargeKlasse(bok.farge, bok.id)} bokstoff bok-3d relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok`}
             draggable={false}
           >
+            {/* sideblokken — arkene som skimtes når boken vrir seg ut fra hyllen */}
+            <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-3.5" />
+
             {/* opphøyde ryggbånd — med god luft ned til det pregede navnet */}
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-2 border-t-2 border-current opacity-25" />
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-3.5 border-t border-current opacity-25" />
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-12 border-t border-current opacity-25" />
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-[3.375rem] border-t-2 border-current opacity-25" />
 
-            {/* lange ord bryter med bindestrek (hyphens følger lang="nb") — og aldri utenfor feltet */}
-            <span className="mt-6 block overflow-hidden break-words [hyphens:auto] bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
+            {/* lange ord bryter med bindestrek (hyphens følger lang="nb") — og aldri utenfor
+                feltet; lange titler settes mindre så de er lesbare på alle skjermer */}
+            <span className={`mt-6 block overflow-hidden break-words [hyphens:auto] bg-paper/95 px-2 py-3 text-center font-display leading-snug text-ink shadow-sm ${bok.name.length > 36 ? 'text-sm' : bok.name.length > 20 ? 'text-base' : 'text-xl'}`}>
               {bok.name}
             </span>
             {/* trykt inn i stoffet: mørkere enn omslaget, med en anelse lys under pregekanten */}

@@ -82,7 +82,7 @@ export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, 
             {kanViseGram && (
               <span className="text-sm skjul-ved-print">
                 {visEnhet === 'gram' ? (
-                  <Link href={href({ enheter: 'original' })} className="underline underline-offset-2 text-ink-soft hover:text-terra">som skrevet</Link>
+                  <Link href={href({ enheter: 'original' })} className="underline underline-offset-2 text-ink-soft hover:text-terra">vis som skrevet</Link>
                 ) : (
                   <Link href={href({ enheter: 'gram' })} className="underline underline-offset-2 text-ink-soft hover:text-terra">vis i gram</Link>
                 )}
@@ -114,9 +114,11 @@ export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, 
         </section>
       </div>
 
-      {handleliste && <div className="mt-8">{handleliste}</div>}
+      {/* lappene hører hjemme rett under oppskriften — bildene, opprinnelsen og lenkene til
+          andre oppskrifter er etterord og bor nedenfor (Maren) */}
+      {notater && <div className="mt-8">{notater}</div>}
 
-      {relasjoner && <div className="mt-10">{relasjoner}</div>}
+      {handleliste && <div className="mt-8">{handleliste}</div>}
 
       {(content.ferdigprodukt.tekst || ferdigBilder) && (
         <section className="mt-10 border-t border-line pt-5">
@@ -127,9 +129,9 @@ export function Oppskrift({ tittel, beskrivelse, content, visEnhet, ganger = 1, 
         </section>
       )}
 
-      <Opprinnelse opprinnelse={content.opprinnelse} />
+      {relasjoner && <div className="mt-10">{relasjoner}</div>}
 
-      {notater && <div className="mt-10">{notater}</div>}
+      <Opprinnelse opprinnelse={content.opprinnelse} />
     </article>
   );
 }

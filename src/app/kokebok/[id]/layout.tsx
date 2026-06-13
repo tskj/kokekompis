@@ -17,8 +17,9 @@ import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { Skisse } from '@/components/skisser';
 import { BlaOm } from '@/components/BlaOm';
 import { BlaMedSvipe } from '@/components/BlaMedSvipe';
-import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBånd, lastOppBokBånd, settBokForside } from '@/app/actions/bok';
+import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBånd, lastOppBokBånd, settBokSkisse, settBokBeskrivelse, arkiverBok, gjenåpneBok } from '@/app/actions/bok';
 import { delBok } from '@/app/actions/deling';
+import { LukkendeForm } from '@/components/LukkendeForm';
 import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 interface CookbookLayoutProps {
@@ -42,6 +43,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
         beskrivelse: cookbook.beskrivelse,
         skisse: cookbook.skisse,
         sistÅpnet: cookbook.sistÅpnet,
+        arkivert: cookbook.arkivert,
       })
       .from(cookbook)
       .where(eq(cookbook.id, id))
@@ -101,7 +103,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       ? await tx
           .select({ id: cookbook.id, name: cookbook.name })
           .from(cookbook)
-          .where(and(eq(cookbook.userId, userId), ne(cookbook.id, id)))
+          .where(and(eq(cookbook.userId, userId), ne(cookbook.id, id), isNull(cookbook.arkivert)))
           .orderBy(asc(cookbook.name))
       : [];
 
@@ -168,6 +170,13 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
       <header className="relative mb-8 skjul-ved-print">
         <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
 
+        {erEier && cookbookData.arkivert && (
+          <form action={gjenåpneBok.bind(null, cookbookId)} className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-line bg-card px-4 py-2.5 text-sm">
+            <span>Denne boken ligger i arkivet — den står ikke på hylla.</span>
+            <button type="submit" className="underline underline-offset-2 hover:text-terra">Sett den tilbake på hylla</button>
+          </form>
+        )}
+
         <div className="mt-1 flex items-baseline gap-3">
           <h1 className="font-display text-4xl">{cookbookData.name}</h1>
 
@@ -223,7 +232,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
 
             <form action={delBok.bind(null, cookbookId)}>
               <button type="submit" title="Lag en delingslenke — vennen kan lese boken og legge den på sin egen hylle" className="underline underline-offset-2 hover:text-terra">
-                Del boken med en venn
+                Del hele boken med en venn
               </button>
             </form>
           </div>
@@ -312,24 +321,42 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
                 </button>
               </form>
 
-              <form action={settBokForside.bind(null, cookbookId)} className="flex flex-col gap-2 border-t border-line pt-3">
+              {/* skissen lagres i det man trykker, som fargene og båndet — bare teksten
+                  trenger en lagre-knapp, og den lukker panelet (man er jo ferdig da) */}
+              <form action={settBokSkisse.bind(null, cookbookId)} className="flex flex-col gap-2 border-t border-line pt-3">
                 <span>Forsiden — det man møter før noe er slått opp:</span>
 
-                <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Akvarell på forsiden">
-                  {skisseNavn.map((navn) => (
-                    <label key={navn} className="cursor-pointer">
-                      <input type="radio" name="skisse" value={navn} defaultChecked={(cookbookData.skisse ? lesSkisse(cookbookData.skisse) : null) === navn} className="peer sr-only" />
-                      <span title={SKISSE_ETIKETTER[navn]} className="block rounded border border-line bg-paper p-0.5 peer-checked:ring-2 peer-checked:ring-ink/60">
+                <div className="flex flex-wrap items-center gap-2">
+                  {skisseNavn.map((navn) => {
+                    const valgt = (cookbookData.skisse ? lesSkisse(cookbookData.skisse) : null) === navn;
+                    return (
+                      <button
+                        key={navn}
+                        type="submit"
+                        name="skisse"
+                        value={navn}
+                        title={SKISSE_ETIKETTER[navn]}
+                        aria-label={`Sett ${SKISSE_ETIKETTER[navn]} på forsiden`}
+                        aria-pressed={valgt}
+                        className={`rounded border border-line bg-paper p-0.5 ${valgt ? 'ring-2 ring-ink/60' : ''}`}
+                      >
                         <Skisse navn={navn} className="w-12" />
-                      </span>
-                    </label>
-                  ))}
-                  <label className="cursor-pointer">
-                    <input type="radio" name="skisse" value="ingen" defaultChecked={!cookbookData.skisse} className="peer sr-only" />
-                    <span className="block rounded border border-line bg-paper px-2 py-1 peer-checked:ring-2 peer-checked:ring-ink/60">ingen</span>
-                  </label>
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="submit"
+                    name="skisse"
+                    value="ingen"
+                    aria-pressed={!cookbookData.skisse}
+                    className={`rounded border border-line bg-paper px-2 py-1 ${!cookbookData.skisse ? 'ring-2 ring-ink/60' : ''}`}
+                  >
+                    ingen
+                  </button>
                 </div>
+              </form>
 
+              <LukkendeForm action={settBokBeskrivelse.bind(null, cookbookId)} className="flex flex-col gap-2">
                 <textarea
                   name="beskrivelse"
                   maxLength={500}
@@ -342,6 +369,12 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
 
                 <button type="submit" className="self-start rounded-full border border-line px-3 py-1 hover:border-terra hover:text-terra">
                   Lagre forsiden
+                </button>
+              </LukkendeForm>
+
+              <form action={arkiverBok.bind(null, cookbookId)} className="border-t border-line pt-3">
+                <button type="submit" title="Boken legges i arkivet nederst på hylla — hent den frem igjen når du vil" className="underline underline-offset-2 hover:text-terra">
+                  Legg boken i arkivet
                 </button>
               </form>
             </div>
@@ -366,9 +399,12 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
         )}
       </header>
 
+      {/* På mobil kommer oppslaget (forsiden eller oppskriften) FØR innholdslista: å åpne boken
+          skal møte deg med forsiden, og et trykk i innholdslista skal lande rett på oppskriften —
+          ikke kreve scrolling forbi lista. På store skjermer står lista til venstre som før. */}
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-4">
         {/* Innholdslista — bokens venstreside */}
-        <div className="lg:col-span-1 skjul-ved-print">
+        <div className="order-2 lg:order-1 lg:col-span-1 skjul-ved-print">
           <div className="sticky top-6">
             <h2 className="mb-3 text-[11px] uppercase tracking-[0.2em] text-ink-soft">Innhold</h2>
 
@@ -418,7 +454,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
 
         {/* Oppskriften — bokens høyreside: bla-om-følelse ved hvert oppslag, og sveip på
             touch blar til neste/forrige oppskrift i lesefølgen */}
-        <div className="lg:col-span-3">
+        <div className="order-1 lg:order-2 lg:col-span-3">
           <BlaMedSvipe oppskrifter={leseRekkefølge}>
             <BlaOm>{recipe}</BlaOm>
           </BlaMedSvipe>

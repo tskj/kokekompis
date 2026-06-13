@@ -17,6 +17,7 @@ import { bildeUrl } from '@/lib/lagring';
 import { PrintKnapp } from '@/components/PrintKnapp';
 import { LukkbarDetails } from '@/components/LukkbarDetails';
 import { delOppskrift } from '@/app/actions/deling';
+import { flyttOppskrift } from '@/app/actions/organisering';
 import { toggleFavoritt } from '@/app/actions/favoritter';
 import { leggTilIPlan, fjernFraPlan } from '@/app/actions/planer';
 import { taIBrukUtkast, forkastUtkast } from '@/app/actions/utkast';
@@ -305,8 +306,8 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
 
             {side.erEier && !erUtkast && (
               <form action={delOppskrift.bind(null, recipeId)}>
-                <button type="submit" className="rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
-                  Del oppskriften
+                <button type="submit" title="Bare denne oppskriften — hele boken deles fra bokas side" className="rounded-full border border-line px-4 py-2 text-sm hover:border-terra hover:text-terra">
+                  Del denne oppskriften
                 </button>
               </form>
             )}
@@ -347,6 +348,27 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                     <Link prefetch={true} href="/planer" className="underline underline-offset-2 hover:text-terra">legg en først</Link>.
                   </p>
                 )}
+              </LukkbarDetails>
+            )}
+
+            {/* ukategoriserte oppskrifter får veien inn i et kapittel rett herfra — man skal
+                slippe å lete i innholdslista for å rydde */}
+            {side.erEier && !erUtkast && side.kapittelId === null && side.kapitlerIBoken.length > 0 && (
+              <LukkbarDetails className="relative">
+                <summary className="cursor-pointer list-none rounded-full border border-dashed border-line px-4 py-2 text-sm text-ink-soft hover:border-terra hover:text-terra">
+                  Ukategorisert — legg i kapittel …
+                </summary>
+
+                <form action={flyttOppskrift.bind(null, recipeId)} className="absolute z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
+                  <select name="kapittel" aria-label="Kapittel" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
+                    {side.kapitlerIBoken.map((kapittel) => (
+                      <option key={kapittel.id} value={encodeUuidToBase32(kapittel.id)}>{kapittel.name}</option>
+                    ))}
+                  </select>
+                  <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
+                    Legg den der
+                  </button>
+                </form>
               </LukkbarDetails>
             )}
 

@@ -71,7 +71,7 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
         <p className="font-display italic text-lg text-ink-soft">
           Delt fra {delt.eierNavn ? `${delt.eierNavn}s` : 'en'} kokebok
         </p>
-        <Link href="/" className="text-sm text-ink-soft hover:text-terra">Kokekompis</Link>
+        <Link href="/" className="text-sm text-ink-soft hover:text-terra">{userId ? '← Bokhylla' : 'Kokekompis'}</Link>
       </header>
 
       {/* eieren får deleverktøyet; alle andre lettvint tilgang — kopien blir deres egen */}

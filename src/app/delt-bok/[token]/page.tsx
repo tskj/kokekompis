@@ -75,7 +75,7 @@ export default async function DeltBokSide({ params }: DeltBokSideProps) {
         <p className="font-display italic text-lg text-ink-soft">
           {delt.bok.eierNavn ?? 'En venn'} deler en hel kokebok med deg
         </p>
-        <Link href="/" className="text-sm text-ink-soft hover:text-terra">Kokekompis</Link>
+        <Link href="/" className="text-sm text-ink-soft hover:text-terra">{userId ? '← Bokhylla' : 'Kokekompis'}</Link>
       </header>
 
       <div className="mb-8 text-center">

@@ -5,6 +5,8 @@ import { oppslag } from '@/lib/db/schema';
 import { getCurrentUserId } from '@/lib/current-user';
 import { INNEBYGDE_OPPSLAG } from '@/lib/oppslag';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
+import { Kompis } from '@/components/Kompis';
+import { OppslagTegning } from '@/components/oppslag-tegninger';
 import { LukkbarDetails } from '@/components/LukkbarDetails';
 import { nyttOppslag, slettOppslag } from '@/app/actions/oppslag';
 
@@ -25,23 +27,30 @@ export default async function OppslagSide() {
     <main className="relative mx-auto max-w-3xl px-6 py-12">
       <Kaffeflekk className="absolute -top-16 -right-24 w-56 rotate-[140deg]" />
 
-      <header className="mb-10">
+      <header className="relative mb-10">
         <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
         <h1 className="mt-1 font-display text-5xl">Oppslagsboka</h1>
-        <p className="mt-2 font-display italic text-lg text-ink-soft">
+        <p className="mt-2 max-w-md font-display italic text-lg text-ink-soft md:max-w-lg">
           Alt man ellers googler — omregning, eggetider, borddekking. Og plass til ditt eget.
         </p>
+
+        {/* Kompisen — husnissen som passer på oppslagene fra toppen av siden */}
+        <Kompis className="absolute -top-2 right-0 w-20 md:w-24" />
+
         <div aria-hidden className="mt-4 border-b-4 border-double border-ink/25" />
       </header>
 
       <section aria-label="Innebygde oppslag" className="flex flex-col">
         {INNEBYGDE_OPPSLAG.map((innslag) => (
           <details key={innslag.id} className="border-b border-line">
-            <summary className="flex cursor-pointer items-baseline justify-between gap-2 py-3 font-display text-xl hover:text-terra">
-              {innslag.tittel}
+            <summary className="flex cursor-pointer items-center justify-between gap-3 py-2.5 font-display text-xl hover:text-terra">
+              <span className="flex items-center gap-3">
+                <OppslagTegning id={innslag.id} className="w-14 shrink-0" />
+                {innslag.tittel}
+              </span>
               <span aria-hidden className="text-xs text-ink-soft">+</span>
             </summary>
-            <p className="whitespace-pre-line pb-4 leading-relaxed">{innslag.tekst}</p>
+            <p className="whitespace-pre-line pb-4 leading-relaxed md:pl-[4.25rem]">{innslag.tekst}</p>
           </details>
         ))}
       </section>

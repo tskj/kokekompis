@@ -127,6 +127,8 @@ export const cookbook = pgTable('cookbook', {
   // tegnet skisse (se src/components/skisser.tsx)
   beskrivelse: text('beskrivelse'),
   skisse: text('skisse'),
+  // arkivet: bøker slettes ikke i første omgang — de legges bort, og kan hentes frem igjen
+  arkivert: timestamp('arkivert', { mode: 'date', withTimezone: true }),
 });
 
 export const chapters = pgTable('chapters', {

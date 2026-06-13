@@ -58,7 +58,7 @@ describe("oppskriftssiden (ekte side rendret mot ekte database)", () => {
 
     expect(screen.getByText("540 g")).toBeInTheDocument();
     expect(screen.getByText("(9 dl)")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "som skrevet" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "vis som skrevet" })).toBeInTheDocument();
   });
 
   it("?tilbake viser veien hjem — hoppet til en lenket oppskrift mister aldri stedet sitt", async () => {
