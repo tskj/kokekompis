@@ -29,8 +29,8 @@ function SignIn() {
   );
 }
 
-// Hylla er personlig: innlogget ser du dine egne bøker — utlogget ser du utvalget av utstilte
-// bøker (Marens utstillingsvindu). Favorittene danner sin egen "bok" med det første hjertet.
+// Hylla er personlig: innlogget ser du dine egne bøker. En utlogget gjest har ingen hylle ennå
+// (utstillingsvinduet er av enn så lenge) — bare Oppslagsboka og en invitasjon til å logge inn.
 // Eieren velger selv om hylla står i egen rekkefølge eller etter sist åpnet.
 async function getHylla(userId: string | null) {
   return withTransaction({ name: 'forside' }, async (tx) => {
@@ -44,17 +44,16 @@ async function getHylla(userId: string | null) {
 
     const sortering = bruker?.hylleSortering ?? 'egen';
 
-    const bøker = await tx
-      .select({ id: cookbook.id, name: cookbook.name, farge: cookbook.farge })
-      .from(cookbook)
-      .where(userId
-        ? and(eq(cookbook.userId, userId), isNull(cookbook.arkivert))
-        : and(eq(cookbook.synlighet, 'utstilt'), isNull(cookbook.arkivert)))
-      .orderBy(...(
-        !userId                     ? [asc(cookbook.name)]
-        : sortering === 'sist-åpnet' ? [sql`${cookbook.sistÅpnet} desc nulls last`, asc(cookbook.name)]
-        :                              [sql`${cookbook.rekkefølge} asc nulls last`, asc(cookbook.name)]
-      ));
+    const bøker = userId
+      ? await tx
+          .select({ id: cookbook.id, name: cookbook.name, farge: cookbook.farge })
+          .from(cookbook)
+          .where(and(eq(cookbook.userId, userId), isNull(cookbook.arkivert)))
+          .orderBy(...(
+            sortering === 'sist-åpnet' ? [sql`${cookbook.sistÅpnet} desc nulls last`, asc(cookbook.name)]
+            :                            [sql`${cookbook.rekkefølge} asc nulls last`, asc(cookbook.name)]
+          ))
+      : [];
 
     // bortlagte bøker — hentes frem eller slettes for godt fra arkivet under hylla
     const arkiverte = userId
@@ -265,15 +264,9 @@ export default async function Home() {
         )}
 
         {!userId && (
-          cookbooks.length > 0 ? (
-            <p className="mt-6 text-ink-soft">
-              Et lite utvalg fra hylla — logg inn for å lage dine egne bøker.
-            </p>
-          ) : (
-            <p className="mt-6 text-ink-soft">
-              Hylla er tom ennå — logg inn for å sette den første boken på plass.
-            </p>
-          )
+          <p className="mt-6 text-ink-soft">
+            Logg inn for å sette den første boken på plass — eller bla i Oppslagsboka så lenge.
+          </p>
         )}
       </section>
 

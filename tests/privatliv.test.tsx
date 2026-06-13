@@ -65,18 +65,21 @@ describe("privatliv: bøker er private, utstilte bøker kan alle lese", () => {
     expect(screen.queryByText("Annens utstilte bok")).not.toBeInTheDocument();
   });
 
-  it("forsiden viser utvalget av utstilte bøker for en utlogget gjest", async () => {
+  it("en utlogget gjest har ingen hylle ennå — bare Oppslagsboka og en invitasjon", async () => {
     await makeKokebok();
     const utstilt = await makeKokebok({ synlighet: "utstilt" });
     await db.update(cookbook).set({ name: "Marens utstilte bok" }).where(eq(cookbook.id, utstilt.bok.id));
 
     render(await Home());
 
-    expect(screen.getByText("Marens utstilte bok")).toBeInTheDocument();
-    expect(screen.getByText(/Et lite utvalg fra hylla/)).toBeInTheDocument();
-    // den private boken heter "Testkokeboka" — og den skal ingen gjest se
+    // utstillingsvinduet er av enn så lenge — verken utstilte eller private bøker vises
+    expect(screen.queryByText("Marens utstilte bok")).not.toBeInTheDocument();
     expect(screen.queryByText("Testkokeboka")).not.toBeInTheDocument();
     expect(screen.queryByText("ny bok")).not.toBeInTheDocument();
+
+    // men oppslagsverket står fremme, og en invitasjon til å logge inn
+    expect(screen.getByText("Oppslagsboka")).toBeInTheDocument();
+    expect(screen.getByText(/Logg inn for å sette den første boken/)).toBeInTheDocument();
   });
 
   it("en privat bok finnes ikke for andre — eieren kommer rett inn", async () => {
