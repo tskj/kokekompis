@@ -7,7 +7,7 @@ import { getCurrentUserId } from '@/lib/current-user';
 import { getCookbookIdParam } from '@/lib/uuid/server-uuid-params';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { uuidHref } from '@/lib/uuid/uuid-links';
-import { importerFraBilde, importerFraUrl } from '@/app/actions/importer';
+import { importerFraBilde, importerFraTekst, importerFraUrl } from '@/app/actions/importer';
 import { opprettTomOppskrift } from '@/app/actions/rediger';
 import { lagUtkastFraSkjema } from '@/app/actions/utkast';
 import { SendeKnapp } from '@/components/SendeKnapp';
@@ -84,8 +84,8 @@ export default async function ImporterPage({ params, searchParams }: ImporterPag
 
         <h1 className="font-display text-4xl">Ny oppskrift</h1>
         <p className="mt-2 text-ink-soft max-w-prose">
-          Skriv den selv, lim inn en lenke, eller ta et bilde — kokekompisen leser og fører den
-          inn i boken med mengder, steg og opprinnelse.
+          Skriv den selv, lim inn en lenke eller hele teksten fra en side, eller ta et bilde —
+          kokekompisen leser og fører den inn i boken med mengder, steg og opprinnelse.
         </p>
       </header>
 
@@ -116,6 +116,29 @@ export default async function ImporterPage({ params, searchParams }: ImporterPag
           <KapittelVelger kapitler={kapitler} />
 
           <SendeKnapp barn="Hent oppskriften" venteTekst="Leser oppskriften — et halvt minutts tid …" />
+        </form>
+
+        <form action={importerFraTekst.bind(null, cookbookId)} className="space-y-4 rounded-xl border border-line bg-card p-5 shadow-bok">
+          <h2 className="font-display text-2xl">Lim inn teksten</h2>
+          <p className="text-sm text-ink-soft">
+            Vil ikke lenken? Åpne siden, merk alt (Ctrl/Cmd+A), kopier og lim inn her —
+            kokekompisen finner oppskriften i rotet.
+          </p>
+
+          <label className="block text-sm">
+            <span className="text-ink-soft">Teksten fra siden</span>
+            <textarea
+              name="tekst"
+              required
+              rows={6}
+              placeholder="Lim inn alt — meny og reklame gjør ingenting, kokekompisen plukker ut oppskriften."
+              className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2 focus:border-terra focus:outline-none"
+            />
+          </label>
+
+          <KapittelVelger kapitler={kapitler} />
+
+          <SendeKnapp barn="Les teksten" venteTekst="Leser teksten — et halvt minutts tid …" />
         </form>
 
         <form action={importerFraBilde.bind(null, cookbookId)} className="space-y-4 rounded-xl border border-line bg-card p-5 shadow-bok">

@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }),
 }));
 
-import { importerFraUrl, importerFraBilde } from "@/app/actions/importer";
+import { importerFraUrl, importerFraBilde, importerFraTekst } from "@/app/actions/importer";
 
 // Det modellen "svarer" med — en gyldig ekstrahert oppskrift etter skjemaet i schema.ts.
 const EKSTRAHERT = {
@@ -46,6 +46,27 @@ function openAISvar(payload: unknown): Response {
 function urlSkjema(kapittelId: string | "ingen", url = "https://www.matbloggen.no/vafler") {
   const formData = new FormData();
   formData.set("url", url);
+  formData.set("kapittel", kapittelId === "ingen" ? "ingen" : encodeUuidToBase32(kapittelId));
+
+  return formData;
+}
+
+// Hele siden slik en Ctrl/Cmd+A-kopi ser ut: oppskriften druknet i meny, cookie-banner, kommentarer
+// og "andre oppskrifter du kanskje liker". Modellen (her mocket) skal plukke ut bare oppskriften.
+const LIMT_SIDE = [
+  "Hjem  Oppskrifter  Om oss  Logg inn  Søk …",
+  "Vi bruker informasjonskapsler for å gi deg en bedre opplevelse. Godta alle.",
+  "Vafler",
+  "Av Kari Nordmann · 12 kommentarer · Del på Facebook · Del på Pinterest",
+  "Ingredienser: 4 dl hvetemel, 5 dl melk",
+  "Slik gjør du: Visp sammen mel og melk. La røra svelle i 30 minutter.",
+  "Andre oppskrifter du kanskje liker: Pannekaker · Lapper · Sveler",
+  "Skriv en kommentar … Abonner på nyhetsbrevet vårt! © 2026 Matbloggen",
+].join("\n");
+
+function tekstSkjema(kapittelId: string | "ingen", tekst = LIMT_SIDE) {
+  const formData = new FormData();
+  formData.set("tekst", tekst);
   formData.set("kapittel", kapittelId === "ingen" ? "ingen" : encodeUuidToBase32(kapittelId));
 
   return formData;
@@ -241,5 +262,66 @@ describe("AI-import (ekte actions og database, mocket nett og OpenAI)", () => {
     }
 
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("limer inn hele siden, sender alt til modellen og lagrer oppskriften — uten å hente noe på nett", async () => {
+    const { user, bok, kapittel } = await makeKokebok();
+    hoisted.userId = user.id;
+    vi.stubEnv("OPENAI_API_KEY", "test-nøkkel");
+
+    const fetchSpy = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      if (String(url).includes("api.openai.com")) return openAISvar(EKSTRAHERT);
+
+      throw new Error("uventet fetch: " + String(url));
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const feil = await importerFraTekst(bok.id, tekstSkjema(kapittel.id)).then(() => null, (e: Error) => e);
+    expect(feil?.message).toMatch(/^NEXT_REDIRECT:.*\/oppskrift\//);
+
+    // ingen nett-fetch — bare OpenAI ble kalt (poenget: lenken funket ikke, så vi limte inn)
+    const nettkall = fetchSpy.mock.calls.filter(([u]) => !String(u).includes("api.openai.com"));
+    expect(nettkall).toHaveLength(0);
+
+    // hele den innlimte siden gikk til modellen — rot og alt; den skal selv skille ut oppskriften
+    const openAIKall = fetchSpy.mock.calls.find(([u]) => String(u).includes("api.openai.com"));
+    const body = JSON.parse(String(openAIKall![1]!.body));
+    expect(body.input[1].content).toContain("Visp sammen mel og melk");
+    expect(body.input[1].content).toContain("Andre oppskrifter du kanskje liker");
+
+    const nye = await db.select().from(recipes).where(eq(recipes.title, "Vafler fra nettet"));
+    expect(nye).toHaveLength(1);
+    expect(nye[0].cookbookId).toBe(bok.id);
+
+    // innlimt tekst har ingen kilde-URL — opprinnelsen er det modellen leste ut, ikke tvunget til nettside
+    const content = recipeContentSchema.parse(nye[0].content);
+    expect(content.opprinnelse?.navn).toBe("Matbloggen");
+    expect(content.opprinnelse?.url).toBeNull();
+    expect(content.ingredienser[0].enhet).toBe("dl");
+
+    const lenke = await db
+      .select()
+      .from(recipeChapters)
+      .where(eq(recipeChapters.recipeId, nye[0].id))
+      .single("test.kapittellenke");
+    expect(lenke.chapterId).toBe(kapittel.id);
+    expect(lenke.order).toBe(2);
+  });
+
+  it("for kort eller tom innliming gir beskjed — ingenting lagres og modellen røres ikke", async () => {
+    const { user, bok, kapittel } = await makeKokebok();
+    hoisted.userId = user.id;
+    vi.stubEnv("OPENAI_API_KEY", "test-nøkkel");
+
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const feil = await importerFraTekst(bok.id, tekstSkjema(kapittel.id, "vafler")).then(() => null, (e: Error) => e);
+    expect(feil?.message).toMatch(/^NEXT_REDIRECT:.*\/importer\?feil=/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    const alle = await db.select().from(recipes).where(eq(recipes.cookbookId, bok.id));
+    expect(alle).toHaveLength(1); // bare den fra makeKokebok
   });
 });

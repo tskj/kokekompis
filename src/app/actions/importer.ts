@@ -10,7 +10,7 @@ import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { parseUuidParam } from '@/lib/uuid/uuid-base32';
-import { ekstraherFraBilde, ekstraherFraTekst, tilRecipeContent, ImportFeil, type EkstrahertOppskrift } from '@/lib/ai/ekstraher-oppskrift';
+import { ekstraherFraBilde, ekstraherFraLimtTekst, ekstraherFraTekst, tilRecipeContent, ImportFeil, type EkstrahertOppskrift } from '@/lib/ai/ekstraher-oppskrift';
 import { log, Attr } from '@/lib/log';
 
 // Importflyten: hent kilden (nettside eller foto), la AI-en strukturere den, lagre i valgt
@@ -57,7 +57,7 @@ async function lagreOppskrift(
   kapittelId: string | null,
   userId: string,
   ekstrahert: EkstrahertOppskrift,
-  kilde: 'url' | 'bilde',
+  kilde: 'url' | 'bilde' | 'tekst',
 ): Promise<string> {
   return withTransaction({ name: 'oppskrift.importer' }, async (tx) => {
     if (kapittelId) {
@@ -221,6 +221,48 @@ export async function importerFraBilde(cookbookId: string, formData: FormData) {
   }
 
   const recipeId = await lagreOppskrift(cookbookId, valg.kapittelId, userId, ekstrahert, 'bilde');
+
+  log.info(recipeId, Attr.IMPORT_MODEL, modell);
+  log.info(recipeId, Attr.IMPORT_LATENCY_MS, latencyMs);
+  redirect(uuidHref`/kokebok/${cookbookId}/oppskrift/${recipeId}`);
+}
+
+// Sisteutvei når lenken ikke vil hentes (JS-rendret side, innlogging, paywall): brukeren merker alt
+// på siden (Ctrl/Cmd+A), kopierer og limer inn her. Ingen nett-fetch — bare teksten, rett til AI-en.
+export async function importerFraTekst(cookbookId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) tilbakeMedFeil(cookbookId, 'Du må være logget inn for å importere');
+
+  const minBok = await db
+    .select({ id: cookbook.id })
+    .from(cookbook)
+    .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
+    .exists();
+  if (!minBok) redirect('/');
+
+  const valg = lesKapittelValg(formData);
+  if (!valg) tilbakeMedFeil(cookbookId, 'Velg et kapittel');
+
+  const tekst = String(formData.get('tekst') ?? '').trim();
+  if (tekst.length < 40) tilbakeMedFeil(cookbookId, 'Lim inn teksten fra oppskriften — gjerne hele siden (Ctrl/Cmd+A)');
+
+  const tekstHash = createHash('sha256').update(tekst).digest('hex');
+
+  let ekstrahert: EkstrahertOppskrift;
+  let modell: string;
+  let latencyMs: number;
+  try {
+    ({ oppskrift: ekstrahert, modell, latencyMs } = await ekstraherFraLimtTekst(tekst, tekstHash));
+  } catch (err) {
+    if (err instanceof ImportFeil) {
+      log.warn('import.tekst-failed', err.message, { lengde: tekst.length });
+      tilbakeMedFeil(cookbookId, err.message);
+    }
+
+    throw err;
+  }
+
+  const recipeId = await lagreOppskrift(cookbookId, valg.kapittelId, userId, ekstrahert, 'tekst');
 
   log.info(recipeId, Attr.IMPORT_MODEL, modell);
   log.info(recipeId, Attr.IMPORT_LATENCY_MS, latencyMs);

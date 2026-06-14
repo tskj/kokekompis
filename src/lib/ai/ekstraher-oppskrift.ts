@@ -32,6 +32,7 @@ Regler:
 - "imens": true på steg som kan gjøres MENS forrige venting pågår (lage fyll mens deigen hever). Vær konservativ — bare når det åpenbart ikke avhenger av ventingens resultat.
 - "totalTidMinutter" er fra start til spiseklart (inkluder heving/avkjøling); null hvis det ikke kan leses ut. "aktivTidMinutter" er hendene-i-bollen-tid.
 - "opprinnelse": kildens navn hvis den fremgår (bloggens/nettstedets navn, "Mormor" på et håndskrevet kort, bokens tittel). null hvis ukjent.
+- Teksten kan være full av rot rundt selve oppskriften — meny, reklame, informasjonskapsel-bannere, nyhetsbrev-bokser, kommentarfelt, "andre oppskrifter du kanskje liker", deleknapper, bunntekst. Plukk ut DEN oppskriften siden handler om og se bort fra alt det andre. Er det flere likeverdige oppskrifter, ta hovedoppskriften siden er bygd rundt.
 - Ikke dikt opp noe som ikke står i kilden. Er bildet/teksten ikke en oppskrift, gjør ditt beste med det som finnes.`;
 
 // Håndskrevet speil av ekstrahertOppskriftSchema for OpenAIs strict-modus (alle felt required,
@@ -273,4 +274,15 @@ export async function ekstraherFraBilde(bildeDataUrl: string, dedupNøkkel: stri
     { type: 'input_text', text: 'Strukturer oppskriften på dette bildet.' },
     { type: 'input_image', image_url: bildeDataUrl },
   ]));
+}
+
+// Innlimt tekst: brukeren har som regel kopiert hele siden (Ctrl/Cmd+A) fordi lenken ikke lot seg
+// hente — JS-rendrede sider, innlogging, paywall. Vi har ingen kilde-URL å tvinge opprinnelsen mot;
+// modellen leser den ut av teksten selv hvis den står der. Dedup-nøkkelen er en hash av teksten.
+export async function ekstraherFraLimtTekst(tekst: string, dedupNøkkel: string) {
+  return medInFlightDedup(`tekst:${dedupNøkkel}`, () => {
+    const avkortet = tekst.slice(0, MAKS_TEKST_TEGN);
+
+    return kallOpenAI(`Brukeren har limt inn tekst — som regel hele nettsiden kopiert (Ctrl/Cmd+A), fordi lenken ikke lot seg hente automatisk. Finn oppskriften i rotet og strukturer bare den.\n\nInnlimt tekst:\n\n${avkortet}`);
+  });
 }
