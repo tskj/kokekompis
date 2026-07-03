@@ -387,6 +387,10 @@ export const users = pgTable('user', {
   oppskriftFont: text('oppskriftFont').$type<FontValg>().notNull().default('montserrat'),
   // utstilling på forsiden er forbeholdt admin (Maren) — eksempler, ikke SoMe
   admin: boolean('admin').notNull().default(false),
+  // spesialbøkenes plass i egen-sorteringen: 1-basert i den samlede hyllerekken (se
+  // src/lib/hylle.ts); null = bakerst, slik hylla alltid har stått
+  favoritterPlass: integer('favoritterPlass'),
+  oppslagPlass:    integer('oppslagPlass'),
 });
 
 export const accounts = pgTable('account', {

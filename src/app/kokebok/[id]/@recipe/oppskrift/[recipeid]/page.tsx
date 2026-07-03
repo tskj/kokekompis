@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { eq, and, asc, ne, isNull, inArray, notInArray } from 'drizzle-orm';
+import { eq, and, asc, ne, isNull, inArray, notInArray, or, sql } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeComments, recipeMarginalia, plans, planRecipes, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
@@ -50,6 +50,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
         description: recipes.description,
         content: recipes.content,
         utkastAv: recipes.utkastAv,
+        kildeUrl: sql<string | null>`${recipes.content}->'opprinnelse'->>'url'`,
       })
       .from(recipes)
       .where(and(eq(recipes.id, recipeId), eq(recipes.cookbookId, cookbookId)))
@@ -57,6 +58,26 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
     if (!oppskrift) return null;
 
     const erEier = bok.userId === userId;
+
+    // samme oppskrift i andre bøker (samme tittel eller samme kilde) — greit å VITE at den står
+    // der også; helt greit å HA den flere steder
+    const andreEksemplarer = erEier && userId
+      ? await tx
+          .select({ id: recipes.id, bokId: recipes.cookbookId, bokNavn: cookbook.name })
+          .from(recipes)
+          .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
+          .where(and(
+            eq(recipes.userId, userId),
+            ne(recipes.cookbookId, cookbookId),
+            isNull(recipes.utkastAv),
+            isNull(cookbook.arkivert),
+            or(
+              sql`lower(${recipes.title}) = lower(${oppskrift.title})`,
+              ...(oppskrift.kildeUrl ? [sql`${recipes.content}->'opprinnelse'->>'url' = ${oppskrift.kildeUrl}`] : []),
+            ),
+          ))
+          .orderBy(asc(cookbook.name))
+      : [];
 
     // utkast-benken: er dette en original, finn utkastene dens; er det et utkast, finn originalen
     const utkast = await tx
@@ -191,7 +212,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(plans.name))
       : [];
 
-    return { ...oppskrift, erEier, kapitlerIBoken, andreBøker, kapittelId: kapittelLenke?.chapterId ?? null, notater, marginalia, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner, iPlaner };
+    return { ...oppskrift, erEier, kapitlerIBoken, andreBøker, andreEksemplarer, kapittelId: kapittelLenke?.chapterId ?? null, notater, marginalia, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner, iPlaner };
   });
 }
 
@@ -281,6 +302,26 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             </span>
           )}
         </div>
+      )}
+
+      {/* oversikten over dubletter: samme oppskrift kan gjerne stå i flere bøker — men du skal
+          slippe å lure på OM den gjør det */}
+      {side.erEier && !erUtkast && side.andreEksemplarer.length > 0 && (
+        <p className="mb-5 text-sm text-ink-soft skjul-ved-print">
+          Denne står også i{' '}
+          {side.andreEksemplarer.map((eksemplar, index) => (
+            <span key={eksemplar.id}>
+              {index > 0 && (index === side.andreEksemplarer.length - 1 ? ' og ' : ', ')}
+              <Link prefetch={true}
+                href={uuidHref`/kokebok/${eksemplar.bokId}/oppskrift/${eksemplar.id}`}
+                className="underline underline-offset-2 hover:text-terra"
+              >
+                «{eksemplar.bokNavn}»
+              </Link>
+            </span>
+          ))}
+          .
+        </p>
       )}
 
       {side.erEier && side.utkast.length > 0 && (

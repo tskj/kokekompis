@@ -9,6 +9,7 @@ import { formaterDag, erTidligereDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { opprettBok, settHylleSortering, gjenåpneBok, slettBok } from '@/app/actions/bok';
 import { BekreftKnapp } from '@/components/BekreftKnapp';
+import { flettHylle } from '@/lib/hylle';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { SorterbarBokhylle } from '@/components/SorterbarBokhylle';
 import Link from 'next/link';
@@ -36,7 +37,7 @@ async function getHylla(userId: string | null) {
   return withTransaction({ name: 'forside' }, async (tx) => {
     const bruker = userId
       ? await tx
-          .select({ hylleSortering: users.hylleSortering })
+          .select({ hylleSortering: users.hylleSortering, favoritterPlass: users.favoritterPlass, oppslagPlass: users.oppslagPlass })
           .from(users)
           .where(eq(users.id, userId))
           .maybeSingle('forside.bruker')
@@ -73,7 +74,15 @@ async function getHylla(userId: string | null) {
           .orderBy(asc(plans.dato), asc(plans.name))
       : [];
 
-    return { bøker, arkiverte, planer, sortering };
+    // hylla flettes med favoritt-boka og oppslagsboka på plassene sine — i "sist åpnet"-modus
+    // (og for gjester) står de bakerst som før. En gjest har bare Oppslagsboka.
+    const hylle = userId
+      ? (sortering === 'egen'
+          ? flettHylle(bøker, bruker?.favoritterPlass ?? null, bruker?.oppslagPlass ?? null)
+          : flettHylle(bøker, null, null))
+      : flettHylle([], null, null).filter((element) => element.slag !== 'favoritter');
+
+    return { hylle, antallBøker: bøker.length, arkiverte, planer, sortering };
   });
 }
 
@@ -92,10 +101,10 @@ export default async function Home() {
     if (!harBok) await db.insert(cookbook).values({ userId, name: 'Min første kokebok' });
   }
 
-  const { bøker: cookbooks, arkiverte, planer, sortering } = await getHylla(userId);
+  const { hylle, antallBøker, arkiverte, planer, sortering } = await getHylla(userId);
 
-  // pilene for egen sortering vises bare når de kan utrette noe
-  const kanSortere = !!userId && sortering === 'egen' && cookbooks.length > 1;
+  // sortering gir bare mening i egen rekkefølge — og med mer enn ett element å flytte på
+  const kanSortere = !!userId && sortering === 'egen' && hylle.length > 1;
 
   // skrivebordet viser det som kommer — tidligere arrangementer bor under /planer
   const iDag = nowDate().toISOString().slice(0, 10);
@@ -150,7 +159,7 @@ export default async function Home() {
         <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <h2 className="text-[11px] uppercase tracking-[0.2em] text-ink-soft">Bokhylla</h2>
 
-          {userId && cookbooks.length > 1 && (
+          {userId && antallBøker > 1 && (
             <form action={settHylleSortering} className="flex items-center gap-2 text-xs text-ink-soft">
               <span>Sortert etter:</span>
               <button
@@ -177,52 +186,10 @@ export default async function Home() {
 
         {/* På telefon ligger bøkene bortover med litt overlapp og scroller sidelengs — de brekker
             aldri under hverandre. På store skjermer brer hylla seg utover med luft mellom.
-            I "min rekkefølge"-modus kan bøkene trykkes-og-dras på plass. */}
-        <SorterbarBokhylle bøker={cookbooks} kanSortere={kanSortere} hale={
+            I "min rekkefølge"-modus kan alt på hylla trykkes-og-dras på plass — også
+            favoritt-boka og oppslagsboka. */}
+        <SorterbarBokhylle elementer={hylle} kanSortere={kanSortere} hale={
           <>
-            {userId && (
-              <div className="relative shrink-0 -ml-8 pb-4 first:ml-0 md:ml-0">
-                <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
-                <Link prefetch={true}
-                  href="/favoritter"
-                  className="bokstoff bok-3d group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok"
-                >
-                  <span aria-hidden className="bok-bak pointer-events-none absolute inset-0 rounded-r-md rounded-l-sm bg-inherit" />
-                  <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-7" />
-                  {/* hjertene er forsiden — strødd som på et godt brukt omslag */}
-                  <span aria-hidden className="pointer-events-none absolute left-3 top-5 rotate-[-14deg] text-lg text-terra/50">♥</span>
-                  <span aria-hidden className="pointer-events-none absolute right-4 top-3 rotate-[10deg] text-sm text-terra/40">♥</span>
-                  <span aria-hidden className="pointer-events-none absolute bottom-14 left-5 rotate-[8deg] text-xl text-terra/45">♥</span>
-                  <span aria-hidden className="pointer-events-none absolute bottom-20 right-5 rotate-[-8deg] text-base text-terra/35">♥</span>
-                  <span className="foto-hjorner mt-5 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug shadow-sm">
-                    ♥ Favoritter
-                  </span>
-                  <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">
-                    Kokekompis
-                  </span>
-                </Link>
-              </div>
-            )}
-
-            {/* oppslagsverket — ikke en kokebok, men den står på samme hylle */}
-            <div className="relative shrink-0 -ml-8 pb-4 first:ml-0 md:ml-0">
-              <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
-              <Link prefetch={true}
-                href="/oppslag"
-                className="bokstoff bok-3d group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 bg-natt p-4 text-paper shadow-bok"
-              >
-                <span aria-hidden className="bok-bak pointer-events-none absolute inset-0 rounded-r-md rounded-l-sm bg-inherit" />
-                <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-7" />
-                {/* ett langt ord — text-base så det aldri må deles (samme regel som bokTittelStørrelse) */}
-                <span className="foto-hjorner mt-5 block overflow-hidden bg-paper/95 px-2 py-3 text-center font-display text-base leading-snug text-ink shadow-sm">
-                  Oppslagsboka
-                </span>
-                <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">
-                  Kokekompis
-                </span>
-              </Link>
-            </div>
-
             {userId && (
               <div className="relative shrink-0 -ml-8 pb-4 first:ml-0 md:ml-0">
                 <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />

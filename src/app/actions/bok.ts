@@ -3,15 +3,16 @@
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { z } from 'zod';
-import { and, asc, eq, max, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, max, sql } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { cookbook, chapters, recipes, users, bokSynligheter, bokFarger, hylleSorteringer, recipeContentSchema } from '@/lib/db/schema';
 import { nowDate } from '@/lib/clock';
-import { withTransaction } from '@/lib/db-tx';
+import { withTransaction, type Tx } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { lesBåndValg, lesSkisse } from '@/lib/bok-utseende';
+import { flettHylle, FAVORITTER_ID, OPPSLAG_ID } from '@/lib/hylle';
 import { lagreBilde, slettBilde } from '@/lib/lagring';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { log, Attr } from '@/lib/log';
@@ -83,39 +84,52 @@ export async function settHylleSortering(formData: FormData) {
   revalidatePath('/', 'layout');
 }
 
-// Hele hyllas rekkefølge i ett jafs — fra trykk-og-dra. Bare dine egne bøker telles med;
-// fremmede ids hopper vi over, og egne bøker som mangler i listen legges bakerst slik
-// visningen alt sorterer dem.
-export async function lagreHylleRekkefølge(bokIds: unknown) {
+// Skriv hele hyllerekken: bøkene nummereres seg imellom (rekkefølge 1..n), spesialbøkene får
+// sin 1-baserte plass i den samlede rekken lagret på brukeren. Kalles med den ferdige listen.
+async function lagreHylle(tx: Tx, userId: string, hylle: Array<{ id: string }>) {
+  let bokPlass = 0;
+  for (const [indeks, element] of hylle.entries()) {
+    if (element.id === FAVORITTER_ID)     await tx.update(users).set({ favoritterPlass: indeks + 1 }).where(eq(users.id, userId));
+    else if (element.id === OPPSLAG_ID)   await tx.update(users).set({ oppslagPlass:    indeks + 1 }).where(eq(users.id, userId));
+    else {
+      bokPlass += 1;
+      await tx.update(cookbook).set({ rekkefølge: bokPlass }).where(eq(cookbook.id, element.id));
+    }
+  }
+}
+
+// Hele hyllas rekkefølge i ett jafs — fra trykk-og-dra. Favoritt-boka og oppslagsboka står i
+// listen med navnene sine som id og får plassen lagret på brukeren; fremmede ids hopper vi
+// over, og egne bøker som mangler i listen legges bakerst slik visningen alt sorterer dem.
+export async function lagreHylleRekkefølge(elementIds: unknown) {
   const userId = await getCurrentUserId();
   if (!userId) return;
 
   // klientkall over nettet — parse, ikke stol
-  const ønskede = z.array(z.string()).safeParse(bokIds);
+  const ønskede = z.array(z.string()).safeParse(elementIds);
   if (!ønskede.success) return;
 
   await withTransaction({ name: 'bok.hylle-rekkefølge' }, async (tx) => {
     const mine = await tx
       .select({ id: cookbook.id })
       .from(cookbook)
-      .where(eq(cookbook.userId, userId))
+      .where(and(eq(cookbook.userId, userId), isNull(cookbook.arkivert)))
       .orderBy(sql`${cookbook.rekkefølge} asc nulls last`, asc(cookbook.name));
 
-    const ønsket = ønskede.data.filter((id) => mine.some((bok) => bok.id === id));
-    const rest = mine.map((bok) => bok.id).filter((id) => !ønsket.includes(id));
+    const gyldige = ønskede.data.filter((id, indeks, liste) =>
+      (id === FAVORITTER_ID || id === OPPSLAG_ID || mine.some((bok) => bok.id === id)) && liste.indexOf(id) === indeks);
+    const rest = mine.map((bok) => bok.id).filter((id) => !gyldige.includes(id));
 
-    for (const [plass, id] of [...ønsket, ...rest].entries()) {
-      await tx.update(cookbook).set({ rekkefølge: plass + 1 }).where(eq(cookbook.id, id));
-    }
+    await lagreHylle(tx, userId, [...gyldige, ...rest].map((id) => ({ id })));
   });
 
   revalidatePath('/', 'layout');
 }
 
-// Flytt en bok mot venstre eller høyre i din egen rekkefølge. Hele hylla normaliseres til
-// 1..n ved hvert bytte — bøker som aldri er sortert (null) står da bakerst i navnerekkefølge,
-// samme rekkefølge som visningen bruker, så pilene flytter alltid det øyet ser.
-export async function flyttBokPåHylla(cookbookId: string, retning: 'venstre' | 'høyre', formData: FormData) {
+// Flytt et hylle-element — bok, favoritter eller oppslagsboka — mot venstre eller høyre i din
+// egen rekkefølge. Hylla flettes som visningen gjør det og normaliseres ved hvert bytte, så
+// pilene flytter alltid det øyet ser.
+export async function flyttBokPåHylla(elementId: string, retning: 'venstre' | 'høyre', formData: FormData) {
   void formData;
 
   const userId = await getCurrentUserId();
@@ -123,22 +137,27 @@ export async function flyttBokPåHylla(cookbookId: string, retning: 'venstre' | 
 
   await withTransaction({ name: 'bok.flytt-på-hylla' }, async (tx) => {
     const bøker = await tx
-      .select({ id: cookbook.id })
+      .select({ id: cookbook.id, name: cookbook.name, farge: cookbook.farge })
       .from(cookbook)
-      .where(eq(cookbook.userId, userId))
+      .where(and(eq(cookbook.userId, userId), isNull(cookbook.arkivert)))
       .orderBy(sql`${cookbook.rekkefølge} asc nulls last`, asc(cookbook.name));
 
-    const index = bøker.findIndex((bok) => bok.id === cookbookId);
+    const bruker = await tx
+      .select({ favoritterPlass: users.favoritterPlass, oppslagPlass: users.oppslagPlass })
+      .from(users)
+      .where(eq(users.id, userId))
+      .single('bok.flytt-på-hylla.bruker');
+
+    const hylle = flettHylle(bøker, bruker.favoritterPlass, bruker.oppslagPlass);
+    const index = hylle.findIndex((element) => element.id === elementId);
     if (index === -1) return;
 
     const nabo = retning === 'venstre' ? index - 1 : index + 1;
-    if (nabo < 0 || nabo >= bøker.length) return;
+    if (nabo < 0 || nabo >= hylle.length) return;
 
-    [bøker[index], bøker[nabo]] = [bøker[nabo], bøker[index]];
+    [hylle[index], hylle[nabo]] = [hylle[nabo], hylle[index]];
 
-    for (const [plass, bok] of bøker.entries()) {
-      await tx.update(cookbook).set({ rekkefølge: plass + 1 }).where(eq(cookbook.id, bok.id));
-    }
+    await lagreHylle(tx, userId, hylle);
   });
 
   revalidatePath('/', 'layout');
