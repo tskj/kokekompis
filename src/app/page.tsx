@@ -130,7 +130,23 @@ export default async function Home() {
         </div>
       </header>
 
-      <section className="relative mt-14" aria-label="Bokhylla">
+      {/* søket går på tvers av alle bøkene — navn og ingredienser i ett felt (/sok) */}
+      {userId && (
+        <form action="/sok" className="mt-10 flex items-center gap-2">
+          <input
+            type="search"
+            name="sok"
+            placeholder="Søk i alle oppskriftene — navn eller ingredienser …"
+            aria-label="Søk i oppskriftene"
+            className="w-full max-w-md rounded-full border border-line bg-card px-5 py-2 text-sm focus:border-terra focus:outline-none"
+          />
+          <button type="submit" className="rounded-full border border-line px-4 py-2 text-sm text-ink-soft hover:border-terra hover:text-terra">
+            Søk
+          </button>
+        </form>
+      )}
+
+      <section className="relative mt-10" aria-label="Bokhylla">
         <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <h2 className="text-[11px] uppercase tracking-[0.2em] text-ink-soft">Bokhylla</h2>
 
