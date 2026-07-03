@@ -56,6 +56,8 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
       .maybeSingle('oppskrift.side');
     if (!oppskrift) return null;
 
+    const erEier = bok.userId === userId;
+
     // utkast-benken: er dette en original, finn utkastene dens; er det et utkast, finn originalen
     const utkast = await tx
       .select({ id: recipes.id, title: recipes.title })
@@ -114,29 +116,53 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(recipeComments.createdAt))
       : [];
 
+    // lenkene kan peke inn i andre bøker — bokens navn følger med til visningen. Gjester i en
+    // utstilt bok ser bare lenkene som holder seg i boken de har fått lese.
     const utgående = await tx
-      .select({ linkId: recipeLinks.id, recipeId: recipeLinks.toRecipeId, tittel: recipes.title })
+      .select({ linkId: recipeLinks.id, recipeId: recipeLinks.toRecipeId, tittel: recipes.title, bokId: recipes.cookbookId, bokNavn: cookbook.name })
       .from(recipeLinks)
       .innerJoin(recipes, eq(recipeLinks.toRecipeId, recipes.id))
-      .where(eq(recipeLinks.fromRecipeId, recipeId));
+      .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
+      .where(and(
+        eq(recipeLinks.fromRecipeId, recipeId),
+        ...(erEier ? [] : [eq(recipes.cookbookId, cookbookId)]),
+      ));
 
     const innkommende = await tx
-      .select({ linkId: recipeLinks.id, recipeId: recipeLinks.fromRecipeId, tittel: recipes.title })
+      .select({ linkId: recipeLinks.id, recipeId: recipeLinks.fromRecipeId, tittel: recipes.title, bokId: recipes.cookbookId, bokNavn: cookbook.name })
       .from(recipeLinks)
       .innerJoin(recipes, eq(recipeLinks.fromRecipeId, recipes.id))
-      .where(eq(recipeLinks.toRecipeId, recipeId));
-
-    const alleredeLenket = utgående.map((l) => l.recipeId);
-    const kandidater = await tx
-      .select({ id: recipes.id, tittel: recipes.title })
-      .from(recipes)
+      .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
       .where(and(
-        eq(recipes.cookbookId, cookbookId),
-        ne(recipes.id, recipeId),
-        isNull(recipes.utkastAv),
-        ...(alleredeLenket.length > 0 ? [notInArray(recipes.id, alleredeLenket)] : []),
-      ))
-      .orderBy(asc(recipes.title));
+        eq(recipeLinks.toRecipeId, recipeId),
+        ...(erEier ? [] : [eq(recipes.cookbookId, cookbookId)]),
+      ));
+
+    // lenkemålene: alle dine oppskrifter på hylla, ikke bare denne bokens
+    const alleredeLenket = utgående.map((l) => l.recipeId);
+    const kandidater = erEier && userId
+      ? await tx
+          .select({ id: recipes.id, tittel: recipes.title, bokId: recipes.cookbookId, bokNavn: cookbook.name })
+          .from(recipes)
+          .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
+          .where(and(
+            eq(recipes.userId, userId),
+            isNull(cookbook.arkivert),
+            ne(recipes.id, recipeId),
+            isNull(recipes.utkastAv),
+            ...(alleredeLenket.length > 0 ? [notInArray(recipes.id, alleredeLenket)] : []),
+          ))
+          .orderBy(asc(cookbook.name), asc(recipes.title))
+      : [];
+
+    // målene for "Flytt …" — dine andre bøker på hylla
+    const andreBøker = erEier && userId
+      ? await tx
+          .select({ id: cookbook.id, name: cookbook.name })
+          .from(cookbook)
+          .where(and(eq(cookbook.userId, userId), ne(cookbook.id, cookbookId), isNull(cookbook.arkivert)))
+          .orderBy(asc(cookbook.name))
+      : [];
 
     const erFavoritt = userId
       ? await tx
@@ -165,7 +191,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(plans.name))
       : [];
 
-    return { ...oppskrift, erEier: bok.userId === userId, kapitlerIBoken, kapittelId: kapittelLenke?.chapterId ?? null, notater, marginalia, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner, iPlaner };
+    return { ...oppskrift, erEier, kapitlerIBoken, andreBøker, kapittelId: kapittelLenke?.chapterId ?? null, notater, marginalia, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner, iPlaner };
   });
 }
 
@@ -351,22 +377,38 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               </LukkbarDetails>
             )}
 
-            {/* ukategoriserte oppskrifter får veien inn i et kapittel rett herfra — man skal
-                slippe å lete i innholdslista for å rydde */}
-            {side.erEier && !erUtkast && side.kapittelId === null && side.kapitlerIBoken.length > 0 && (
+            {/* flytting rett fra oppskriften — til et kapittel, ut av alle, eller til en annen
+                bok (la den inn feil sted? flytt den dit den hører hjemme). Var før gjemt i
+                innholdslista og bare for ukategoriserte — vanskelig å finne. */}
+            {side.erEier && !erUtkast && (side.kapitlerIBoken.length > 0 || side.andreBøker.length > 0) && (
               <LukkbarDetails className="relative">
                 <summary className="cursor-pointer list-none rounded-full border border-dashed border-line px-4 py-2 text-sm text-ink-soft hover:border-terra hover:text-terra">
-                  Ukategorisert — legg i kapittel …
+                  {side.kapittelId === null && side.kapitlerIBoken.length > 0 ? 'Ukategorisert — flytt …' : 'Flytt …'}
                 </summary>
 
                 <form action={flyttOppskrift.bind(null, recipeId)} className="absolute z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
-                  <select name="kapittel" aria-label="Kapittel" className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm">
-                    {side.kapitlerIBoken.map((kapittel) => (
-                      <option key={kapittel.id} value={encodeUuidToBase32(kapittel.id)}>{kapittel.name}</option>
-                    ))}
+                  <select
+                    name="kapittel"
+                    defaultValue={side.kapittelId ? encodeUuidToBase32(side.kapittelId) : 'ingen'}
+                    aria-label="Hvor skal oppskriften stå?"
+                    className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm"
+                  >
+                    <optgroup label="I denne boken">
+                      {side.kapitlerIBoken.map((kapittel) => (
+                        <option key={kapittel.id} value={encodeUuidToBase32(kapittel.id)}>{kapittel.name}</option>
+                      ))}
+                      <option value="ingen">Ukategorisert</option>
+                    </optgroup>
+                    {side.andreBøker.length > 0 && (
+                      <optgroup label="Til en annen bok">
+                        {side.andreBøker.map((bok) => (
+                          <option key={bok.id} value={`bok:${encodeUuidToBase32(bok.id)}`}>{bok.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                   <button type="submit" className="rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
-                    Legg den der
+                    Flytt den dit
                   </button>
                 </form>
               </LukkbarDetails>

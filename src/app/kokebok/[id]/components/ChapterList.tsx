@@ -44,14 +44,14 @@ function OppskriftPil({ chapterId, recipe, retning }: { chapterId: string; recip
   );
 }
 
-// Flytting mellom kapitler bor her, hos kapitlene — ikke i oppskriftens handlingsrad.
-function FlyttTilKapittel({ recipe, gjeldendeKapittelId, kapitler }: { recipe: Recipe; gjeldendeKapittelId: string | null; kapitler: Chapter[] }) {
+// Flytting bor her, hos kapitlene — til et annet kapittel, ut av alle, eller til en annen bok.
+function FlyttTilKapittel({ recipe, gjeldendeKapittelId, kapitler, andreBøker }: { recipe: Recipe; gjeldendeKapittelId: string | null; kapitler: Chapter[]; andreBøker: Bok[] }) {
   return (
     <LukkbarDetails className="relative">
       <summary
         className="cursor-pointer list-none px-1 py-1 text-xs text-ink/25 hover:text-terra"
-        title={`Flytt ${recipe.title} til et annet kapittel`}
-        aria-label={`Flytt ${recipe.title} til et annet kapittel`}
+        title={`Flytt ${recipe.title} til et annet kapittel eller en annen bok`}
+        aria-label={`Flytt ${recipe.title} til et annet kapittel eller en annen bok`}
       >
         ⇄
       </summary>
@@ -60,13 +60,22 @@ function FlyttTilKapittel({ recipe, gjeldendeKapittelId, kapitler }: { recipe: R
         <select
           name="kapittel"
           defaultValue={gjeldendeKapittelId ? encodeUuidToBase32(gjeldendeKapittelId) : 'ingen'}
-          aria-label={`Kapittel for ${recipe.title}`}
+          aria-label={`Hvor skal ${recipe.title} stå?`}
           className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm"
         >
-          {kapitler.map((kapittel) => (
-            <option key={kapittel.id} value={encodeUuidToBase32(kapittel.id)}>{kapittel.name}</option>
-          ))}
-          <option value="ingen">Ukategorisert</option>
+          <optgroup label="I denne boken">
+            {kapitler.map((kapittel) => (
+              <option key={kapittel.id} value={encodeUuidToBase32(kapittel.id)}>{kapittel.name}</option>
+            ))}
+            <option value="ingen">Ukategorisert</option>
+          </optgroup>
+          {andreBøker.length > 0 && (
+            <optgroup label="Til en annen bok">
+              {andreBøker.map((bok) => (
+                <option key={bok.id} value={`bok:${encodeUuidToBase32(bok.id)}`}>{bok.name}</option>
+              ))}
+            </optgroup>
+          )}
         </select>
         <button type="submit" className="self-start rounded-full bg-terra px-3 py-1 text-sm font-medium text-paper hover:bg-terra-deep">
           Flytt
@@ -181,7 +190,7 @@ function Chapter({ chapter, alleKapitler, cookbookId, currentRecipeId, erEier, a
                   <span className="flex shrink-0 items-center">
                     <OppskriftPil chapterId={chapter.id} recipe={recipe} retning="opp" />
                     <OppskriftPil chapterId={chapter.id} recipe={recipe} retning="ned" />
-                    <FlyttTilKapittel recipe={recipe} gjeldendeKapittelId={chapter.id} kapitler={alleKapitler} />
+                    <FlyttTilKapittel recipe={recipe} gjeldendeKapittelId={chapter.id} kapitler={alleKapitler} andreBøker={andreBøker} />
                   </span>
                 )}
               </li>
@@ -236,8 +245,8 @@ export function ChapterList({ cookbookId, chapters, ukategorisert, erEier, andre
                   {recipe.title}
                 </Link>
 
-                {erEier && chapters.length > 0 && (
-                  <FlyttTilKapittel recipe={recipe} gjeldendeKapittelId={null} kapitler={chapters} />
+                {erEier && (chapters.length > 0 || andreBøker.length > 0) && (
+                  <FlyttTilKapittel recipe={recipe} gjeldendeKapittelId={null} kapitler={chapters} andreBøker={andreBøker} />
                 )}
               </li>
             ))}

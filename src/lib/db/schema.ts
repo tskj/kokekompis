@@ -162,8 +162,8 @@ export const recipes = pgTable('recipes', {
   utkastAv: uuid('utkastAv').references((): AnyPgColumn => recipes.id, { onDelete: 'cascade' }),
 });
 
-// Manuell lenking innad i boken: skolebollen peker på vaniljekremen. Rettet kant — visningen
-// viser begge retninger ("Se også" / "Brukes i").
+// Manuell lenking mellom oppskrifter, også på tvers av bøker: skolebollen peker på
+// vaniljekremen. Rettet kant — visningen viser begge retninger ("Se også" / "Brukes i").
 export const recipeLinks = pgTable('recipe_links', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
   fromRecipeId: uuid('fromRecipeId')
