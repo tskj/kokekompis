@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { eq, and, asc, ne, isNull, inArray, notInArray, or, sql } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeComments, recipeMarginalia, plans, planRecipes, recipeContentSchema } from '@/lib/db/schema';
+import { cookbook, recipes, recipeChapters, chapters, recipeNotes, recipeLinks, recipeFavorites, recipeComments, recipeMarginalia, recipeKategorier, plans, planRecipes, recipeContentSchema } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { kanSeBok } from '@/lib/bok-tilgang';
 import { lagHandleliste } from '@/lib/handleliste';
@@ -22,6 +22,7 @@ import { toggleFavoritt } from '@/app/actions/favoritter';
 import { leggTilIPlan, fjernFraPlan } from '@/app/actions/planer';
 import { taIBrukUtkast, forkastUtkast } from '@/app/actions/utkast';
 import { settPrøvd, nullstillPrøvd, gjenopprettFraArkiv } from '@/app/actions/provd';
+import { leggTilKategori, fjernKategori } from '@/app/actions/kategorier';
 import { Handleliste } from '@/components/oppskrift/Handleliste';
 import { StegKommentarer } from '@/components/oppskrift/StegKommentarer';
 import { MargSkrift } from '@/components/oppskrift/MargSkrift';
@@ -189,6 +190,24 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(cookbook.name))
       : [];
 
+    // kategoriene — merkelappene som samler på tvers av bøkene — og alle navnene du har brukt
+    // før, som forslag når et nytt merke settes
+    const kategorier = erEier && userId
+      ? await tx
+          .select({ id: recipeKategorier.id, navn: recipeKategorier.navn })
+          .from(recipeKategorier)
+          .where(and(eq(recipeKategorier.recipeId, recipeId), eq(recipeKategorier.userId, userId)))
+          .orderBy(asc(recipeKategorier.navn))
+      : [];
+
+    const alleKategorier = erEier && userId
+      ? await tx
+          .selectDistinct({ navn: recipeKategorier.navn })
+          .from(recipeKategorier)
+          .where(eq(recipeKategorier.userId, userId))
+          .orderBy(asc(recipeKategorier.navn))
+      : [];
+
     const erFavoritt = userId
       ? await tx
           .select({ id: recipeFavorites.id })
@@ -216,7 +235,7 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(plans.name))
       : [];
 
-    return { ...oppskrift, erEier, kapitlerIBoken, andreBøker, andreEksemplarer, kapittelId: kapittelLenke?.chapterId ?? null, notater, marginalia, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner, iPlaner };
+    return { ...oppskrift, erEier, kapitlerIBoken, andreBøker, andreEksemplarer, kategorier, alleKategorier, kapittelId: kapittelLenke?.chapterId ?? null, notater, marginalia, kommentarer, utkast, original, utgående, innkommende, kandidater, erFavoritt, minePlaner, iPlaner };
   });
 }
 
@@ -537,10 +556,70 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               </LukkbarDetails>
             )}
 
+            {/* kategoriene — merker som samler på tvers av bøkene: trykk på merket for å se
+                alle suppene dine, uansett bok. Søket finner dem også. */}
+            {side.erEier && !erUtkast && (
+              <>
+                {side.kategorier.map((kategori) => (
+                  <span key={kategori.id} className="flex items-center gap-0.5 rounded-full border border-butter/70 bg-butter/15 py-1 pl-3 pr-1 text-sm">
+                    <Link prefetch={true}
+                      href={`/kategori/${encodeURIComponent(kategori.navn)}`}
+                      className="hover:text-terra"
+                      title={`Alle med merket «${kategori.navn}» — på tvers av bøkene`}
+                    >
+                      {kategori.navn}
+                    </Link>
+                    <form action={fjernKategori.bind(null, kategori.id)}>
+                      <button
+                        type="submit"
+                        aria-label={`Fjern merket ${kategori.navn}`}
+                        title="Fjern merket"
+                        className="size-6 rounded-full text-ink/30 hover:bg-ink/10 hover:text-ink"
+                      >
+                        ×
+                      </button>
+                    </form>
+                  </span>
+                ))}
+
+                <LukkbarDetails className="relative">
+                  <summary
+                    className="cursor-pointer list-none rounded-full border border-dashed border-line px-4 py-2 text-sm text-ink-soft hover:border-terra hover:text-terra"
+                    title="Et merke samler oppskrifter på tvers av bøkene — «suppe» finner alle suppene dine"
+                  >
+                    + kategori
+                  </summary>
+
+                  <form action={leggTilKategori.bind(null, recipeId)} className="absolute z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-line bg-card p-3 shadow-bok">
+                    <label className="block text-sm">
+                      <span className="text-xs text-ink-soft">Et merke på tvers av bøkene — «suppe», «pai» …</span>
+                      <input
+                        name="navn"
+                        required
+                        maxLength={40}
+                        list="kategori-forslag"
+                        placeholder="suppe"
+                        className="mt-1 w-full rounded-lg border border-line bg-paper px-3 py-1.5 text-sm focus:border-terra focus:outline-none"
+                      />
+                    </label>
+                    <datalist id="kategori-forslag">
+                      {side.alleKategorier.map((kategori) => (
+                        <option key={kategori.navn} value={kategori.navn} />
+                      ))}
+                    </datalist>
+                    <button type="submit" className="self-start rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
+                      Sett merket
+                    </button>
+                  </form>
+                </LukkbarDetails>
+              </>
+            )}
+
             {/* så man ser det herfra: merkene viser hvilke planer oppskriften alt ligger i */}
             {!erUtkast && side.iPlaner.map((plan) => (
               <span key={plan.id} className="flex items-center gap-0.5 rounded-full border border-sage/50 bg-sage/10 py-1 pl-3 pr-1 text-sm">
-                <Link prefetch={true} href={uuidHref`/planer/${plan.id}`} className="hover:text-terra" title="Åpne planen">
+                {/* hoppet til planen tar med seg veien hjem — tilbake-knappen der lander HER */}
+                <Link prefetch={true} href={`${uuidHref`/planer/${plan.id}`}?tilbake=${encodeURIComponent(stiBase)}`} className="hover:text-terra" title="Åpne planen">
                   På planen: {plan.name}{plan.ganger !== 1 && ` — ${plan.ganger === 0.5 ? '½' : plan.ganger}×`}
                 </Link>
                 <form action={fjernFraPlan.bind(null, plan.id, recipeId)}>

@@ -1,7 +1,7 @@
 import { auth, signIn } from '@/auth';
 import { and, asc, eq, isNull, isNotNull, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { cookbook, plans, users } from '@/lib/db/schema';
+import { cookbook, plans, recipeKategorier, users } from '@/lib/db/schema';
 import { withTransaction } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
 import { nowDate } from '@/lib/clock';
@@ -74,6 +74,17 @@ async function getHylla(userId: string | null) {
           .orderBy(asc(plans.dato), asc(plans.name))
       : [];
 
+    // kategoriene — merkene som samler oppskrifter på tvers av bøkene («suppe», «pai») —
+    // med antall, til stripen under hylla
+    const kategorier = userId
+      ? await tx
+          .select({ navn: recipeKategorier.navn, antall: sql<number>`count(*)::int` })
+          .from(recipeKategorier)
+          .where(eq(recipeKategorier.userId, userId))
+          .groupBy(recipeKategorier.navn)
+          .orderBy(asc(recipeKategorier.navn))
+      : [];
+
     // hylla flettes med favoritt-boka og oppslagsboka på plassene sine — i "sist åpnet"-modus
     // (og for gjester) står de bakerst som før. En gjest har bare Oppslagsboka.
     const hylle = userId
@@ -82,7 +93,7 @@ async function getHylla(userId: string | null) {
           : flettHylle(bøker, null, null))
       : flettHylle([], null, null).filter((element) => element.slag !== 'favoritter');
 
-    return { hylle, antallBøker: bøker.length, arkiverte, planer, sortering };
+    return { hylle, antallBøker: bøker.length, arkiverte, planer, kategorier, sortering };
   });
 }
 
@@ -101,7 +112,7 @@ export default async function Home() {
     if (!harBok) await db.insert(cookbook).values({ userId, name: 'Min første kokebok' });
   }
 
-  const { hylle, antallBøker, arkiverte, planer, sortering } = await getHylla(userId);
+  const { hylle, antallBøker, arkiverte, planer, kategorier, sortering } = await getHylla(userId);
 
   // sortering gir bare mening i egen rekkefølge — og med mer enn ett element å flytte på
   const kanSortere = !!userId && sortering === 'egen' && hylle.length > 1;
@@ -255,6 +266,29 @@ export default async function Home() {
           </p>
         )}
       </section>
+
+      {/* Kategoriene — merkene som samler på tvers av bøkene: alle suppene under ett, uansett
+          hvilken bok de bor i. Merkene settes på oppskriftssiden («+ kategori»). */}
+      {kategorier.length > 0 && (
+        <section className="mt-14" aria-label="Kategorier">
+          <h2 className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-ink-soft">Kategorier</h2>
+          <p className="mb-4 text-sm text-ink-soft">
+            Merkene dine på tvers av bøkene — alle suppene under ett, uansett hvor de bor.
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            {kategorier.map((kategori) => (
+              <Link prefetch={true}
+                key={kategori.navn}
+                href={`/kategori/${encodeURIComponent(kategori.navn)}`}
+                className="rounded-full border border-line bg-card px-3.5 py-1.5 text-sm hover:border-terra hover:text-terra"
+              >
+                {kategori.navn} <span className="text-ink-soft">({kategori.antall})</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Skrivebordet under hylla: planene ligger som håndskrevne lapper — det man SKAL lage,
           før det havner i en bok. Lappestilen sier hva en plan er bedre enn noen forklaring. */}

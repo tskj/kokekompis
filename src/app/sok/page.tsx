@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { and, asc, eq, isNull, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { cookbook, recipes } from '@/lib/db/schema';
+import { cookbook, recipes, recipeKategorier } from '@/lib/db/schema';
 import { getCurrentUserId } from '@/lib/current-user';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 
@@ -19,7 +19,8 @@ function likeMønster(ord: string): string {
 }
 
 async function søk(userId: string, ord: string[]) {
-  // hvert ord må treffe et sted i oppskriften — tittel, beskrivelse eller en ingrediens
+  // hvert ord må treffe et sted i oppskriften — tittel, beskrivelse, en ingrediens eller et
+  // kategorimerke («suppe» finner alt du har merket som suppe)
   const vilkår: SQL[] = ord.map((o) => {
     const mønster = likeMønster(o);
     return sql`(
@@ -28,6 +29,10 @@ async function søk(userId: string, ord: string[]) {
       or exists (
         select 1 from jsonb_array_elements(${recipes.content}->'ingredienser') as ing
         where ing->>'navn' ilike ${mønster}
+      )
+      or exists (
+        select 1 from ${recipeKategorier}
+        where ${recipeKategorier.recipeId} = ${recipes.id} and ${recipeKategorier.navn} ilike ${mønster}
       )
     )`;
   });
@@ -110,8 +115,9 @@ export default async function SokPage({ searchParams }: SokPageProps) {
           <ul className="divide-y divide-line border-y border-line">
             {treff.map((oppskrift) => (
               <li key={oppskrift.id}>
+                {/* veien tilbake til akkurat dette søket følger med inn i oppskriften */}
                 <Link prefetch={true}
-                  href={uuidHref`/kokebok/${oppskrift.bokId}/oppskrift/${oppskrift.id}`}
+                  href={`${uuidHref`/kokebok/${oppskrift.bokId}/oppskrift/${oppskrift.id}`}?tilbake=${encodeURIComponent(`/sok?sok=${encodeURIComponent(sok ?? '')}`)}`}
                   className="group block py-3.5"
                 >
                   <span className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">

@@ -183,6 +183,22 @@ export const recipeLinks = pgTable('recipe_links', {
   check('no_self_link', sql`"fromRecipeId" <> "toRecipeId"`),
 ]);
 
+// Kategorier — merkelapper på tvers av bøkene («suppe», «pai»): kapitlene organiserer innad i
+// boken, kategoriene samler på tvers. Fritekst per bruker; navnet normaliseres til små
+// bokstaver ved skriving så «Suppe» og «suppe» er samme kategori. Søket leter også i disse.
+export const recipeKategorier = pgTable('recipe_kategorier', {
+  id: uuid('id').defaultRandom().notNull().primaryKey(),
+  recipeId: uuid('recipeId')
+    .notNull()
+    .references(() => recipes.id, { onDelete: 'cascade' }),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  navn: text('navn').notNull(),
+}, (recipeKategorier) => [
+  unique().on(recipeKategorier.recipeId, recipeKategorier.navn),
+]);
+
 export const recipeChapters = pgTable('recipe_chapters', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),
   recipeId: uuid('recipeId')

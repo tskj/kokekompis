@@ -21,16 +21,22 @@ import { LukkbarDetails } from '@/components/LukkbarDetails';
 
 interface PlanSideProps {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ tilbake?: string }>;
 }
 
 // Én plan: oppskriftene som skal på bordet, og handlelisten for alt sammen — summert på tvers
 // av oppskriftene. Planen er personlig; oppskrifter fra bøker som siden er gjort private for
 // deg, holdes utenfor både listen og handlelisten.
-export default async function PlanSide({ params }: PlanSideProps) {
+export default async function PlanSide({ params, searchParams }: PlanSideProps) {
   const planId = getUuidParam(await params, 'id');
+  const { tilbake: tilbakeParam } = (await searchParams) ?? {};
 
   const userId = await getCurrentUserId();
   if (!userId) notFound();
+
+  // kom man hit fra en oppskrift (?tilbake=…), skal veien tilbake dit ligge øverst —
+  // samme spor som lenkehoppene mellom oppskrifter bruker
+  const tilbakeSti = tilbakeParam && tilbakeParam.startsWith('/') ? tilbakeParam : null;
 
   const data = await withTransaction({ name: 'plan.side' }, async (tx) => {
     const plan = await tx
@@ -95,6 +101,17 @@ export default async function PlanSide({ params }: PlanSideProps) {
     <main className="relative mx-auto max-w-3xl px-4 py-10 sm:px-6 md:py-12">
       {/* dekor nederst/ytterst — utenfor innholdet */}
       <Kaffeflekk className="absolute bottom-0 -left-28 w-44 rotate-12 skjul-ved-print" />
+
+      {tilbakeSti && (
+        <p className="mb-4 skjul-ved-print">
+          <Link prefetch={true}
+            href={tilbakeSti}
+            className="inline-block rounded-full bg-butter/40 border border-butter px-4 py-1.5 text-sm hover:bg-butter/70"
+          >
+            ← Tilbake dit du var
+          </Link>
+        </p>
+      )}
 
       <header className="mb-8 skjul-ved-print">
         <Link prefetch={true} href="/planer" className="text-sm text-ink-soft hover:text-terra">← Planer</Link>

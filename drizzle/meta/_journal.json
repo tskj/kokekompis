@@ -162,6 +162,13 @@
       "when": 1783100899053,
       "tag": "0022_brave_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1783101756191,
+      "tag": "0023_youthful_luckman",
+      "breakpoints": true
     }
   ]
 }
