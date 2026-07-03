@@ -6,7 +6,7 @@ import { cookbook } from "@/lib/db/schema";
 import { encodeUuidToBase32 } from "@/lib/uuid/uuid-base32";
 import { makeKokebok, resetDb } from "./db";
 import "./rtl";
-import { cleanup, render, screen } from "./rtl";
+import { render, screen } from "./rtl";
 
 const hoisted = vi.hoisted(() => ({ userId: "" }));
 vi.mock("@/auth", () => ({
@@ -27,7 +27,6 @@ import Home from "@/app/page";
 import CookbookLayout from "@/app/kokebok/[id]/layout";
 import RecipePage from "@/app/kokebok/[id]/@recipe/oppskrift/[recipeid]/page";
 import BakPage from "@/app/bak/[recipeid]/page";
-import { settBokSynlighet } from "@/app/actions/bok";
 
 function layoutProps(bokId: string) {
   return { recipe: null, params: Promise.resolve({ id: encodeUuidToBase32(bokId) }) };
@@ -47,7 +46,10 @@ function bakProps(oppskriftId: string) {
   };
 }
 
-describe("privatliv: bøker er private, utstilte bøker kan alle lese", () => {
+// En bok er ALLTID privat — bare eieren ser den, uansett hva synlighet-kolonnen måtte si
+// (den står igjen fra utstillings-tiden). Innsyn for andre går kun via delingslenkene,
+// som testes i deling.test.tsx.
+describe("privatliv: bøker er private — deling går via delingslenker", () => {
   beforeEach(async () => {
     hoisted.userId = "";
     await resetDb();
@@ -56,24 +58,24 @@ describe("privatliv: bøker er private, utstilte bøker kan alle lese", () => {
   it("forsiden viser bare dine egne bøker når du er logget inn", async () => {
     const { user, bok } = await makeKokebok();
     const annen = await makeKokebok({ synlighet: "utstilt" });
-    await db.update(cookbook).set({ name: "Annens utstilte bok" }).where(eq(cookbook.id, annen.bok.id));
+    await db.update(cookbook).set({ name: "Annens bok" }).where(eq(cookbook.id, annen.bok.id));
     hoisted.userId = user.id;
 
     render(await Home());
 
     expect(screen.getByText(bok.name)).toBeInTheDocument();
-    expect(screen.queryByText("Annens utstilte bok")).not.toBeInTheDocument();
+    expect(screen.queryByText("Annens bok")).not.toBeInTheDocument();
   });
 
-  it("en utlogget gjest har ingen hylle ennå — bare Oppslagsboka og en invitasjon", async () => {
+  it("en utlogget gjest har ingen hylle — bare Oppslagsboka og en invitasjon", async () => {
     await makeKokebok();
-    const utstilt = await makeKokebok({ synlighet: "utstilt" });
-    await db.update(cookbook).set({ name: "Marens utstilte bok" }).where(eq(cookbook.id, utstilt.bok.id));
+    const merket = await makeKokebok({ synlighet: "utstilt" });
+    await db.update(cookbook).set({ name: "Marens bok" }).where(eq(cookbook.id, merket.bok.id));
 
     render(await Home());
 
-    // utstillingsvinduet er av enn så lenge — verken utstilte eller private bøker vises
-    expect(screen.queryByText("Marens utstilte bok")).not.toBeInTheDocument();
+    // ingen bøker vises for gjester — heller ikke rader merket utstilt i gamle data
+    expect(screen.queryByText("Marens bok")).not.toBeInTheDocument();
     expect(screen.queryByText("Testkokeboka")).not.toBeInTheDocument();
     expect(screen.queryByText("ny bok")).not.toBeInTheDocument();
 
@@ -95,86 +97,38 @@ describe("privatliv: bøker er private, utstilte bøker kan alle lese", () => {
     hoisted.userId = user.id;
     render(await CookbookLayout(layoutProps(bok.id)));
     expect(screen.getByRole("heading", { name: bok.name })).toBeInTheDocument();
-  });
-
-  it("en utstilt bok kan leses av gjester — men uten eierens stelleknapper", async () => {
-    const { user, bok } = await makeKokebok({ synlighet: "utstilt" });
-
-    hoisted.userId = "";
-    render(await CookbookLayout(layoutProps(bok.id)));
-    expect(screen.getByRole("heading", { name: bok.name })).toBeInTheDocument();
-    expect(screen.getByText("Gjærbakst")).toBeInTheDocument();
-    expect(screen.queryByText("+ nytt kapittel")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Endre navn på boken")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Ny oppskrift/)).not.toBeInTheDocument();
-
-    // eieren har dem alle
-    cleanup();
-    hoisted.userId = user.id;
-    render(await CookbookLayout(layoutProps(bok.id)));
     expect(screen.getByText("+ nytt kapittel")).toBeInTheDocument();
     expect(screen.getByLabelText("Endre navn på boken")).toBeInTheDocument();
   });
 
-  it("utstilling er forbeholdt admin — vanlige eiere og fremmede preller av", async () => {
-    const { user: admin, bok } = await makeKokebok({ admin: true });
-    const vanlig = await makeKokebok();
-
-    const skjema = new FormData();
-    skjema.set("synlighet", "utstilt");
-
-    // en vanlig eier får ikke stilt ut sin egen bok
-    hoisted.userId = vanlig.user.id;
-    await settBokSynlighet(vanlig.bok.id, skjema);
-    let rad = await db.select().from(cookbook).where(eq(cookbook.id, vanlig.bok.id)).single("test.vanlig");
-    expect(rad.synlighet).toBe("privat");
-
-    // en admin får heller ikke stilt ut andres bøker
-    hoisted.userId = admin.id;
-    await settBokSynlighet(vanlig.bok.id, skjema);
-    rad = await db.select().from(cookbook).where(eq(cookbook.id, vanlig.bok.id)).single("test.fremmed");
-    expect(rad.synlighet).toBe("privat");
-
-    // admin stiller ut sin egen
-    await settBokSynlighet(bok.id, skjema);
-    rad = await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.admin");
-    expect(rad.synlighet).toBe("utstilt");
-  });
-
-  it("oppskrift i privat bok 404-er for fremmede; i utstilt bok leses den uten redigeringsknapper", async () => {
-    const privat = await makeKokebok();
+  it("gamle utstilt-merker gir IKKE lenger innsyn — verken bok, oppskrift eller bakeview", async () => {
     const utstilt = await makeKokebok({ synlighet: "utstilt" });
     const fremmed = await makeKokebok();
+
+    // utlogget gjest
+    hoisted.userId = "";
+    await expect(CookbookLayout(layoutProps(utstilt.bok.id))).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(RecipePage(sideProps(utstilt.bok.id, utstilt.oppskrift.id))).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(BakPage(bakProps(utstilt.oppskrift.id))).rejects.toThrow("NEXT_NOT_FOUND");
+
+    // innlogget fremmed
     hoisted.userId = fremmed.user.id;
+    await expect(CookbookLayout(layoutProps(utstilt.bok.id))).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(RecipePage(sideProps(utstilt.bok.id, utstilt.oppskrift.id))).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(BakPage(bakProps(utstilt.oppskrift.id))).rejects.toThrow("NEXT_NOT_FOUND");
 
-    await expect(RecipePage(sideProps(privat.bok.id, privat.oppskrift.id))).rejects.toThrow("NEXT_NOT_FOUND");
-
+    // eieren leser som før
+    hoisted.userId = utstilt.user.id;
     render(await RecipePage(sideProps(utstilt.bok.id, utstilt.oppskrift.id)));
     expect(screen.getByRole("heading", { name: "Testboller" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Rediger" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Del oppskriften")).not.toBeInTheDocument();
-    expect(screen.queryByText("Flytt …")).not.toBeInTheDocument();
-    // gjesten er innlogget: lappene og hjertet er personlige og fortsatt der
-    expect(screen.getByText("ny lapp")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Merk som favoritt" })).toBeInTheDocument();
   });
 
-  it("en utlogget gjest leser den utstilte oppskriften uten lapper og hjerte", async () => {
-    const utstilt = await makeKokebok({ synlighet: "utstilt" });
+  it("bok-headeren sier at boken er privat — og tilbyr deling", async () => {
+    const { user, bok } = await makeKokebok();
+    hoisted.userId = user.id;
 
-    render(await RecipePage(sideProps(utstilt.bok.id, utstilt.oppskrift.id)));
-    expect(screen.getByRole("heading", { name: "Testboller" })).toBeInTheDocument();
-    expect(screen.queryByText("ny lapp")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Merk som favoritt" })).not.toBeInTheDocument();
-  });
-
-  it("bakeviewet følger bokens synlighet", async () => {
-    const privat = await makeKokebok();
-    const utstilt = await makeKokebok({ synlighet: "utstilt" });
-
-    await expect(BakPage(bakProps(privat.oppskrift.id))).rejects.toThrow("NEXT_NOT_FOUND");
-
-    render(await BakPage(bakProps(utstilt.oppskrift.id)));
-    expect(screen.getByText("Elt sammen mel og sukker.")).toBeInTheDocument();
+    render(await CookbookLayout(layoutProps(bok.id)));
+    expect(screen.getByText(/Privat bok — bare du ser den/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Del hele boken med en venn" })).toBeInTheDocument();
   });
 });

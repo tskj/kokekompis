@@ -123,12 +123,14 @@ describe("planer (ekte actions, ekte database, ekte planside)", () => {
 
     expect(await db.select().from(planRecipes).where(eq(planRecipes.planId, minPlan.id))).toHaveLength(0);
 
-    // en utstilt bok kan derimot planlegges fra
-    const utstilt = await makeKokebok({ synlighet: "utstilt" });
-    await leggTilIPlan(utstilt.oppskrift.id, leggTilSkjema(minPlan.id));
-    expect(await db.select().from(planRecipes).where(eq(planRecipes.planId, minPlan.id))).toHaveLength(1);
+    // et gammelt utstilt-merke gir heller ikke innpass — andres bøker er alltid private
+    const merket = await makeKokebok({ synlighet: "utstilt" });
+    await leggTilIPlan(merket.oppskrift.id, leggTilSkjema(minPlan.id));
+    expect(await db.select().from(planRecipes).where(eq(planRecipes.planId, minPlan.id))).toHaveLength(0);
 
-    void oppskrift;
+    // min egen oppskrift går selvsagt inn
+    await leggTilIPlan(oppskrift.id, leggTilSkjema(minPlan.id));
+    expect(await db.select().from(planRecipes).where(eq(planRecipes.planId, minPlan.id))).toHaveLength(1);
   });
 
   it("tar en oppskrift ut av planen — men fremmede får ikke rive i den", async () => {

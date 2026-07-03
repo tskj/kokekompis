@@ -35,9 +35,9 @@ interface RecipePageProps {
 // kapitler/oppskrifter til flytt- og lenk-skjemaene.
 async function getOppskriftSide(recipeId: string, cookbookId: string, userId: string | null) {
   return withTransaction({ name: 'oppskrift.side' }, async (tx) => {
-    // boken styrer tilgangen: privat = bare eieren, utstilt = alle får lese
+    // boken styrer tilgangen: privat — bare eieren leser her (deling går via /delt-sidene)
     const bok = await tx
-      .select({ userId: cookbook.userId, synlighet: cookbook.synlighet })
+      .select({ userId: cookbook.userId })
       .from(cookbook)
       .where(eq(cookbook.id, cookbookId))
       .maybeSingle('oppskrift.side.bok');
@@ -137,8 +137,8 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
           .orderBy(asc(recipeComments.createdAt))
       : [];
 
-    // lenkene kan peke inn i andre bøker — bokens navn følger med til visningen. Gjester i en
-    // utstilt bok ser bare lenkene som holder seg i boken de har fått lese.
+    // lenkene kan peke inn i andre bøker — bokens navn følger med til visningen. (Ikke-eiere
+    // holdes uansett ute av kanSeBok; bok-filteret for dem står som belte-og-bukse.)
     const utgående = await tx
       .select({ linkId: recipeLinks.id, recipeId: recipeLinks.toRecipeId, tittel: recipes.title, bokId: recipes.cookbookId, bokNavn: cookbook.name })
       .from(recipeLinks)

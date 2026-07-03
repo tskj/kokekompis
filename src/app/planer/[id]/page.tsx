@@ -63,7 +63,6 @@ export default async function PlanSide({ params }: PlanSideProps) {
         content: recipes.content,
         ganger: planRecipes.ganger,
         bokEier: cookbook.userId,
-        synlighet: cookbook.synlighet,
       })
       .from(planRecipes)
       .innerJoin(recipes, eq(planRecipes.recipeId, recipes.id))
@@ -85,7 +84,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
   // handlelisten regnes fra oppskriftenes innhold ved visning, ganget med størrelsen hver rett
   // skal lages i — en rad som ikke parser hopper bare over, den skal ikke velte hele planen
   const synlige = data.rader
-    .filter((rad) => kanSeBok({ userId: rad.bokEier, synlighet: rad.synlighet }, userId))
+    .filter((rad) => kanSeBok({ userId: rad.bokEier }, userId))
     .map((rad) => ({ ...rad, parsed: recipeContentSchema.safeParse(rad.content) }));
 
   const retter = synlige.flatMap((rad) => (rad.parsed.success ? [{ content: rad.parsed.data, ganger: rad.ganger }] : []));

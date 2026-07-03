@@ -28,7 +28,7 @@ export async function skrivIMargen(recipeId: string, formData: FormData) {
   const skrevet = await withTransaction({ name: 'margskrift.skriv' }, async (tx) => {
     // margen er personlig, men oppskriften må være synlig for deg — din egen eller utstilt
     const bok = await tx
-      .select({ userId: cookbook.userId, synlighet: cookbook.synlighet })
+      .select({ userId: cookbook.userId })
       .from(recipes)
       .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
       .where(eq(recipes.id, recipeId))

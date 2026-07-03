@@ -523,20 +523,18 @@ async function seed() {
     await tx.delete(cookbook);
     await tx.delete(recipes);
 
-    // Seed-brukeren (CLAUDE.md sin test-bruker) — må finnes for FK-ene. Admin: utstilling av
-    // eksempelbøker på forsiden er forbeholdt henne.
+    // Seed-brukeren (CLAUDE.md sin test-bruker) — må finnes for FK-ene.
     await tx
       .insert(users)
       .values({ id: USER_ID, name: 'Maren', email: 'maren@kokekompis.no', admin: true })
       .onConflictDoNothing();
 
-    // utstilt: showcase-boken som møter utloggede gjester på forsiden
+    // privat, som alle bøker — innsyn gis kun via delingslenker
     const [marensKokebok] = await tx
       .insert(cookbook)
       .values({
         userId: USER_ID,
         name: 'Marens kokebok',
-        synlighet: 'utstilt',
         farge: 'terra',
         headerBilde: 'striper',
         beskrivelse: 'Alt mormor aldri målte opp — samlet, prøvd og rettet.',

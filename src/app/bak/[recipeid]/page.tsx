@@ -91,12 +91,12 @@ export default async function BakPage({ params, searchParams }: BakPageProps) {
   const data = await withTransaction({ name: 'bakeview' }, async (tx) => {
     // tilgangen følger boken oppskriften står i: privat = bare eieren, utstilt = alle
     const oppskrift = await tx
-      .select({ id: recipes.id, title: recipes.title, content: recipes.content, bokEier: cookbook.userId, synlighet: cookbook.synlighet })
+      .select({ id: recipes.id, title: recipes.title, content: recipes.content, bokEier: cookbook.userId })
       .from(recipes)
       .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
       .where(eq(recipes.id, recipeId))
       .maybeSingle('bakeview.recipe');
-    if (!oppskrift || !kanSeBok({ userId: oppskrift.bokEier, synlighet: oppskrift.synlighet }, userId)) return null;
+    if (!oppskrift || !kanSeBok({ userId: oppskrift.bokEier }, userId)) return null;
 
     const notater = userId
       ? await tx

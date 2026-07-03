@@ -23,7 +23,7 @@ export async function toggleFavoritt(recipeId: string, formData: FormData) {
 
     // hjertet kan bare settes på noe du får se — ditt eget eller en utstilt bok
     const bok = await tx
-      .select({ userId: cookbook.userId, synlighet: cookbook.synlighet })
+      .select({ userId: cookbook.userId })
       .from(recipes)
       .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
       .where(eq(recipes.id, recipeId))

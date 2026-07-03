@@ -25,12 +25,12 @@ export async function leggTilKommentar(recipeId: string, stegId: string, formDat
   const lagtTil = await withTransaction({ name: 'kommentar.legg-til' }, async (tx) => {
     // kommentaren er personlig, men oppskriften må være synlig for deg — og steget må finnes
     const rad = await tx
-      .select({ content: recipes.content, bokEier: cookbook.userId, synlighet: cookbook.synlighet })
+      .select({ content: recipes.content, bokEier: cookbook.userId })
       .from(recipes)
       .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
       .where(eq(recipes.id, recipeId))
       .maybeSingle('kommentar.legg-til.bok');
-    if (!rad || !kanSeBok({ userId: rad.bokEier, synlighet: rad.synlighet }, userId)) return false;
+    if (!rad || !kanSeBok({ userId: rad.bokEier }, userId)) return false;
 
     const content = recipeContentSchema.safeParse(rad.content);
     if (!content.success || !content.data.steg.some((steg) => steg.id === stegId)) return false;

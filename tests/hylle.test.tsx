@@ -142,12 +142,12 @@ describe("bokhylla kan sorteres — egen rekkefølge og sist åpnet", () => {
     expect(rad.hylleSortering).toBe("egen");
   });
 
-  it("gjester setter aldri bokmerke — sistÅpnet tilhører eieren", async () => {
-    const { user, bok } = await makeKokebok({ synlighet: "utstilt" });
+  it("fremmede setter aldri bokmerke — de slipper ikke inn, og sistÅpnet tilhører eieren", async () => {
+    const { user, bok } = await makeKokebok();
     const fremmed = await makeKokebok();
 
     hoisted.userId = fremmed.user.id;
-    await CookbookLayout({ recipe: null, params: Promise.resolve({ id: encodeUuidToBase32(bok.id) }) });
+    await expect(CookbookLayout({ recipe: null, params: Promise.resolve({ id: encodeUuidToBase32(bok.id) }) })).rejects.toThrow("NEXT_NOT_FOUND");
     expect((await db.select().from(cookbook).where(eq(cookbook.id, bok.id)).single("test.gjest")).sistÅpnet).toBeNull();
 
     hoisted.userId = user.id;

@@ -7,7 +7,7 @@ import { and, asc, eq, isNull, max, sql } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { cookbook, chapters, recipes, users, bokSynligheter, bokFarger, hylleSorteringer, recipeContentSchema } from '@/lib/db/schema';
+import { cookbook, chapters, recipes, users, bokFarger, hylleSorteringer, recipeContentSchema } from '@/lib/db/schema';
 import { nowDate } from '@/lib/clock';
 import { withTransaction, type Tx } from '@/lib/db-tx';
 import { getCurrentUserId } from '@/lib/current-user';
@@ -381,37 +381,6 @@ export async function settBokBeskrivelse(cookbookId: string, formData: FormData)
   if (!endret) return;
 
   log.info(cookbookId, Attr.COOKBOOK_STYLED, { harBeskrivelse: beskrivelse !== null });
-  revalidatePath('/', 'layout');
-}
-
-// Privat ↔ utstilt. En utstilt bok står fremme på forsiden for alle — det er eksemplene en
-// utlogget gjest møter. Forbeholdt admin (Maren): deling med venner går via delingslenker,
-// ikke utstilling.
-export async function settBokSynlighet(cookbookId: string, formData: FormData) {
-  const userId = await getCurrentUserId();
-  if (!userId) return;
-
-  const synlighet = z.enum(bokSynligheter).safeParse(formData.get('synlighet'));
-  if (!synlighet.success) return;
-
-  const endret = await withTransaction({ name: 'bok.synlighet' }, async (tx) => {
-    const meg = await tx
-      .select({ admin: users.admin })
-      .from(users)
-      .where(eq(users.id, userId))
-      .maybeSingle('bok.synlighet.admin');
-    if (!meg?.admin) return null;
-
-    return tx
-      .update(cookbook)
-      .set({ synlighet: synlighet.data })
-      .where(and(eq(cookbook.id, cookbookId), eq(cookbook.userId, userId)))
-      .returning({ id: cookbook.id })
-      .maybeSingle('bok.synlighet');
-  });
-  if (!endret) return;
-
-  log.info(cookbookId, Attr.COOKBOOK_VISIBILITY, synlighet.data);
   revalidatePath('/', 'layout');
 }
 

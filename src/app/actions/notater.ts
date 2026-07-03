@@ -29,7 +29,7 @@ export async function leggTilNotat(recipeId: string, formData: FormData) {
   const lagtTil = await withTransaction({ name: 'notat.legg-til' }, async (tx) => {
     // lappen er personlig, men oppskriften må være synlig for deg — din egen eller i en utstilt bok
     const bok = await tx
-      .select({ userId: cookbook.userId, synlighet: cookbook.synlighet })
+      .select({ userId: cookbook.userId })
       .from(recipes)
       .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
       .where(eq(recipes.id, recipeId))

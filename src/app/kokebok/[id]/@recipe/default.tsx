@@ -19,7 +19,7 @@ export default async function DefaultRecipe({ params }: DefaultRecipeProps) {
 
   const userId = await getCurrentUserId();
   const bok = await db
-    .select({ userId: cookbook.userId, synlighet: cookbook.synlighet, beskrivelse: cookbook.beskrivelse, skisse: cookbook.skisse })
+    .select({ userId: cookbook.userId, beskrivelse: cookbook.beskrivelse, skisse: cookbook.skisse })
     .from(cookbook)
     .where(eq(cookbook.id, cookbookId))
     .maybeSingle('bok.forside');

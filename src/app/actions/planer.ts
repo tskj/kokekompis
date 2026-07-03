@@ -163,7 +163,7 @@ export async function leggTilIPlan(recipeId: string, formData: FormData) {
     if (!minPlan) return false;
 
     const bok = await tx
-      .select({ userId: cookbook.userId, synlighet: cookbook.synlighet })
+      .select({ userId: cookbook.userId })
       .from(recipes)
       .innerJoin(cookbook, eq(recipes.cookbookId, cookbook.id))
       .where(eq(recipes.id, recipeId))
