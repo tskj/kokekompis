@@ -171,13 +171,14 @@ export default async function Home() {
                   href="/favoritter"
                   className="bokstoff bok-3d group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/15 bg-butter p-4 text-ink shadow-bok"
                 >
-                  <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-3.5" />
+                  <span aria-hidden className="bok-bak pointer-events-none absolute inset-0 rounded-r-md rounded-l-sm bg-inherit" />
+                  <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-7" />
                   {/* hjertene er forsiden — strødd som på et godt brukt omslag */}
                   <span aria-hidden className="pointer-events-none absolute left-3 top-5 rotate-[-14deg] text-lg text-terra/50">♥</span>
                   <span aria-hidden className="pointer-events-none absolute right-4 top-3 rotate-[10deg] text-sm text-terra/40">♥</span>
                   <span aria-hidden className="pointer-events-none absolute bottom-14 left-5 rotate-[8deg] text-xl text-terra/45">♥</span>
                   <span aria-hidden className="pointer-events-none absolute bottom-20 right-5 rotate-[-8deg] text-base text-terra/35">♥</span>
-                  <span className="mt-5 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug shadow-sm">
+                  <span className="foto-hjorner mt-5 block bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug shadow-sm">
                     ♥ Favoritter
                   </span>
                   <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">
@@ -194,9 +195,10 @@ export default async function Home() {
                 href="/oppslag"
                 className="bokstoff bok-3d group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 bg-natt p-4 text-paper shadow-bok"
               >
-                <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-3.5" />
+                <span aria-hidden className="bok-bak pointer-events-none absolute inset-0 rounded-r-md rounded-l-sm bg-inherit" />
+                <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-7" />
                 {/* ett langt ord — text-base så det aldri må deles (samme regel som bokTittelStørrelse) */}
-                <span className="mt-5 block overflow-hidden bg-paper/95 px-2 py-3 text-center font-display text-base leading-snug text-ink shadow-sm">
+                <span className="foto-hjorner mt-5 block overflow-hidden bg-paper/95 px-2 py-3 text-center font-display text-base leading-snug text-ink shadow-sm">
                   Oppslagsboka
                 </span>
                 <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">

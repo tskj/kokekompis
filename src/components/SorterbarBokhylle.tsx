@@ -102,8 +102,10 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
             className={`${bokFargeKlasse(bok.farge, bok.id)} bokstoff bok-3d relative flex h-64 w-44 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 p-4 shadow-bok`}
             draggable={false}
           >
-            {/* sideblokken — arkene som skimtes når boken vrir seg ut fra hyllen */}
-            <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-3.5" />
+            {/* tykkelsen — baksiden i bokens egen farge, og arkene som skimtes når boken
+                vrir seg ut fra hyllen (bredden på sideblokken = dybden i .bok-bak) */}
+            <span aria-hidden className="bok-bak pointer-events-none absolute inset-0 rounded-r-md rounded-l-sm bg-inherit" />
+            <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-7" />
 
             {/* opphøyde ryggbånd — med god luft ned til det pregede navnet */}
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-2 border-t-2 border-current opacity-25" />
@@ -114,7 +116,7 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
             {/* skriften krymper til det lengste ordet får plass på én linje — ingen orddeling
                 (den brøt ulikt og feil fra nettleser til nettleser); break-words står igjen
                 som nødventil så en ekstremtittel aldri renner utenfor etiketten */}
-            <span className={`mt-6 block overflow-hidden break-words [text-wrap:balance] bg-paper/95 px-2 py-3 text-center font-display leading-snug text-ink shadow-sm ${bokTittelStørrelse(bok.name)}`}>
+            <span className={`foto-hjorner mt-6 block overflow-hidden break-words [text-wrap:balance] bg-paper/95 px-2 py-3 text-center font-display leading-snug text-ink shadow-sm ${bokTittelStørrelse(bok.name)}`}>
               {bok.name}
             </span>
             {/* trykt inn i stoffet: mørkere enn omslaget, med en anelse lys under pregekanten */}

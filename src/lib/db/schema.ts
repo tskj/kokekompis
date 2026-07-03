@@ -100,7 +100,7 @@ export const bokSynligheter = ['privat', 'utstilt'] as const;
 export type BokSynlighet = (typeof bokSynligheter)[number];
 
 // Stoffargene en bokrygg kan ha på hylla. null = ikke valgt — hylla veksler da selv.
-export const bokFarger = ['terra', 'sage', 'ink', 'butter', 'vin', 'natt'] as const;
+export const bokFarger = ['terra', 'sage', 'ink', 'butter', 'vin', 'natt', 'bris', 'rosa'] as const;
 export type BokFarge = (typeof bokFarger)[number];
 
 // Hylla kan sorteres på to vis (users.hylleSortering): brukerens egen rekkefølge, eller etter

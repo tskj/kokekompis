@@ -183,12 +183,13 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
 
           {erEier && (
             <LukkbarDetails className="group">
+              {/* het før bare "✎" — for gjemt til å finne navneendringen (Maren) */}
               <summary
-                className="cursor-pointer list-none text-sm text-ink-soft opacity-60 hover:text-terra hover:opacity-100 group-open:hidden"
+                className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full border border-line px-3 py-1 text-xs text-ink-soft hover:border-terra hover:text-terra group-open:hidden"
                 title="Endre navn på boken"
                 aria-label="Endre navn på boken"
               >
-                ✎
+                ✎ endre navn
               </summary>
               <form action={endreBokNavn.bind(null, cookbookId)} className="flex items-center gap-2">
                 <input
@@ -278,7 +279,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
 
               <form action={settBokBånd.bind(null, cookbookId)} className="flex flex-col gap-1.5">
                 <span>Bånd under tittelen — hvert mønster i alle bokfargene:</span>
-                <div className="grid grid-cols-6 gap-1.5">
+                <div className="grid grid-cols-8 gap-1.5">
                   {båndMønstre.flatMap((mønster) =>
                     bokFarger.map((farge) => (
                       <button

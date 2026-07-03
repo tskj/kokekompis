@@ -18,6 +18,10 @@
   /* bokryggfarger utover grunnpaletten — vinrød og nattblå klassikere fra mormors hylle */
   --color-vin:          #722f37;
   --color-natt:         #2f3a4a;
+  /* de lyse ønskene (Maren): sjøbris — dus sjøgrønn mot blått — og en støvet rosa.
+     Dempet og varmet så de står i samme falmede stofftone som resten av hylla. */
+  --color-bris:         #7fa199;
+  --color-rosa:         #b37d85;
   /* teipfargene på notatlappene — bokens egen palett, ikke kontorgult */
   --color-teip-terrakotta: #c97c5d;
   --color-teip-rav:        #e3b04b;
@@ -121,22 +125,48 @@ body {
     repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.04) 0 2px, rgb(0 0 0 / 0.04) 2px 4px);
 }
 
-/* 3D-vippet på hylla: boken hopper opp og vrir seg bittelitt ut fra hyllen, så sideblokken
-   (.bok-sider — arkene, stående striper langs høyrekanten) skimtes. Sideblokken står vinkelrett
-   bakover fra høyrekanten og er usynlig rett forfra; først vippet avslører den. */
+/* 3D-vippet på hylla: boken hopper opp og vrir seg ut fra hyllen, så tykkelsen kommer til syne —
+   sideblokken (.bok-sider, arkene langs høyrekanten) og baksiden (.bok-bak) bak den. Begge står
+   i dybden og er usynlige rett forfra; først vippet avslører dem. */
 .bok-3d {
   transform-style: preserve-3d;
   transition: transform 200ms ease;
 }
 
 .bok-3d:hover {
-  transform: perspective(900px) translateY(-0.5rem) rotateY(-15deg);
+  transform: perspective(900px) translateY(-0.5rem) rotateY(-17deg);
 }
 
+/* arkene: tynne papirlinjer, med en anelse skygge mot permene så blokken ser rund ut */
 .bok-sider {
-  background: repeating-linear-gradient(90deg, #efe6d2 0 2px, #d9cdb2 2px 3px);
+  background-image:
+    linear-gradient(90deg, rgb(0 0 0 / 0.12), transparent 30%, transparent 70%, rgb(0 0 0 / 0.16)),
+    repeating-linear-gradient(90deg, #f2e9d5 0 1px, #e3d8bd 1px 2px, #d9cdb2 2px 3px);
   transform-origin: right center;
   transform: rotateY(90deg);
+}
+
+/* baksiden: arver bokfargen (bg-inherit i komponenten), mørknet et hakk, skjøvet bakover
+   like langt som sideblokken er bred — permen man skimter bak arkene */
+.bok-bak {
+  transform: translateZ(-1.75rem);
+  background-image:
+    linear-gradient(rgb(0 0 0 / 0.16) 0 0),
+    repeating-linear-gradient(45deg,  rgb(255 255 255 / 0.05) 0 2px, rgb(0 0 0 / 0.05) 2px 4px),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.04) 0 2px, rgb(0 0 0 / 0.04) 2px 4px);
+}
+
+/* Foto-hjørnene på tittel-etiketten: fire små trekanter, som lommene i et gammelt fotoalbum. */
+.foto-hjorner {
+  --hjorne: 13px;
+  background-image:
+    linear-gradient(135deg, rgb(54 43 30 / 0.17) 50%, transparent 50%),
+    linear-gradient(225deg, rgb(54 43 30 / 0.17) 50%, transparent 50%),
+    linear-gradient(45deg,  rgb(54 43 30 / 0.17) 50%, transparent 50%),
+    linear-gradient(315deg, rgb(54 43 30 / 0.17) 50%, transparent 50%);
+  background-position: top left, top right, bottom left, bottom right;
+  background-size: var(--hjorne) var(--hjorne);
+  background-repeat: no-repeat;
 }
 
 /* Bokbånd-mønstre: den smale stoffstripen mellom bokens tittel og innholdet — som

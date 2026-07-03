@@ -10,6 +10,8 @@ export const BOK_FARGE_KLASSER: Record<BokFarge, string> = {
   butter: 'bg-butter text-ink',
   vin:    'bg-vin text-paper',
   natt:   'bg-natt text-paper',
+  bris:   'bg-bris text-ink',
+  rosa:   'bg-rosa text-ink',
 };
 
 // Bøker uten valgt farge får en stabil farge fra sin egen id — aldri fra plassen på hylla.
@@ -60,6 +62,8 @@ export const BOK_FARGE_VAR: Record<BokFarge, string> = {
   butter: 'var(--color-butter)',
   vin:    'var(--color-vin)',
   natt:   'var(--color-natt)',
+  bris:   'var(--color-bris)',
+  rosa:   'var(--color-rosa)',
 };
 
 // drakten mønstrene ble født i — eldre rader uten farge skal se ut som før
