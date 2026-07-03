@@ -162,7 +162,7 @@ function HylleBok({ element }: { element: HylleElement }) {
         draggable={false}
       >
         <span aria-hidden className="bok-bak pointer-events-none absolute inset-0 rounded-r-md rounded-l-sm bg-inherit" />
-        <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-7" />
+        <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-1 right-1 w-6" />
         {/* hjertene er forsiden — strødd som på et godt brukt omslag */}
         <span aria-hidden className="pointer-events-none absolute left-3 top-5 rotate-[-14deg] text-lg text-terra/50">♥</span>
         <span aria-hidden className="pointer-events-none absolute right-4 top-3 rotate-[10deg] text-sm text-terra/40">♥</span>
@@ -186,7 +186,7 @@ function HylleBok({ element }: { element: HylleElement }) {
         draggable={false}
       >
         <span aria-hidden className="bok-bak pointer-events-none absolute inset-0 rounded-r-md rounded-l-sm bg-inherit" />
-        <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-7" />
+        <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-1 right-1 w-6" />
         {/* ett langt ord — text-base så det aldri må deles (samme regel som bokTittelStørrelse) */}
         <span className="foto-hjorner mt-5 block overflow-hidden bg-paper/95 px-2 py-3 text-center font-display text-base leading-snug text-ink shadow-sm">
           Oppslagsboka
@@ -207,7 +207,7 @@ function HylleBok({ element }: { element: HylleElement }) {
       {/* tykkelsen — baksiden i bokens egen farge, og arkene som skimtes når boken
           vrir seg ut fra hyllen (bredden på sideblokken = dybden i .bok-bak) */}
       <span aria-hidden className="bok-bak pointer-events-none absolute inset-0 rounded-r-md rounded-l-sm bg-inherit" />
-      <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-7" />
+      <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-1 right-1 w-6" />
 
       {/* opphøyde ryggbånd — med god luft ned til det pregede navnet */}
       <span aria-hidden className="pointer-events-none absolute inset-x-1.5 top-2 border-t-2 border-current opacity-25" />

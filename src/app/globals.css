@@ -138,14 +138,15 @@ body {
 }
 
 /* arkene: tynne papirlinjer, med en anelse skygge mot permene så blokken ser rund ut.
-   rotateY(-90) legger blokken BAKOVER fra forpermens høyrekant — inni boken, mellom permene
-   (+90 stakk den ut foran omslaget, som ark oppå boken) */
+   rotateY(-90) legger blokken BAKOVER fra forpermen — inni boken. Den står litt innenfor
+   kanten (right/inset i komponenten) og skyves 2px bakover, så permene henger utover arkene
+   på alle kanter: forpermen dekker litt av dem, og bakpermen stikker forbi. */
 .bok-sider {
   background-image:
     linear-gradient(90deg, rgb(0 0 0 / 0.12), transparent 30%, transparent 70%, rgb(0 0 0 / 0.16)),
     repeating-linear-gradient(90deg, #f2e9d5 0 1px, #e3d8bd 1px 2px, #d9cdb2 2px 3px);
   transform-origin: right center;
-  transform: rotateY(-90deg);
+  transform: translateZ(-2px) rotateY(-90deg);
 }
 
 /* baksiden: arver bokfargen (bg-inherit i komponenten), mørknet et hakk, skjøvet bakover

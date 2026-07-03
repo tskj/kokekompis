@@ -28,7 +28,8 @@ interface Bok {
   name: string;
 }
 
-// Eierens små piler på hver oppskriftslinje — sorteringen i boka skal være konstant tilgjengelig.
+// Eierens små piler på hver oppskriftslinje — sorteringen i boka skal være konstant
+// tilgjengelig. Flatene er fingervennlige (min. 32 px) — mindre traff ingen på mobil.
 function OppskriftPil({ chapterId, recipe, retning }: { chapterId: string; recipe: Recipe; retning: Retning }) {
   return (
     <form action={flyttOppskriftIKapittel.bind(null, chapterId, recipe.id, retning)}>
@@ -36,7 +37,7 @@ function OppskriftPil({ chapterId, recipe, retning }: { chapterId: string; recip
         type="submit"
         aria-label={`Flytt ${recipe.title} ${retning}`}
         title={retning === 'opp' ? 'Flytt oppskriften opp' : 'Flytt oppskriften ned'}
-        className="px-1 py-1 text-xs text-ink/25 hover:text-terra"
+        className="flex size-8 items-center justify-center rounded-full text-sm text-ink/40 hover:bg-ink/5 hover:text-terra"
       >
         {retning === 'opp' ? '↑' : '↓'}
       </button>
@@ -49,7 +50,7 @@ function FlyttTilKapittel({ recipe, gjeldendeKapittelId, kapitler, andreBøker }
   return (
     <LukkbarDetails className="relative">
       <summary
-        className="cursor-pointer list-none px-1 py-1 text-xs text-ink/25 hover:text-terra"
+        className="flex size-8 cursor-pointer list-none items-center justify-center rounded-full text-sm text-ink/40 hover:bg-ink/5 hover:text-terra"
         title={`Flytt ${recipe.title} til et annet kapittel eller en annen bok`}
         aria-label={`Flytt ${recipe.title} til et annet kapittel eller en annen bok`}
       >
