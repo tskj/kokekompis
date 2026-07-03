@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import type { BokFarge } from '@/lib/db/schema';
-import { bokFargeKlasse } from '@/lib/bok-utseende';
+import { bokFargeKlasse, bokTittelStørrelse } from '@/lib/bok-utseende';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { lagreHylleRekkefølge, flyttBokPåHylla } from '@/app/actions/bok';
 
@@ -111,9 +111,10 @@ export function SorterbarBokhylle({ bøker, kanSortere, hale }: { bøker: HylleB
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-12 border-t border-current opacity-25" />
             <span aria-hidden className="pointer-events-none absolute inset-x-1.5 bottom-[3.375rem] border-t-2 border-current opacity-25" />
 
-            {/* lange ord bryter med bindestrek (hyphens følger lang="nb") — og aldri utenfor
-                feltet; lange titler settes mindre så de er lesbare på alle skjermer */}
-            <span className={`mt-6 block overflow-hidden break-words [hyphens:auto] bg-paper/95 px-2 py-3 text-center font-display leading-snug text-ink shadow-sm ${bok.name.length > 36 ? 'text-sm' : bok.name.length > 20 ? 'text-base' : 'text-xl'}`}>
+            {/* skriften krymper til det lengste ordet får plass på én linje — ingen orddeling
+                (den brøt ulikt og feil fra nettleser til nettleser); break-words står igjen
+                som nødventil så en ekstremtittel aldri renner utenfor etiketten */}
+            <span className={`mt-6 block overflow-hidden break-words [text-wrap:balance] bg-paper/95 px-2 py-3 text-center font-display leading-snug text-ink shadow-sm ${bokTittelStørrelse(bok.name)}`}>
               {bok.name}
             </span>
             {/* trykt inn i stoffet: mørkere enn omslaget, med en anelse lys under pregekanten */}

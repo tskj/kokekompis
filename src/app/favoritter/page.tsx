@@ -72,7 +72,7 @@ export default async function FavoritterSide() {
     `${uuidHref`/kokebok/${favoritt.cookbookId}/oppskrift/${favoritt.id}`}?tilbake=${encodeURIComponent('/favoritter')}`;
 
   return (
-    <div className="relative mx-auto max-w-7xl p-6 md:p-10">
+    <div className="relative mx-auto max-w-7xl p-4 sm:p-6 md:p-10">
       <header className="mb-8">
         <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
         <h1 className="mt-1 font-display text-4xl">♥ Favoritter</h1>

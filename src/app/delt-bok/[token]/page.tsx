@@ -70,7 +70,7 @@ export default async function DeltBokSide({ params }: DeltBokSideProps) {
   const oppskriftHref = (id: string) => uuidHref`/delt-bok/${token}/oppskrift/${id}`;
 
   return (
-    <main className="mx-auto max-w-3xl p-6 md:p-10">
+    <main className="mx-auto max-w-3xl p-4 sm:p-6 md:p-10">
       <header className="mb-8 flex items-baseline justify-between gap-4 border-b border-line pb-4">
         <p className="font-display italic text-lg text-ink-soft">
           {delt.bok.eierNavn ?? 'En venn'} deler en hel kokebok med deg

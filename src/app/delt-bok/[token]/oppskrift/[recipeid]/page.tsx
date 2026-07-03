@@ -51,7 +51,7 @@ export default async function DeltBokOppskrift({ params, searchParams }: DeltBok
   const stiBase = uuidHref`/delt-bok/${token}/oppskrift/${recipeId}`;
 
   return (
-    <main className="mx-auto max-w-5xl p-6 md:p-10">
+    <main className="mx-auto max-w-5xl p-4 sm:p-6 md:p-10">
       <header className="mb-8 flex items-baseline justify-between gap-4 border-b border-line pb-4 skjul-ved-print">
         <Link prefetch={true} href={uuidHref`/delt-bok/${token}`} className="text-sm text-ink-soft hover:text-terra">
           ← Tilbake til boken

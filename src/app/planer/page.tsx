@@ -47,7 +47,7 @@ export default async function PlanerSide() {
     .sort((a, b) => (b.dato ?? '').localeCompare(a.dato ?? ''));
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 md:py-12">
       <header className="mb-10">
         <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
         <h1 className="mt-1 font-display text-5xl">Planer</h1>

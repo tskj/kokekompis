@@ -21,6 +21,7 @@ import { endreBokNavn, nyttKapittel, settBokSynlighet, settBokFarge, settBokBån
 import { delBok } from '@/app/actions/deling';
 import { LukkendeForm } from '@/components/LukkendeForm';
 import { LukkbarDetails } from '@/components/LukkbarDetails';
+import { BildeInput } from '@/components/BildeInput';
 
 interface CookbookLayoutProps {
   recipe: React.ReactNode;
@@ -162,7 +163,7 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
              :                                   null;
 
   return (
-    <div className="relative mx-auto max-w-7xl p-6 md:p-10">
+    <div className="relative mx-auto max-w-7xl p-4 sm:p-6 md:p-10">
       {/* dekor i kantene — aldri over innholdet: søl nede til venstre, og én stor delvis
           utenfor høyre kant (body klipper overhenget uten scroll) */}
       <Kaffeflekk className="absolute bottom-0 -left-36 w-52 rotate-6 skjul-ved-print" />
@@ -308,12 +309,9 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
               </form>
 
               <form action={lastOppBokBånd.bind(null, cookbookId)} className="flex flex-wrap items-center gap-2">
-                <input
-                  type="file"
+                <BildeInput
                   name="bilde"
-                  accept="image/*"
-                  required
-                  aria-label="Eget bilde til båndet"
+                  ariaLabel="Eget bilde til båndet"
                   className="text-xs file:mr-2 file:rounded-full file:border file:border-line file:bg-paper file:px-3 file:py-1 file:text-xs hover:file:border-terra"
                 />
                 <button type="submit" className="rounded-full border border-line px-3 py-1 hover:border-terra hover:text-terra">
@@ -408,7 +406,9 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
           <div className="sticky top-6">
             <h2 className="mb-3 text-[11px] uppercase tracking-[0.2em] text-ink-soft">Innhold</h2>
 
-            {cookbookData.chapters.length === 0 ? (
+            {/* uten kapitler skal de ukategoriserte oppskriftene fortsatt stå i innholdslista —
+                boken er ikke tom selv om den mangler seksjonsoverskrifter */}
+            {cookbookData.chapters.length === 0 && cookbookData.ukategorisert.length === 0 ? (
               <p className="text-ink-soft">Ingen kapitler ennå</p>
             ) : (
               <ChapterList

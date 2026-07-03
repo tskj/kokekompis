@@ -66,7 +66,7 @@ export default async function DeltSide({ params, searchParams }: DeltSideProps) 
   const stiBase = uuidHref`/delt/${token}`;
 
   return (
-    <main className="mx-auto max-w-5xl p-6 md:p-10">
+    <main className="mx-auto max-w-5xl p-4 sm:p-6 md:p-10">
       <header className="mb-8 flex items-baseline justify-between gap-4 border-b border-line pb-4 skjul-ved-print">
         <p className="font-display italic text-lg text-ink-soft">
           Delt fra {delt.eierNavn ? `${delt.eierNavn}s` : 'en'} kokebok

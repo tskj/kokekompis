@@ -25,6 +25,19 @@ export function bokFargeKlasse(farge: BokFarge | null, bokId: string): string {
   return BOK_FARGE_KLASSER[HYLLE_ROTASJON[hash % HYLLE_ROTASJON.length]];
 }
 
+// Tittelen på etiketten settes så stor som det LENGSTE ORDET tillater — da trengs aldri
+// orddeling. (Automatisk orddeling ga ville brudd: nettlesere uten norsk ordliste delte hvor
+// som helst, og med ordliste delte de gjerne feil. Skjermene viste det ulikt.) Terskler målt
+// mot etikettbredden ~100–118 px i font-display.
+export function bokTittelStørrelse(navn: string): string {
+  const lengsteOrd = Math.max(...navn.split(/\s+/).map((ord) => ord.length), 0);
+
+  if (navn.length > 36 || lengsteOrd > 13) return 'text-sm';
+  if (navn.length > 20 || lengsteOrd > 10) return 'text-base';
+
+  return 'text-xl';
+}
+
 // Bokbåndet (den smale stripen mellom tittel og innhold): enten et mønster vevd i en av
 // bokfargene — CSS-klassene bor i globals.css og farges via --baand-farge — eller nøkkelen til
 // et opplastet bilde (bok/<id>/…webp). Lagret form: "mønster:farge" (eldre rader: bare mønster).

@@ -21,7 +21,7 @@ export default async function InnstillingerSide() {
     : null;
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
+    <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 md:py-12">
       <header className="mb-10">
         <Link prefetch={true} href="/" className="text-sm text-ink-soft hover:text-terra">← Bokhylla</Link>
         <h1 className="mt-1 font-display text-5xl">Innstillinger</h1>

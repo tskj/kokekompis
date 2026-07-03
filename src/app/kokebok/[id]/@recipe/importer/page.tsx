@@ -11,6 +11,7 @@ import { importerFraBilde, importerFraTekst, importerFraUrl } from '@/app/action
 import { opprettTomOppskrift } from '@/app/actions/rediger';
 import { lagUtkastFraSkjema } from '@/app/actions/utkast';
 import { SendeKnapp } from '@/components/SendeKnapp';
+import { BildeInput } from '@/components/BildeInput';
 
 interface ImporterPageProps {
   params: Promise<{ id: string }>;
@@ -149,12 +150,8 @@ export default async function ImporterPage({ params, searchParams }: ImporterPag
 
           <label className="block text-sm">
             <span className="text-ink-soft">Bilde av oppskriften</span>
-            <input
-              type="file"
+            <BildeInput
               name="bilde"
-              accept="image/*"
-              capture="environment"
-              required
               className="mt-1 block w-full text-sm file:mr-3 file:rounded-full file:border file:border-line file:bg-paper file:px-4 file:py-1.5 file:text-sm hover:file:border-terra"
             />
           </label>

@@ -102,7 +102,7 @@ export default async function Home() {
   const kommendePlaner = planer.filter((plan) => !erTidligereDag(plan.dato, iDag));
 
   return (
-    <main className="relative mx-auto max-w-4xl px-6 py-12">
+    <main className="relative mx-auto max-w-4xl px-4 py-10 sm:px-6 md:py-12">
       {/* dekor i kantene — søl nede til venstre, og én stor delvis utenfor høyre kant */}
       <Kaffeflekk className="absolute bottom-2 -left-32 w-52 rotate-12" />
       <Kaffeflekk className="absolute -top-16 -right-24 w-60 rotate-[150deg]" />
@@ -195,7 +195,8 @@ export default async function Home() {
                 className="bokstoff bok-3d group relative flex h-56 w-40 flex-col justify-between rounded-r-md rounded-l-sm border-l-[10px] border-black/20 bg-natt p-4 text-paper shadow-bok"
               >
                 <span aria-hidden className="bok-sider pointer-events-none absolute inset-y-0.5 right-0 w-3.5" />
-                <span className="mt-5 block overflow-hidden break-words [hyphens:auto] bg-paper/95 px-2 py-3 text-center font-display text-xl leading-snug text-ink shadow-sm">
+                {/* ett langt ord — text-base så det aldri må deles (samme regel som bokTittelStørrelse) */}
+                <span className="mt-5 block overflow-hidden bg-paper/95 px-2 py-3 text-center font-display text-base leading-snug text-ink shadow-sm">
                   Oppslagsboka
                 </span>
                 <span className="text-center text-[10px] uppercase tracking-[0.25em] text-black/30 [text-shadow:0_1px_0_rgba(255,255,255,0.15)]">

@@ -24,7 +24,7 @@ export default async function OppslagSide() {
     : [];
 
   return (
-    <main className="relative mx-auto max-w-3xl px-6 py-12">
+    <main className="relative mx-auto max-w-3xl px-4 py-10 sm:px-6 md:py-12">
       <Kaffeflekk className="absolute -top-16 -right-24 w-56 rotate-[140deg]" />
 
       <header className="relative mb-10">

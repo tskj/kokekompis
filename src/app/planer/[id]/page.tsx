@@ -6,6 +6,7 @@ import { withTransaction } from '@/lib/db-tx';
 import { GANGER_VALG } from '@/lib/skalering';
 import { bildeUrl } from '@/lib/lagring';
 import { getCurrentUserId } from '@/lib/current-user';
+import { BildeInput } from '@/components/BildeInput';
 import { kanSeBok } from '@/lib/bok-tilgang';
 import { lagHandleliste } from '@/lib/handleliste';
 import { nowDate } from '@/lib/clock';
@@ -92,7 +93,7 @@ export default async function PlanSide({ params }: PlanSideProps) {
   const tilbake = encodeURIComponent(uuidHref`/planer/${planId}`);
 
   return (
-    <main className="relative mx-auto max-w-3xl px-6 py-12">
+    <main className="relative mx-auto max-w-3xl px-4 py-10 sm:px-6 md:py-12">
       {/* dekor nederst/ytterst — utenfor innholdet */}
       <Kaffeflekk className="absolute bottom-0 -left-28 w-44 rotate-12 skjul-ved-print" />
 
@@ -359,13 +360,9 @@ export default async function PlanSide({ params }: PlanSideProps) {
         )}
 
         <form action={lastOppPlanBilde.bind(null, planId)} className="flex flex-wrap items-center gap-2 skjul-ved-print">
-          <input
-            type="file"
+          <BildeInput
             name="bilde"
-            accept="image/*"
-            capture="environment"
-            required
-            aria-label="Bilde fra arrangementet"
+            ariaLabel="Bilde fra arrangementet"
             className="text-sm file:mr-3 file:rounded-full file:border file:border-line file:bg-paper file:px-4 file:py-1.5 file:text-sm hover:file:border-terra"
           />
           <button type="submit" className="rounded-full border border-line px-4 py-1.5 text-sm hover:border-terra hover:text-terra">

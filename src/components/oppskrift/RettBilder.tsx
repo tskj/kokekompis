@@ -1,4 +1,5 @@
 import { lastOppRettBilde, slettRettBilde } from '@/app/actions/bilder';
+import { BildeInput } from '@/components/BildeInput';
 
 export type RettBilde = { key: string; url: string };
 
@@ -45,13 +46,9 @@ export function RettBilder({ tittel, bilder, recipeId }: RettBilderProps) {
 
       {recipeId && (
         <form action={lastOppRettBilde.bind(null, recipeId)} className="flex flex-wrap items-center gap-2 skjul-ved-print">
-          <input
-            type="file"
+          <BildeInput
             name="bilde"
-            accept="image/*"
-            capture="environment"
-            required
-            aria-label="Bilde av retten"
+            ariaLabel="Bilde av retten"
             className="text-sm file:mr-3 file:rounded-full file:border file:border-line file:bg-paper file:px-4 file:py-1.5 file:text-sm hover:file:border-terra"
           />
           <button type="submit" className="rounded-full border border-line px-4 py-1.5 text-sm hover:border-terra hover:text-terra">
