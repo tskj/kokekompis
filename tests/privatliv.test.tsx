@@ -67,19 +67,20 @@ describe("privatliv: bøker er private — deling går via delingslenker", () =>
     expect(screen.queryByText("Annens bok")).not.toBeInTheDocument();
   });
 
-  it("en utlogget gjest har ingen hylle — bare Oppslagsboka og en invitasjon", async () => {
+  it("en utlogget gjest har ingen hylle — bare eksempelboka, Oppslagsboka og en invitasjon", async () => {
     await makeKokebok();
     const merket = await makeKokebok({ synlighet: "utstilt" });
     await db.update(cookbook).set({ name: "Marens bok" }).where(eq(cookbook.id, merket.bok.id));
 
     render(await Home());
 
-    // ingen bøker vises for gjester — heller ikke rader merket utstilt i gamle data
+    // ingen brukerbøker vises for gjester — heller ikke rader merket utstilt i gamle data
     expect(screen.queryByText("Marens bok")).not.toBeInTheDocument();
     expect(screen.queryByText("Testkokeboka")).not.toBeInTheDocument();
     expect(screen.queryByText("ny bok")).not.toBeInTheDocument();
 
-    // men oppslagsverket står fremme, og en invitasjon til å logge inn
+    // men smaksprøven og oppslagsverket står fremme, og en invitasjon til å logge inn
+    expect(screen.getByText("Min første kokebok")).toBeInTheDocument();
     expect(screen.getByText("Oppslagsboka")).toBeInTheDocument();
     expect(screen.getByText(/Logg inn for å sette den første boken/)).toBeInTheDocument();
   });

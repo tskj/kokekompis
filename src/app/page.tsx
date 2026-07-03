@@ -9,7 +9,7 @@ import { formaterDag, erTidligereDag } from '@/lib/dato';
 import { uuidHref } from '@/lib/uuid/uuid-links';
 import { opprettBok, settHylleSortering, gjenåpneBok, slettBok } from '@/app/actions/bok';
 import { BekreftKnapp } from '@/components/BekreftKnapp';
-import { flettHylle } from '@/lib/hylle';
+import { flettHylle, type HylleElement } from '@/lib/hylle';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { SorterbarBokhylle } from '@/components/SorterbarBokhylle';
 import Link from 'next/link';
@@ -86,12 +86,12 @@ async function getHylla(userId: string | null) {
       : [];
 
     // hylla flettes med favoritt-boka og oppslagsboka på plassene sine — i "sist åpnet"-modus
-    // (og for gjester) står de bakerst som før. En gjest har bare Oppslagsboka.
-    const hylle = userId
+    // står de bakerst som før. En gjest møter eksempelboka og Oppslagsboka.
+    const hylle: HylleElement[] = userId
       ? (sortering === 'egen'
           ? flettHylle(bøker, bruker?.favoritterPlass ?? null, bruker?.oppslagPlass ?? null)
           : flettHylle(bøker, null, null))
-      : flettHylle([], null, null).filter((element) => element.slag !== 'favoritter');
+      : [{ slag: 'eksempel', id: 'eksempel' }, { slag: 'oppslag', id: 'oppslag' }];
 
     return { hylle, antallBøker: bøker.length, arkiverte, planer, kategorier, sortering };
   });
@@ -199,36 +199,29 @@ export default async function Home() {
             aldri under hverandre. På store skjermer brer hylla seg utover med luft mellom.
             I "min rekkefølge"-modus kan alt på hylla trykkes-og-dras på plass — også
             favoritt-boka og oppslagsboka. */}
-        <SorterbarBokhylle elementer={hylle} kanSortere={kanSortere} hale={
-          <>
-            {userId && (
-              <div className="relative shrink-0 -ml-8 pb-4 first:ml-0 md:ml-0">
-                <span aria-hidden className="hylle-bit absolute -inset-x-3 bottom-0 h-4" />
-                <LukkbarDetails className="group block h-64 w-44">
-                <summary className="flex h-full cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-r-md rounded-l-sm border-2 border-dashed border-line text-ink-soft hover:border-terra hover:text-terra group-open:hidden">
-                  <span className="text-3xl leading-none">+</span>
-                  <span className="font-display text-lg">ny bok</span>
-                </summary>
+        <SorterbarBokhylle elementer={hylle} kanSortere={kanSortere} hale={userId ? (
+          <LukkbarDetails className="group block h-64 w-44">
+            <summary className="flex h-full cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-r-md rounded-l-sm border-2 border-dashed border-line text-ink-soft hover:border-terra hover:text-terra group-open:hidden">
+              <span className="text-3xl leading-none">+</span>
+              <span className="font-display text-lg">ny bok</span>
+            </summary>
 
-                <form action={opprettBok} className="flex h-full flex-col justify-center gap-3 rounded-r-md rounded-l-sm border border-line bg-card p-4 shadow-bok">
-                  <label className="block text-sm">
-                    <span className="text-ink-soft">Hva skal boken hete? (kan stå tomt)</span>
-                    <input
-                      name="navn"
-                      maxLength={100}
-                      placeholder="Mormors arvegods"
-                      className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2 font-display focus:border-terra focus:outline-none"
-                    />
-                  </label>
-                  <button type="submit" className="rounded-full bg-terra px-4 py-2 text-sm font-medium text-paper hover:bg-terra-deep">
-                    Sett på hylla
-                  </button>
-                </form>
-                </LukkbarDetails>
-              </div>
-            )}
-          </>
-        } />
+            <form action={opprettBok} className="flex h-full flex-col justify-center gap-3 rounded-r-md rounded-l-sm border border-line bg-card p-4 shadow-bok">
+              <label className="block text-sm">
+                <span className="text-ink-soft">Hva skal boken hete? (kan stå tomt)</span>
+                <input
+                  name="navn"
+                  maxLength={100}
+                  placeholder="Mormors arvegods"
+                  className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2 font-display focus:border-terra focus:outline-none"
+                />
+              </label>
+              <button type="submit" className="rounded-full bg-terra px-4 py-2 text-sm font-medium text-paper hover:bg-terra-deep">
+                Sett på hylla
+              </button>
+            </form>
+          </LukkbarDetails>
+        ) : undefined} />
 
         {arkiverte.length > 0 && (
           <details className="mt-5 text-sm text-ink-soft">
@@ -262,7 +255,8 @@ export default async function Home() {
 
         {!userId && (
           <p className="mt-6 text-ink-soft">
-            Logg inn for å sette den første boken på plass — eller bla i Oppslagsboka så lenge.
+            Logg inn for å sette den første boken på plass — eller bla i «Min første kokebok» og
+            Oppslagsboka så lenge.
           </p>
         )}
       </section>

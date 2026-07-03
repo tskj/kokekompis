@@ -9,7 +9,9 @@ import type { BokFarge } from '@/lib/db/schema';
 export type HylleElement =
   | { slag: 'bok'; id: string; name: string; farge: BokFarge | null }
   | { slag: 'favoritter'; id: 'favoritter' }
-  | { slag: 'oppslag'; id: 'oppslag' };
+  | { slag: 'oppslag'; id: 'oppslag' }
+  // eksempelboka — smaksprøven en utlogget gjest kan bla i (src/lib/eksempelbok.ts)
+  | { slag: 'eksempel'; id: 'eksempel' };
 
 export const FAVORITTER_ID = 'favoritter';
 export const OPPSLAG_ID    = 'oppslag';

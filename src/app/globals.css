@@ -150,9 +150,9 @@ body {
 }
 
 /* baksiden: arver bokfargen (bg-inherit i komponenten), mørknet et hakk, skjøvet bakover
-   like langt som sideblokken er bred — permen man skimter bak arkene */
+   litt lenger enn arkene rekker (w-9 + 2px inntrekk) — permen man skimter bak arkene */
 .bok-bak {
-  transform: translateZ(-1.75rem);
+  transform: translateZ(-2.5rem);
   background-image:
     linear-gradient(rgb(0 0 0 / 0.16) 0 0),
     repeating-linear-gradient(45deg,  rgb(255 255 255 / 0.05) 0 2px, rgb(0 0 0 / 0.05) 2px 4px),
