@@ -206,11 +206,13 @@ interface ChapterListProps {
   cookbookId: string;
   chapters: Chapter[];
   ukategorisert: Recipe[];
+  // prøvd og lagt bort — bokens arkiv, nederst og sammenleggbart
+  arkiverte: Array<{ id: string; title: string }>;
   erEier: boolean;
   andreBøker: Bok[];
 }
 
-export function ChapterList({ cookbookId, chapters, ukategorisert, erEier, andreBøker }: ChapterListProps) {
+export function ChapterList({ cookbookId, chapters, ukategorisert, arkiverte, erEier, andreBøker }: ChapterListProps) {
   const currentRecipeId = useRecipeId();
 
   return (
@@ -252,6 +254,31 @@ export function ChapterList({ cookbookId, chapters, ukategorisert, erEier, andre
             ))}
           </ul>
         </div>
+      )}
+
+      {arkiverte.length > 0 && (
+        <details className="border-b border-line">
+          <summary className="cursor-pointer list-none py-2.5 font-display text-lg italic text-ink-soft hover:text-terra">
+            Arkiv ({arkiverte.length})
+          </summary>
+
+          <ul className="pb-3">
+            {arkiverte.map((recipe) => (
+              <li key={recipe.id}>
+                <Link prefetch={true}
+                  href={uuidHref`/kokebok/${cookbookId}/oppskrift/${recipe.id}`}
+                  className={`block border-l-2 py-1.5 pl-3 text-sm leading-snug transition-colors ${
+                    currentRecipeId === recipe.id
+                      ? 'border-terra font-medium text-terra'
+                      : 'border-transparent text-ink/60 hover:border-line hover:text-terra'
+                  }`}
+                >
+                  {recipe.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </nav>
   );

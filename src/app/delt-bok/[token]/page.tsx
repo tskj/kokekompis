@@ -42,12 +42,13 @@ export default async function DeltBokSide({ params }: DeltBokSideProps) {
       .where(eq(chapters.cookbookId, share.cookbookId))
       .orderBy(asc(chapters.order));
 
+    // arkiverte oppskrifter (prøvd og lagt bort) deles ikke — gjesten ser boken slik den står
     const koblinger = await tx
       .select({ chapterId: recipeChapters.chapterId, recipeId: recipes.id, title: recipes.title, description: recipes.description })
       .from(recipeChapters)
       .innerJoin(chapters, eq(recipeChapters.chapterId, chapters.id))
       .innerJoin(recipes, eq(recipeChapters.recipeId, recipes.id))
-      .where(eq(chapters.cookbookId, share.cookbookId))
+      .where(and(eq(chapters.cookbookId, share.cookbookId), isNull(recipes.arkivert)))
       .orderBy(asc(recipeChapters.order));
 
     const kategorisert = tx
@@ -59,7 +60,7 @@ export default async function DeltBokSide({ params }: DeltBokSideProps) {
     const ukategorisert = await tx
       .select({ id: recipes.id, title: recipes.title, description: recipes.description })
       .from(recipes)
-      .where(and(eq(recipes.cookbookId, share.cookbookId), isNull(recipes.utkastAv), notInArray(recipes.id, kategorisert)))
+      .where(and(eq(recipes.cookbookId, share.cookbookId), isNull(recipes.utkastAv), isNull(recipes.arkivert), notInArray(recipes.id, kategorisert)))
       .orderBy(asc(recipes.title));
 
     return { bok, kapitler, koblinger, ukategorisert };

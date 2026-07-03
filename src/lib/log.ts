@@ -66,6 +66,7 @@ export const Attr = {
   RECIPE_COPIED_FROM_SHARE: ":recipe/copied-from-share", // value: share token — asserted on the COPY
   RECIPE_IMPORTED:     ":recipe/imported",     // value: { kilde: "url" | "bilde", tittel }
   RECIPE_UPDATED:      ":recipe/updated",      // value: { tittel }
+  RECIPE_TRIED:        ":recipe/tried",        // value: { likte: "ja" | "nei", skjebne: "behold" | "arkiver" }
   RECIPE_DELETED:      ":recipe/deleted",      // value: true
   RECIPE_PHOTO_ADDED:   ":recipe/photo-added",   // value: object key
   RECIPE_PHOTO_DELETED: ":recipe/photo-deleted", // value: object key

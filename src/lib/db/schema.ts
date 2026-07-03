@@ -160,6 +160,12 @@ export const recipes = pgTable('recipes', {
   // står utenfor kapitler og innholdslister, og kan tas i bruk (skrive over originalen) eller
   // forkastes. Forsvinner originalen, følger utkastene med.
   utkastAv: uuid('utkastAv').references((): AnyPgColumn => recipes.id, { onDelete: 'cascade' }),
+  // prøvd-status: når retten først ble laget, og om kokken likte den. null = ikke prøvd ennå.
+  prøvd: timestamp('provd', { mode: 'date', withTimezone: true }),
+  likte: boolean('likte'),
+  // bokens eget arkiv: prøvd og lagt bort — ute av kapitlene, men lett å angre (nederst i
+  // innholdslista). null = står fremme i boken.
+  arkivert: timestamp('arkivert', { mode: 'date', withTimezone: true }),
 });
 
 // Manuell lenking mellom oppskrifter, også på tvers av bøker: skolebollen peker på

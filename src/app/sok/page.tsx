@@ -54,6 +54,8 @@ async function søk(userId: string, ord: string[]) {
       eq(cookbook.userId, userId),
       isNull(cookbook.arkivert),
       isNull(recipes.utkastAv),
+      // lagt bort etter prøving — skal ikke dukke opp som middagsforslag
+      isNull(recipes.arkivert),
       ...vilkår,
     ))
     .orderBy(asc(cookbook.name), asc(recipes.title));

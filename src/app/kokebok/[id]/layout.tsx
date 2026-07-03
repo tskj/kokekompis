@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { withTransaction } from '@/lib/db-tx';
 import { nowDate, nowMs } from '@/lib/clock';
 import { cookbook, chapters, recipes, recipeChapters, bokFarger } from '@/lib/db/schema';
-import { eq, asc, notInArray, isNull, and, ne } from 'drizzle-orm';
+import { eq, asc, notInArray, isNull, isNotNull, and, ne } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChapterList } from './components/ChapterList';
@@ -60,7 +60,8 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       .where(eq(chapters.cookbookId, id))
       .orderBy(asc(chapters.order));
 
-    // Get all recipe-chapter relationships for this cookbook
+    // Get all recipe-chapter relationships for this cookbook — arkiverte oppskrifter står
+    // utenfor kapitlene sine til de hentes frem igjen (kapittel-lenken består)
     const recipeChapterData = await tx
       .select({
         chapterId: recipeChapters.chapterId,
@@ -72,7 +73,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       .from(recipeChapters)
       .innerJoin(chapters, eq(recipeChapters.chapterId, chapters.id))
       .innerJoin(recipes, eq(recipeChapters.recipeId, recipes.id))
-      .where(eq(chapters.cookbookId, id))
+      .where(and(eq(chapters.cookbookId, id), isNull(recipes.arkivert)))
       .orderBy(asc(recipeChapters.order));
 
     // Bokens oppskrifter uten kapittel — egen "Ukategorisert"-seksjon i innholdslista.
@@ -86,7 +87,14 @@ async function getCookbookWithChapters(id: string, userId?: string) {
     const ukategorisert = await tx
       .select({ id: recipes.id, title: recipes.title, description: recipes.description })
       .from(recipes)
-      .where(and(eq(recipes.cookbookId, id), isNull(recipes.utkastAv), notInArray(recipes.id, kategorisert)))
+      .where(and(eq(recipes.cookbookId, id), isNull(recipes.utkastAv), isNull(recipes.arkivert), notInArray(recipes.id, kategorisert)))
+      .orderBy(asc(recipes.title));
+
+    // bokens arkiv: prøvd og lagt bort — nederst i innholdslista, lett å hente frem
+    const arkiverteOppskrifter = await tx
+      .select({ id: recipes.id, title: recipes.title })
+      .from(recipes)
+      .where(and(eq(recipes.cookbookId, id), isNull(recipes.utkastAv), isNotNull(recipes.arkivert)))
       .orderBy(asc(recipes.title));
 
     // Dine andre bøker — målene kapittel-stellet kan flytte et helt kapittel til.
@@ -115,6 +123,7 @@ async function getCookbookWithChapters(id: string, userId?: string) {
       ...cookbookData,
       chapters: chaptersWithRecipes,
       ukategorisert,
+      arkiverteOppskrifter,
       andreBøker,
     };
   });
@@ -379,13 +388,14 @@ export default async function CookbookLayout({ recipe, params }: CookbookLayoutP
 
             {/* uten kapitler skal de ukategoriserte oppskriftene fortsatt stå i innholdslista —
                 boken er ikke tom selv om den mangler seksjonsoverskrifter */}
-            {cookbookData.chapters.length === 0 && cookbookData.ukategorisert.length === 0 ? (
+            {cookbookData.chapters.length === 0 && cookbookData.ukategorisert.length === 0 && cookbookData.arkiverteOppskrifter.length === 0 ? (
               <p className="text-ink-soft">Ingen kapitler ennå</p>
             ) : (
               <ChapterList
                 cookbookId={cookbookId}
                 chapters={cookbookData.chapters}
                 ukategorisert={cookbookData.ukategorisert}
+                arkiverte={cookbookData.arkiverteOppskrifter}
                 erEier={erEier}
                 andreBøker={erEier ? cookbookData.andreBøker : []}
               />

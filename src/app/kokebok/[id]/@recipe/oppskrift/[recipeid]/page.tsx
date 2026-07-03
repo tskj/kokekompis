@@ -21,6 +21,7 @@ import { flyttOppskrift } from '@/app/actions/organisering';
 import { toggleFavoritt } from '@/app/actions/favoritter';
 import { leggTilIPlan, fjernFraPlan } from '@/app/actions/planer';
 import { taIBrukUtkast, forkastUtkast } from '@/app/actions/utkast';
+import { settPrøvd, nullstillPrøvd, gjenopprettFraArkiv } from '@/app/actions/provd';
 import { Handleliste } from '@/components/oppskrift/Handleliste';
 import { StegKommentarer } from '@/components/oppskrift/StegKommentarer';
 import { MargSkrift } from '@/components/oppskrift/MargSkrift';
@@ -50,6 +51,9 @@ async function getOppskriftSide(recipeId: string, cookbookId: string, userId: st
         description: recipes.description,
         content: recipes.content,
         utkastAv: recipes.utkastAv,
+        prøvd: recipes.prøvd,
+        likte: recipes.likte,
+        arkivert: recipes.arkivert,
         kildeUrl: sql<string | null>`${recipes.content}->'opprinnelse'->>'url'`,
       })
       .from(recipes)
@@ -304,6 +308,16 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
         </div>
       )}
 
+      {/* arkivert etter prøving: står ikke i innholdslista, men er ett trykk fra å komme frem */}
+      {side.erEier && !erUtkast && side.arkivert && (
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-card px-4 py-2.5 text-sm skjul-ved-print">
+          <span>Denne ligger i bokas arkiv — den står ikke i innholdslista.</span>
+          <form action={gjenopprettFraArkiv.bind(null, recipeId)}>
+            <button type="submit" className="underline underline-offset-2 hover:text-terra">Sett den frem igjen</button>
+          </form>
+        </div>
+      )}
+
       {/* oversikten over dubletter: samme oppskrift kan gjerne stå i flere bøker — men du skal
           slippe å lure på OM den gjør det */}
       {side.erEier && !erUtkast && side.andreEksemplarer.length > 0 && (
@@ -415,6 +429,74 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                     <Link prefetch={true} href="/planer" className="underline underline-offset-2 hover:text-terra">legg en først</Link>.
                   </p>
                 )}
+              </LukkbarDetails>
+            )}
+
+            {/* prøvd-flyten: «ikke prøvd ennå» til kokken sier fra — da svarer man på om den
+                falt i smak, om den skal stå fremme eller i arkivet, og kan gi seg selv innspill
+                (de blir en lapp på oppskriften) */}
+            {side.erEier && !erUtkast && (
+              <LukkbarDetails className="relative">
+                <summary className={`cursor-pointer list-none rounded-full px-4 py-2 text-sm ${
+                  side.prøvd === null ? 'border-2 border-dashed border-butter bg-butter/15 hover:border-terra hover:text-terra'
+                  : side.likte        ? 'border border-sage/60 bg-sage/10 hover:border-terra hover:text-terra'
+                  :                     'border border-line text-ink-soft hover:border-terra hover:text-terra'
+                }`}>
+                  {side.prøvd === null ? '🍳 Ikke prøvd ennå' : side.likte ? '✓ Prøvd — likte den' : '✓ Prøvd — falt ikke i smak'}
+                </summary>
+
+                <div className="absolute z-10 mt-2 flex w-72 flex-col gap-3 rounded-xl border border-line bg-card p-4 shadow-bok">
+                  <form action={settPrøvd.bind(null, recipeId)} className="flex flex-col gap-3">
+                    <p className="font-display text-lg">{side.prøvd === null ? 'Har du prøvd den?' : 'Hvordan var den?'}</p>
+
+                    <fieldset className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                      <legend className="mb-1 text-xs text-ink-soft">Likte du den?</legend>
+                      <label className="flex items-center gap-1.5">
+                        <input type="radio" name="likte" value="ja" required defaultChecked={side.likte !== false} className="accent-terra" />
+                        Ja! ♥
+                      </label>
+                      <label className="flex items-center gap-1.5">
+                        <input type="radio" name="likte" value="nei" defaultChecked={side.likte === false} className="accent-terra" />
+                        Ikke helt
+                      </label>
+                    </fieldset>
+
+                    <fieldset className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                      <legend className="mb-1 text-xs text-ink-soft">Hva skjer med den?</legend>
+                      <label className="flex items-center gap-1.5">
+                        <input type="radio" name="skjebne" value="behold" required defaultChecked={!side.arkivert} className="accent-terra" />
+                        Spar på den
+                      </label>
+                      <label className="flex items-center gap-1.5">
+                        <input type="radio" name="skjebne" value="arkiver" defaultChecked={!!side.arkivert} className="accent-terra" />
+                        Legg i arkivet
+                      </label>
+                    </fieldset>
+
+                    <label className="block text-sm">
+                      <span className="text-xs text-ink-soft">Noe å endre til neste gang? (blir en lapp på oppskriften)</span>
+                      <textarea
+                        name="innspill"
+                        rows={2}
+                        maxLength={500}
+                        placeholder="mindre sukker, ti minutter til i ovnen …"
+                        className="mt-1 w-full resize-y rounded-lg border border-line bg-paper px-3 py-2 focus:border-terra focus:outline-none"
+                      />
+                    </label>
+
+                    <button type="submit" className="self-start rounded-full bg-terra px-4 py-1.5 text-sm font-medium text-paper hover:bg-terra-deep">
+                      Lagre
+                    </button>
+                  </form>
+
+                  {side.prøvd !== null && (
+                    <form action={nullstillPrøvd.bind(null, recipeId)} className="border-t border-line pt-2">
+                      <button type="submit" className="text-xs text-ink-soft underline underline-offset-2 hover:text-terra">
+                        nullstill til «ikke prøvd ennå»
+                      </button>
+                    </form>
+                  )}
+                </div>
               </LukkbarDetails>
             )}
 
