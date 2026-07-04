@@ -1,30 +1,50 @@
 import Link from 'next/link';
 import { asc, eq } from 'drizzle-orm';
-import { db } from '@/lib/db';
-import { oppslag } from '@/lib/db/schema';
+import { withTransaction } from '@/lib/db-tx';
+import { oppslag, users, bokFarger } from '@/lib/db/schema';
 import { getCurrentUserId } from '@/lib/current-user';
 import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
-import { BÅND_KLASSER, BOK_FARGE_VAR } from '@/lib/bok-utseende';
+import { BÅND_KLASSER, BOK_FARGE_VAR, båndMønstre, lesBåndValg } from '@/lib/bok-utseende';
+import { bildeUrl } from '@/lib/lagring';
 import { Kaffeflekk } from '@/components/Kaffeflekk';
 import { Kompis } from '@/components/Kompis';
 import { BlaOm } from '@/components/BlaOm';
+import { BildeInput } from '@/components/BildeInput';
 import { LukkbarDetails } from '@/components/LukkbarDetails';
-import { nyttOppslag } from '@/app/actions/oppslag';
+import { LukkDetailsKnapp } from '@/components/LukkDetailsKnapp';
+import { nyttOppslag, settOppslagBånd, lastOppOppslagBånd } from '@/app/actions/oppslag';
 import { OppslagInnhold } from './OppslagInnhold';
 
 // Oppslagsboka innvendig — samme oppsett som kokebøkene (kokebok/[id]/layout.tsx): bokheader
 // med dobbelstrek og bånd, innholdslista til venstre, oppslaget til høyre med
-// bla-om-animasjonen. Ikke en kokebok, men den skal KJENNES som en bok fra samme hylle.
+// bla-om-animasjonen. Ikke en kokebok, men den skal KJENNES som en bok fra samme hylle —
+// og båndet kan kles om, som i de andre bøkene.
 export default async function OppslagLayout({ children }: { children: React.ReactNode }) {
   const userId = await getCurrentUserId();
 
-  const egne = userId
-    ? await db
-        .select({ id: oppslag.id, tittel: oppslag.tittel })
-        .from(oppslag)
-        .where(eq(oppslag.userId, userId))
-        .orderBy(asc(oppslag.tittel))
-    : [];
+  const { egne, oppslagBånd } = await withTransaction({ name: 'oppslag.layout' }, async (tx) => ({
+    egne: userId
+      ? await tx
+          .select({ id: oppslag.id, tittel: oppslag.tittel })
+          .from(oppslag)
+          .where(eq(oppslag.userId, userId))
+          .orderBy(asc(oppslag.tittel))
+      : [],
+
+    oppslagBånd: userId
+      ? (await tx
+          .select({ oppslagBånd: users.oppslagBånd })
+          .from(users)
+          .where(eq(users.id, userId))
+          .maybeSingle('oppslag.layout.bruker'))?.oppslagBånd ?? null
+      : null,
+  }));
+
+  // båndet: brukerens valg, eller standarddrakten — prikker i natt, som bokryggen på hylla
+  const båndValg = oppslagBånd ? lesBåndValg(oppslagBånd) : null;
+  const bånd = båndValg                            ? { mønster: båndValg }
+             : oppslagBånd?.startsWith('oppslag/') ? { bilde: await bildeUrl(oppslagBånd) }
+             :                                       { mønster: { mønster: 'prikker' as const, farge: 'natt' as const } };
 
   return (
     <div className="relative mx-auto max-w-7xl p-4 sm:p-6 md:p-10">
@@ -44,14 +64,85 @@ export default async function OppslagLayout({ children }: { children: React.Reac
         {/* Kompisen — husnissen som passer på oppslagene fra toppen av siden */}
         <Kompis className="absolute -top-2 right-0 w-20 md:w-24" />
 
+        {/* utseende-panelet: båndet kan kles om som i kokebøkene — mønster i bokfarge eller
+            eget bilde. Valget bor på brukeren; Oppslagsboka er én per person. */}
+        {userId && (
+          <LukkbarDetails lukkVedInnsending={false} className="mt-2.5 text-xs text-ink-soft md:absolute md:right-28 md:top-1 md:mt-0">
+            <summary
+              className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm hover:border-terra hover:text-terra md:float-right"
+              title="Velg bånd under tittelen"
+            >
+              <span aria-hidden>🎨</span> Bokas utseende
+            </summary>
+
+            <div className="mt-2 flex w-[26rem] max-w-[calc(100vw-3rem)] flex-col gap-4 rounded-lg border border-line bg-card p-3 shadow-bok md:absolute md:right-0 md:z-20 md:clear-both">
+              <div className="flex items-start justify-between gap-3">
+                <p className="italic">Alt her lagres i det du trykker.</p>
+                <LukkDetailsKnapp
+                  merkelapp="Lukk utseende-panelet"
+                  className="-mt-1 size-7 shrink-0 rounded-full border border-line text-base leading-none text-ink-soft hover:border-terra hover:text-terra"
+                />
+              </div>
+
+              <form action={settOppslagBånd} className="flex flex-col gap-1.5">
+                <span>Bånd under tittelen — hvert mønster i alle bokfargene:</span>
+                <div className="grid grid-cols-8 gap-1.5">
+                  {båndMønstre.flatMap((mønster) =>
+                    bokFarger.map((farge) => (
+                      <button
+                        key={`${mønster}:${farge}`}
+                        type="submit"
+                        name="valg"
+                        value={`${mønster}:${farge}`}
+                        title={`${mønster} i ${farge}`}
+                        aria-label={`Båndet ${mønster} i ${farge}`}
+                        aria-pressed={oppslagBånd === `${mønster}:${farge}`}
+                        className={`${BÅND_KLASSER[mønster]} relative h-8 w-full rounded border ${oppslagBånd === `${mønster}:${farge}` ? 'border-ink/60 ring-2 ring-offset-1 ring-ink/70' : 'border-line'}`}
+                        style={{ '--baand-farge': BOK_FARGE_VAR[farge] } as React.CSSProperties}
+                      >
+                        {oppslagBånd === `${mønster}:${farge}` && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="rounded-full bg-card px-1 text-sm leading-tight shadow-sm">✓</span>
+                          </span>
+                        )}
+                      </button>
+                    )),
+                  )}
+                </div>
+                {oppslagBånd && (
+                  <button type="submit" name="valg" value="fjern" className="self-start underline underline-offset-2 hover:text-terra">
+                    tilbake til standardbåndet
+                  </button>
+                )}
+              </form>
+
+              <form action={lastOppOppslagBånd} className="flex flex-wrap items-center gap-2">
+                <BildeInput
+                  name="bilde"
+                  ariaLabel="Eget bilde til båndet"
+                  className="text-xs file:mr-2 file:rounded-full file:border file:border-line file:bg-paper file:px-3 file:py-1 file:text-xs hover:file:border-terra"
+                />
+                <button type="submit" className="rounded-full border border-line px-3 py-1 hover:border-terra hover:text-terra">
+                  Bruk eget bilde
+                </button>
+              </form>
+            </div>
+          </LukkbarDetails>
+        )}
+
         {/* dobbeltstrek under tittelfeltet — den gamle kokebokens linjespill */}
         <div aria-hidden className="mt-4 border-b-4 border-double border-ink/25" />
 
-        <div aria-hidden className="mt-4 h-24 overflow-hidden rounded-sm border border-line shadow-sm md:h-32">
-          <div
-            className={`h-full w-full ${BÅND_KLASSER.prikker}`}
-            style={{ '--baand-farge': BOK_FARGE_VAR.natt } as React.CSSProperties}
-          />
+        <div aria-hidden className="mt-4 h-24 overflow-hidden rounded-sm border border-line shadow-sm md:h-32" data-testid="bokbaand">
+          {'bilde' in bånd ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={bånd.bilde} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div
+              className={`h-full w-full ${BÅND_KLASSER[bånd.mønster.mønster]}`}
+              style={{ '--baand-farge': BOK_FARGE_VAR[bånd.mønster.farge] } as React.CSSProperties}
+            />
+          )}
         </div>
       </header>
 

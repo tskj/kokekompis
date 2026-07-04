@@ -413,6 +413,9 @@ export const users = pgTable('user', {
   // src/lib/hylle.ts); null = bakerst, slik hylla alltid har stått
   favoritterPlass: integer('favoritterPlass'),
   oppslagPlass:    integer('oppslagPlass'),
+  // Oppslagsbokas bånd, samme format som cookbook.headerBilde: "mønster:farge" eller nøkkelen
+  // til et opplastet bilde (oppslag/<userId>/…webp). null = standarddrakten (prikker i natt).
+  oppslagBånd: text('oppslagBaand'),
 });
 
 export const accounts = pgTable('account', {

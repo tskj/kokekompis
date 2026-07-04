@@ -18,10 +18,10 @@
   /* bokryggfarger utover grunnpaletten — vinrød og nattblå klassikere fra mormors hylle */
   --color-vin:          #722f37;
   --color-natt:         #2f3a4a;
-  /* de lyse ønskene (Maren): sjøbris — dus sjøgrønn mot blått — og en støvet rosa.
-     Dempet og varmet så de står i samme falmede stofftone som resten av hylla. */
+  /* de lyse ønskene (Maren): sjøbris — dus sjøgrønn mot blått — og en rosa.
+     Dempet så de står i hyllas stofftone; rosaen litt mettet — grårosa så trist ut. */
   --color-bris:         #7fa199;
-  --color-rosa:         #b37d85;
+  --color-rosa:         #c9798b;
   /* teipfargene på notatlappene — bokens egen palett, ikke kontorgult */
   --color-teip-terrakotta: #c97c5d;
   --color-teip-rav:        #e3b04b;
