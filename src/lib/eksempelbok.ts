@@ -44,3 +44,11 @@ export const EKSEMPEL_OPPSKRIFTER: EksempelOppskrift[] = [
 export function finnEksempelOppskrift(slug: string): EksempelOppskrift | null {
   return EKSEMPEL_OPPSKRIFTER.find((oppskrift) => oppskrift.slug === slug) ?? null;
 }
+
+// Innholdslista i eksempelboka — kapitler som i en ekte bok, med slugs inn i oppskriftene
+export const EKSEMPEL_BESKRIVELSE = 'Slik kjennes en bok i Kokekompis — bla, skaler, vis i gram.';
+
+export const EKSEMPEL_KAPITLER: Array<{ navn: string; oppskrifter: string[] }> = [
+  { navn: 'Bakst',  oppskrifter: ['mormors-skillingsboller', 'focaccia-med-rosmarin'] },
+  { navn: 'Middag', oppskrifter: ['mammas-pannekaker', 'pappas-fiskesuppe'] },
+];
