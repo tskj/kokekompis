@@ -3,9 +3,11 @@
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { oppslag } from '@/lib/db/schema';
 import { getCurrentUserId } from '@/lib/current-user';
+import { encodeUuidToBase32 } from '@/lib/uuid/uuid-base32';
 import { log, Attr } from '@/lib/log';
 
 // Egne oppslag i Oppslagsboka — det DU alltid må google, skrevet opp én gang for alle.
@@ -29,6 +31,8 @@ export async function nyttOppslag(formData: FormData) {
 
   log.info(rad.id, Attr.OPPSLAG_CREATED, tittel.data);
   revalidatePath('/oppslag');
+  // rett til det man nettopp skrev — boken slår seg opp der
+  redirect(`/oppslag/${encodeUuidToBase32(rad.id)}`);
 }
 
 export async function slettOppslag(oppslagId: string, formData: FormData) {
@@ -46,4 +50,6 @@ export async function slettOppslag(oppslagId: string, formData: FormData) {
 
   log.info(oppslagId, Attr.OPPSLAG_DELETED, true);
   revalidatePath('/oppslag');
+  // oppslaget man sto i finnes ikke lenger — hjem til bokens forside
+  redirect('/oppslag');
 }

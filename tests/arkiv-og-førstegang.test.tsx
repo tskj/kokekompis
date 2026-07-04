@@ -27,7 +27,8 @@ vi.mock("next/navigation", () => ({
 import { arkiverBok, gjenåpneBok, slettBok } from "@/app/actions/bok";
 import Home from "@/app/page";
 import CookbookLayout from "@/app/kokebok/[id]/layout";
-import OppslagSide from "@/app/oppslag/page";
+import OppslagLayout from "@/app/oppslag/layout";
+import OppslagOppslag from "@/app/oppslag/[id]/page";
 import FavoritterSide from "@/app/favoritter/page";
 
 async function ferskBruker() {
@@ -118,11 +119,14 @@ describe("arkivet og førstegangsopplevelsen", () => {
     expect(screen.getByText("Oppslagsboka")).toBeInTheDocument();
   });
 
-  it("Oppslagsboka er illustrert: en tegning ved hvert innebygde oppslag, og kompisen på toppen", async () => {
-    const { container } = render(await OppslagSide());
-
-    expect(container.querySelectorAll("summary svg")).toHaveLength(7);
+  it("Oppslagsboka er illustrert: kompisen på toppen, og tegningen på oppslaget", async () => {
+    render(await OppslagLayout({ children: null }));
     expect(screen.getByTestId("kompis")).toBeInTheDocument();
+
+    cleanup();
+    const { container } = render(await OppslagOppslag({ params: Promise.resolve({ id: "kokte-egg" }) }));
+    expect(container.querySelector("svg")).toBeTruthy();
+    expect(screen.getByText("Hvor lenge koker et egg?")).toBeInTheDocument();
   });
 
   it("favorittboken leser som en vanlig bok: oppskriftene under kapitlene sine", async () => {

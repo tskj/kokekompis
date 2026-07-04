@@ -66,3 +66,7 @@ Tempurere — varme forsiktig så ingenting skiller seg.
 En klype — det du får mellom tommel og pekefinger.`,
   },
 ];
+
+export function finnInnebygdOppslag(id: string): InnebygdOppslag | null {
+  return INNEBYGDE_OPPSLAG.find((innslag) => innslag.id === id) ?? null;
+}
